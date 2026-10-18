@@ -1,90 +1,109 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Button } from '@/components/button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Colors, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { resolveAddress } from '@/lib/address';
 import { login } from '@/lib/auth';
-import { clearAuth, getAuth, type IAuthState } from '@/lib/storage';
+import { signOut, useAuth } from '@/lib/auth-store';
 
 export default function HomeScreen() {
-  const theme = useTheme();
-  const [auth, setAuth] = useState<IAuthState | null>(null);
+  const { auth, loaded } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [address, setAddress] = useState('');
-
-  useEffect(() => {
-    void getAuth().then(setAuth);
-  }, []);
 
   const connect = useCallback(async () => {
     setError(null);
     try {
-      setAuth(await login());
+      await login();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connexion impossible');
     }
   }, []);
 
   const disconnect = useCallback(async () => {
-    await clearAuth();
-    setAuth(null);
+    await signOut();
   }, []);
 
   const open = useCallback(() => {
-    const trimmed = address.trim();
-    if (!trimmed) return;
-    const url = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-    router.push({ pathname: '/browser', params: { url } });
+    const url = resolveAddress(address);
+    if (url) router.push({ pathname: '/browser', params: { url } });
   }, [address]);
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">Actunime</ThemedText>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <View style={styles.header}>
+            <Image source={require('../../assets/images/logo.png')} style={styles.logo} contentFit="contain" />
+            <ThemedText type="title">Actunime</ThemedText>
+            <ThemedText themeColor="textSecondary">Ta liste anime & manga, partout.</ThemedText>
+          </View>
 
-        {auth ? (
           <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText>Connecté : {auth.user.displayName ?? auth.user.username}</ThemedText>
-            <Pressable onPress={disconnect}>
-              <ThemedText type="small">Se déconnecter</ThemedText>
-            </Pressable>
+            {!loaded ? null : auth ? (
+              <>
+                <ThemedText type="subtitle">Bonjour {auth.user.displayName ?? auth.user.username}</ThemedText>
+                <ThemedText themeColor="textSecondary" type="small">
+                  Tes lectures détectées dans le navigateur seront ajoutées à ta liste.
+                </ThemedText>
+                <Button label="Se déconnecter" variant="outline" onPress={disconnect} />
+              </>
+            ) : (
+              <>
+                <ThemedText type="subtitle">Connexion</ThemedText>
+                <ThemedText themeColor="textSecondary" type="small">
+                  Connecte-toi pour que tes lectures soient ajoutées à ta liste.
+                </ThemedText>
+                <Button label="Se connecter avec Actunime" onPress={connect} />
+                {error && (
+                  <ThemedText type="small" themeColor="destructive">
+                    {error}
+                  </ThemedText>
+                )}
+              </>
+            )}
           </ThemedView>
-        ) : (
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText>Connecte-toi pour que tes lectures soient ajoutées à ta liste.</ThemedText>
-            <Pressable onPress={connect} style={[styles.button, { backgroundColor: theme.text }]}>
-              <ThemedText style={{ color: theme.background }}>Se connecter</ThemedText>
-            </Pressable>
-            {error && <ThemedText type="small">{error}</ThemedText>}
-          </ThemedView>
-        )}
 
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText>Ouvre un site de lecture</ThemedText>
-          <TextInput
-            value={address}
-            onChangeText={setAddress}
-            onSubmitEditing={open}
-            placeholder="adresse du site"
-            placeholderTextColor={theme.textSecondary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-            returnKeyType="go"
-            style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-          />
-          <Pressable
-            onPress={open}
-            disabled={!auth}
-            style={[styles.button, { backgroundColor: theme.text, opacity: auth ? 1 : 0.4 }]}
-          >
-            <ThemedText style={{ color: theme.background }}>Ouvrir</ThemedText>
-          </Pressable>
-        </ThemedView>
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="subtitle">Comment ça marche</ThemedText>
+            {[
+              'Ouvre ton site de lecture ou de streaming dans le navigateur ci-dessous.',
+              'Une barre Actunime apparaît en bas : elle te dit quelle œuvre et quel chapitre sont reconnus.',
+              'À la fin du chapitre, ta liste est mise à jour (ou touche « Marquer comme lu »).',
+              'Si rien n’est reconnu, touche « Configurer ce site » : tu montres une fois où lire le titre et le numéro.',
+            ].map((step, index) => (
+              <ThemedText key={step} type="small" themeColor="textSecondary">
+                {index + 1}. {step}
+              </ThemedText>
+            ))}
+          </ThemedView>
+
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="subtitle">Navigateur</ThemedText>
+            <ThemedText themeColor="textSecondary" type="small">
+              Ouvre un site de lecture ou de streaming : Actunime détecte l’œuvre et le chapitre.
+            </ThemedText>
+            <TextInput
+              value={address}
+              onChangeText={setAddress}
+              onSubmitEditing={open}
+              placeholder="Adresse du site ou recherche"
+              placeholderTextColor={Colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              returnKeyType="go"
+              style={styles.input}
+            />
+            <Button label="Ouvrir" onPress={open} disabled={!auth || !address.trim()} />
+          </ThemedView>
+        </ScrollView>
       </SafeAreaView>
     </ThemedView>
   );
@@ -92,13 +111,32 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  safeArea: { flex: 1, padding: Spacing.three, gap: Spacing.three },
-  card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
-  button: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.two,
-    alignItems: 'center',
+  safeArea: { flex: 1 },
+  scroll: { flex: 1 },
+  content: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+    padding: Spacing.three,
+    gap: Spacing.three,
   },
-  input: { borderWidth: 1, borderRadius: Spacing.two, padding: Spacing.two },
+  header: { alignItems: 'center', gap: Spacing.one, paddingVertical: Spacing.four },
+  logo: { width: 72, height: 76, marginBottom: Spacing.two },
+  card: {
+    padding: Spacing.three,
+    borderRadius: Radius.large,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: Spacing.three,
+  },
+  input: {
+    minHeight: 48,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.medium,
+    borderWidth: 1,
+    borderColor: Colors.input,
+    color: Colors.text,
+    fontFamily: Fonts.medium,
+    fontSize: 16,
+  },
 });
