@@ -3,7 +3,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { api } from './api';
 import { AUTH_REDIRECT_URL, WEB_URL } from './config';
 import { createPkcePair, createState } from './pkce';
-import { setAuth, type IAuthState } from './storage';
+import { signIn } from './auth-store';
+import type { IAuthState } from './storage';
 
 const SCOPES = ['profile:read', 'lists:read', 'lists:write', 'progress:write'];
 
@@ -37,6 +38,6 @@ export async function login(): Promise<IAuthState> {
     expiresAt: Date.now() + exchanged.expiresIn * 1000 - 60_000,
     user: exchanged.user,
   };
-  await setAuth(auth);
+  await signIn(auth);
   return auth;
 }

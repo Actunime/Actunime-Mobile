@@ -1,4 +1,5 @@
 import { API_URL } from './config';
+import { markSignedOut } from './auth-store';
 import { clearAuth, getAuth } from './storage';
 
 export class ApiError extends Error {
@@ -17,10 +18,7 @@ interface IRequestOptions {
   auth?: boolean;
 }
 
-async function request<T>(
-  path: string,
-  { method = 'GET', body, auth = true }: IRequestOptions = {},
-): Promise<T> {
+async function request<T>(path: string, { method = 'GET', body, auth = true }: IRequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (auth) {
     const state = await getAuth();
@@ -46,7 +44,10 @@ async function request<T>(
     } catch {
       // corps non JSON
     }
-    if (response.status === 401 && auth) await clearAuth();
+    if (response.status === 401 && auth) {
+      await clearAuth();
+      markSignedOut();
+    }
     throw new ApiError(response.status, message);
   }
   if (response.status === 204) return undefined as T;
@@ -80,13 +81,10 @@ export const api = {
   },
 
   searchByKind(kind: 'anime' | 'manga', search: string, limit = 6) {
-    return request<{ results?: ISearchMedia[]; data?: ISearchMedia[] }>(
-      kind === 'manga' ? '/mangas' : '/animes',
-      {
-        method: 'POST',
-        body: { query: { search }, limit, page: 1 },
-      },
-    ).then((res) => res.results ?? res.data ?? []);
+    return request<{ results?: ISearchMedia[]; data?: ISearchMedia[] }>(kind === 'manga' ? '/mangas' : '/animes', {
+      method: 'POST',
+      body: { query: { search }, limit, page: 1 },
+    }).then((res) => res.results ?? res.data ?? []);
   },
 
   getListByMedia(id: string) {
