@@ -28,7 +28,12 @@ declare global {
 }
 
 const EVALUATE_DEBOUNCE_MS = 800;
-const HIGHLIGHT_COLOR = '#0099ff';
+/**
+ * Un réglage appris qui ne trouve rien (page de lecteur SPA encore en construction, ou page d'un autre type) a ce
+ * délai pour réussir ; ensuite on retombe sur la lecture automatique, comme l'extension Sync.
+ */
+const LEARNED_GRACE_MS = 12_000;
+const LEARNED_RETRY_MS = 1_000;
 
 function post(message: InPageMessage) {
   window.ReactNativeWebView?.postMessage(JSON.stringify(message));
@@ -95,6 +100,7 @@ if (!window.__actunime) {
   let observer: IObserver | null = null;
   // Pas de détection avant d'avoir reçu le pattern du site : sinon une détection générique erronée précède la bonne.
   let configured = false;
+  let navigationStartedAt = Date.now();
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   /** Observateur de fin de chapitre selon la configuration du site (défilement par défaut). */
@@ -119,7 +125,19 @@ if (!window.__actunime) {
 
   const evaluate = () => {
     timer = null;
-    const detection = pattern ? detectLearned(pattern) : detectGeneric();
+    let detection: PageDetection | null;
+    if (pattern) {
+      detection = detectLearned(pattern);
+      if (!detection) {
+        if (Date.now() - navigationStartedAt < LEARNED_GRACE_MS) {
+          schedule(LEARNED_RETRY_MS);
+          return;
+        }
+        detection = detectGeneric();
+      }
+    } else {
+      detection = detectGeneric();
+    }
     const key = keyOf(detection);
     if (key === lastKey) return;
     lastKey = key;
@@ -145,10 +163,15 @@ if (!window.__actunime) {
     picking = null;
   };
 
-  const startPick = () => {
+  /** `color` : couleur du champ en cours de choix (titre, numéro), la même que dans l'assistant de l'app. */
+  const startPick = (label: string, color: string) => {
     stopPick();
     const box = document.createElement('div');
-    box.style.cssText = `position:fixed;z-index:2147483647;pointer-events:none;border:3px solid ${HIGHLIGHT_COLOR};background:rgba(0,153,255,.18);border-radius:4px;display:none`;
+    box.style.cssText = `position:fixed;z-index:2147483647;pointer-events:none;border:4px solid ${color};background:${color}33;border-radius:6px;display:none`;
+    const tag = document.createElement('div');
+    tag.textContent = label;
+    tag.style.cssText = `position:absolute;left:-4px;bottom:100%;margin-bottom:4px;padding:4px 10px;border-radius:6px;background:${color};color:#fff;font:700 15px/1.2 sans-serif;white-space:nowrap`;
+    box.appendChild(tag);
     document.documentElement.appendChild(box);
 
     const targetAt = (x: number, y: number): HTMLElement | null => {
@@ -161,7 +184,14 @@ if (!window.__actunime) {
         return;
       }
       const rect = el.getBoundingClientRect();
-      box.style.cssText += `;display:block;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px`;
+      box.style.display = 'block';
+      box.style.left = `${rect.left}px`;
+      box.style.top = `${rect.top}px`;
+      box.style.width = `${rect.width}px`;
+      box.style.height = `${rect.height}px`;
+      // L'étiquette passe sous l'élément quand il touche le haut de l'écran.
+      tag.style.bottom = rect.top < 36 ? 'auto' : '100%';
+      tag.style.top = rect.top < 36 ? '100%' : 'auto';
     };
     const onTouch = (event: TouchEvent) => {
       const touch = event.touches[0];
@@ -224,7 +254,7 @@ if (!window.__actunime) {
           post({ type: 'strategies', results: runAllStrategies() });
           break;
         case 'start-pick':
-          startPick();
+          startPick(command.label, command.color);
           break;
         case 'stop-pick':
           stopPick();
@@ -238,6 +268,7 @@ if (!window.__actunime) {
     // Les lecteurs SPA changent d'URL sans recharger la page : on repart d'un état propre.
     if (location.href !== lastUrl) {
       lastUrl = location.href;
+      navigationStartedAt = Date.now();
       lastKey = UNKNOWN; // force à renvoyer l'état de la nouvelle page, y compris « rien détecté »
     }
     schedule();

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
 
 import { ConfigWizard } from '@/components/browser/config-wizard';
+import { fieldStyle } from '@/components/browser/wizard-parts';
 import { SearchSheet } from '@/components/browser/search-sheet';
 import { TrackingBar } from '@/components/browser/tracking-bar';
 import { ThemedText } from '@/components/themed-text';
@@ -178,33 +179,37 @@ export default function BrowserScreen() {
           {navigation.loading && <View style={[styles.progressBar, { width: `${Math.round(progress * 100)}%` }]} />}
         </View>
 
-        <WebView
-          ref={webview}
-          source={{ uri: source, headers: PRIVACY_HEADERS }}
-          style={styles.container}
-          injectedJavaScript={INJECTED_DETECTION}
-          onMessage={onMessage}
-          onNavigationStateChange={onNavigationStateChange}
-          onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
-          setSupportMultipleWindows={false}
-          thirdPartyCookiesEnabled={false}
-          mixedContentMode="never"
-          allowsBackForwardNavigationGestures
-        />
+        <View style={styles.container}>
+          <WebView
+            ref={webview}
+            source={{ uri: source, headers: PRIVACY_HEADERS }}
+            style={styles.container}
+            injectedJavaScript={INJECTED_DETECTION}
+            onMessage={onMessage}
+            onNavigationStateChange={onNavigationStateChange}
+            onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
+            setSupportMultipleWindows={false}
+            thirdPartyCookiesEnabled={false}
+            mixedContentMode="never"
+            allowsBackForwardNavigationGestures
+          />
 
-        <TrackingBar
-          tracking={tracking.tracking}
-          notice={tracking.notice}
-          host={tracking.host}
-          pattern={tracking.pattern}
-          onMarkRead={tracking.markRead}
-          onChoose={(media) => void tracking.choose(media)}
-          onChange={tracking.change}
-          onSearch={() => setSearchOpen(true)}
-          onConfigure={() => setWizardOpen(true)}
-          onIgnore={() => void tracking.ignoreHost()}
-          onUnignore={() => void tracking.unignoreHost()}
-        />
+          {!wizardOpen && (
+            <TrackingBar
+              tracking={tracking.tracking}
+              notice={tracking.notice}
+              host={tracking.host}
+              pattern={tracking.pattern}
+              onMarkRead={tracking.markRead}
+              onChoose={(media) => void tracking.choose(media)}
+              onChange={tracking.change}
+              onSearch={() => setSearchOpen(true)}
+              onConfigure={() => setWizardOpen(true)}
+              onIgnore={() => void tracking.ignoreHost()}
+              onUnignore={() => void tracking.unignoreHost()}
+            />
+          )}
+        </View>
 
         <ConfigWizard
           visible={wizardOpen}
@@ -214,7 +219,12 @@ export default function BrowserScreen() {
           strategies={strategies}
           picked={picked}
           onRunStrategies={runStrategies}
-          onStartPick={() => webview.current?.injectJavaScript(commandScript({ type: 'start-pick' }))}
+          onStartPick={(field) => {
+            const style = fieldStyle(field, tracking.inferredKind);
+            webview.current?.injectJavaScript(
+              commandScript({ type: 'start-pick', label: style.label, color: style.color }),
+            );
+          }}
           onStopPick={() => webview.current?.injectJavaScript(commandScript({ type: 'stop-pick' }))}
           onClose={() => setWizardOpen(false)}
           onSave={tracking.applyPattern}

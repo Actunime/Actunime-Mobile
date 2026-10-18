@@ -17,6 +17,11 @@ const FAKE_PAGE = `
 
 let messages: InPageMessage[];
 
+// Chaque test réinstalle le script : on déconnecte les observateurs du test précédent, sinon ils réagissent
+// aux changements de page du test suivant et postent dans le mauvais tableau de messages.
+const RealMutationObserver = window.MutationObserver;
+const observers: MutationObserver[] = [];
+
 const send = (command: InPageCommand) => (window as any).__actunime.handle(JSON.stringify(command));
 
 const pattern = (overrides: Partial<LearnedPattern>): LearnedPattern => ({
@@ -39,9 +44,17 @@ async function install() {
 describe('script injecté', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    window.MutationObserver = class extends RealMutationObserver {
+      constructor(callback: MutationCallback) {
+        super(callback);
+        observers.push(this);
+      }
+    };
     loadPage(FAKE_PAGE);
   });
   afterEach(() => {
+    observers.splice(0).forEach((observer) => observer.disconnect());
+    window.MutationObserver = RealMutationObserver;
     vi.useRealTimers();
   });
 
@@ -94,10 +107,24 @@ describe('script injecté', () => {
     expect(messages.find((m) => m.type === 'detection')).toMatchObject({ detection: { chapter: 200 } });
   });
 
-  it('ne signale rien sur une page où le pattern ne trouve pas le titre (la barre reste « aucune œuvre détectée »)', async () => {
+  it('laisse 12 s à un pattern qui ne trouve rien, puis retombe sur la lecture automatique', async () => {
     await install();
     send({ type: 'set-pattern', pattern: pattern({ manualSelectors: { title: '.absent' } }) });
-    vi.advanceTimersByTime(10);
+
+    vi.advanceTimersByTime(6000);
+    expect(messages.some((m) => m.type === 'detection')).toBe(false);
+
+    vi.advanceTimersByTime(7000);
+    expect(messages.find((m) => m.type === 'detection')).toMatchObject({
+      detection: { title: 'Solo Leveling', chapter: 45, source: 'generic' },
+    });
+  });
+
+  it('ne signale rien tant que ni le pattern ni les heuristiques ne trouvent la page', async () => {
+    loadPage('<head><title>Accueil</title></head><body><p>Liste</p></body>', 'https://manhwa.example/');
+    await install();
+    send({ type: 'set-pattern', pattern: pattern({ manualSelectors: { title: '.absent' } }) });
+    vi.advanceTimersByTime(20_000);
 
     expect(messages.some((m) => m.type === 'detection')).toBe(false);
   });
@@ -124,7 +151,7 @@ describe('script injecté', () => {
 
   it('renvoie le sélecteur et les nombres de l’élément pointé', async () => {
     await install();
-    send({ type: 'start-pick' });
+    send({ type: 'start-pick', label: 'Titre', color: '#0099ff' });
     document.querySelector<HTMLElement>('.chap')!.click();
 
     expect(messages.find((m) => m.type === 'picked')).toMatchObject({
@@ -134,7 +161,7 @@ describe('script injecté', () => {
 
   it('ne pointe plus rien après une annulation', async () => {
     await install();
-    send({ type: 'start-pick' });
+    send({ type: 'start-pick', label: 'Titre', color: '#0099ff' });
     send({ type: 'stop-pick' });
     document.querySelector<HTMLElement>('.chap')!.click();
 

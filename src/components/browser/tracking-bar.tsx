@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -9,8 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import type { LearnedPattern } from '@/detection/core/types';
 import type { PageDetection } from '@/detection/messages';
-import type { ISearchMedia } from '@/lib/api';
-import { titleOf } from '@/lib/sync';
+import type { ICandidate } from '@/lib/sync';
 import type { INotice, TrackingState } from '@/lib/use-tracking';
 
 interface ITrackingBarProps {
@@ -19,7 +18,7 @@ interface ITrackingBarProps {
   host: string;
   pattern: LearnedPattern | null;
   onMarkRead: () => void;
-  onChoose: (media: ISearchMedia) => void;
+  onChoose: (candidate: ICandidate) => void;
   onChange: () => void;
   onSearch: () => void;
   onConfigure: () => void;
@@ -48,13 +47,59 @@ function matchedHelp(tracking: Extract<TrackingState, { kind: 'matched' }>, patt
 
 const NOTICE_COLOR = { success: Colors.success, error: Colors.destructive, info: Colors.textSecondary } as const;
 
+type BarMode = 'panel' | 'pill' | 'icon';
+
+const PILL_DELAY_MS = 5_000;
+const PILL_NOTICE_DELAY_MS = 7_000;
+
+/** Texte court de la pastille : l'essentiel de l'état, sans ouvrir le panneau. */
+function pillText(tracking: TrackingState): string {
+  switch (tracking.kind) {
+    case 'idle':
+      return 'Aucune œuvre détectée';
+    case 'resolving':
+      return 'Recherche…';
+    case 'confirm':
+      return 'Quelle œuvre ?';
+    case 'ignored':
+      return 'Suivi désactivé';
+    case 'matched': {
+      const number = numberLabel(tracking.detection);
+      return number ? `${tracking.match.title} · ${number}` : tracking.match.title;
+    }
+  }
+}
+
 /**
- * Barre de suivi Actunime, toujours visible sous la page : c'est l'équivalent mobile du popup de l'extension.
- * Elle dit ce qui a été reconnu et propose la prochaine action à chaque état, y compris « rien détecté ».
+ * Barre de suivi Actunime, équivalent mobile du popup de l'extension. Elle flotte par-dessus la page (elle ne la
+ * redimensionne jamais) et reste discrète pendant la lecture :
+ * - `panel` : le détail et les actions, ouvert d'office quand il faut choisir l'œuvre ;
+ * - `pill` : une pastille translucide d'une ligne, pour une œuvre reconnue ;
+ * - `icon` : le seul logo Actunime, où la pastille se range seule au bout de quelques secondes.
  */
 export function TrackingBar(props: ITrackingBarProps) {
   const { tracking, notice, host, pattern } = props;
-  const [collapsed, setCollapsed] = useState(false);
+  const [mode, setMode] = useState<BarMode>('pill');
+
+  const number = 'detection' in tracking ? numberLabel(tracking.detection) : null;
+  const stateKey = `${tracking.kind}|${'detection' in tracking ? `${tracking.detection.title}|${number}` : ''}`;
+
+  // Mode par défaut selon l'état : on n'ouvre le panneau que quand l'utilisateur doit décider.
+  useEffect(() => {
+    if (tracking.kind === 'resolving') return;
+    setMode(tracking.kind === 'confirm' ? 'panel' : tracking.kind === 'ignored' ? 'icon' : 'pill');
+  }, [stateKey]); // eslint-disable-line react-hooks/exhaustive-deps -- seul un changement d'état réinitialise le mode
+
+  // Un retour (ajout réussi, erreur) rouvre la pastille pour qu'on le voie.
+  useEffect(() => {
+    if (notice) setMode((current) => (current === 'icon' ? 'pill' : current));
+  }, [notice]);
+
+  useEffect(() => {
+    if (mode !== 'pill') return;
+    const timer = setTimeout(() => setMode('icon'), notice ? PILL_NOTICE_DELAY_MS : PILL_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [mode, notice, stateKey]);
 
   const title =
     tracking.kind === 'idle'
@@ -67,117 +112,221 @@ export function TrackingBar(props: ITrackingBarProps) {
             ? tracking.match.title
             : 'Suivi désactivé';
 
-  return (
-    <ThemedView type="backgroundElement" style={styles.bar}>
-      <Pressable accessibilityRole="button" onPress={() => setCollapsed((value) => !value)} style={styles.header}>
-        <Image source={require('../../../assets/images/logo.png')} style={styles.logo} contentFit="contain" />
-        <View style={styles.headerText}>
-          <ThemedText type="smallBold" numberOfLines={1}>
-            {title}
+  const inList =
+    tracking.kind === 'matched' &&
+    tracking.progress !== undefined &&
+    (tracking.detection.kind === 'manga' ? tracking.detection.chapter : tracking.detection.episode) !== undefined &&
+    tracking.progress >=
+      ((tracking.detection.kind === 'manga' ? tracking.detection.chapter : tracking.detection.episode) ?? 0);
+
+  if (mode === 'icon') {
+    return (
+      <View pointerEvents="box-none" style={styles.overlay}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Ouvrir le suivi Actunime"
+          onPress={() => setMode('pill')}
+          style={styles.iconButton}
+        >
+          <Image source={require('../../../assets/images/logo.png')} style={styles.iconLogo} contentFit="contain" />
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (mode === 'pill') {
+    return (
+      <View pointerEvents="box-none" style={styles.overlay}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Ouvrir le détail du suivi Actunime"
+          onPress={() => setMode('panel')}
+          style={styles.pill}
+        >
+          <Image source={require('../../../assets/images/logo.png')} style={styles.pillLogo} contentFit="contain" />
+          {tracking.kind === 'resolving' && <ActivityIndicator size="small" color={Colors.primary} />}
+          <ThemedText
+            type="smallBold"
+            numberOfLines={1}
+            style={[styles.pillText, notice && { color: NOTICE_COLOR[notice.tone] }]}
+          >
+            {notice ? notice.text : pillText(tracking)}
           </ThemedText>
-          {'detection' in tracking && numberLabel(tracking.detection) && (
-            <ThemedText type="small" themeColor="textSecondary">
-              {numberLabel(tracking.detection)}
+          {!notice && inList && <Ionicons name="checkmark-circle" size={18} color={Colors.success} />}
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <View pointerEvents="box-none" style={styles.overlay}>
+      <ThemedView type="backgroundElement" style={styles.bar}>
+        <Pressable accessibilityRole="button" onPress={() => setMode('pill')} style={styles.header}>
+          <Image source={require('../../../assets/images/logo.png')} style={styles.logo} contentFit="contain" />
+          <View style={styles.headerText}>
+            <ThemedText type="smallBold" numberOfLines={1}>
+              {title}
             </ThemedText>
-          )}
-        </View>
-        {tracking.kind === 'resolving' && <ActivityIndicator color={Colors.primary} />}
-        <Ionicons name={collapsed ? 'chevron-up' : 'chevron-down'} size={20} color={Colors.textSecondary} />
-      </Pressable>
-
-      {notice && (
-        <ThemedText type="small" style={{ color: NOTICE_COLOR[notice.tone] }}>
-          {notice.text}
-        </ThemedText>
-      )}
-
-      {!collapsed && (
-        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled">
-          {tracking.kind === 'idle' && (
-            <>
+            {number && (
               <ThemedText type="small" themeColor="textSecondary">
-                Ouvre une page de chapitre ou d’épisode. Si Actunime ne la reconnaît pas toute seule, configure ce site
-                : tu lui montres une fois où se trouvent le titre et le numéro.
+                {number}
               </ThemedText>
-              <Button label={pattern ? 'Reconfigurer ce site' : 'Configurer ce site'} onPress={props.onConfigure} />
-              <Button label="Chercher une œuvre à la main" variant="outline" onPress={props.onSearch} />
-              <Pressable onPress={props.onIgnore}>
-                <ThemedText type="link" themeColor="textSecondary">
-                  Ne pas suivre {host || 'ce site'}
+            )}
+          </View>
+          {tracking.kind === 'resolving' && <ActivityIndicator color={Colors.primary} />}
+          <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
+        </Pressable>
+
+        {notice && (
+          <ThemedText type="small" style={{ color: NOTICE_COLOR[notice.tone] }}>
+            {notice.text}
+          </ThemedText>
+        )}
+
+        {
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {tracking.kind === 'idle' && (
+              <>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Ouvre une page de chapitre ou d’épisode. Si Actunime ne la reconnaît pas toute seule, configure ce
+                  site : tu lui montres une fois où se trouvent le titre et le numéro.
                 </ThemedText>
-              </Pressable>
-            </>
-          )}
-
-          {tracking.kind === 'confirm' && (
-            <>
-              <ThemedText type="small" themeColor="textSecondary">
-                Page détectée : « {tracking.detection.title} ». Choisis l’œuvre correspondante pour que le suivi
-                s’active.
-              </ThemedText>
-              {tracking.candidates.map((media) => (
-                <Pressable key={media.id ?? media._id} onPress={() => props.onChoose(media)} style={styles.candidate}>
-                  <Image
-                    source={media.posterUrl ? { uri: media.posterUrl } : undefined}
-                    style={styles.poster}
-                    contentFit="cover"
-                  />
-                  <ThemedText type="smallBold" style={styles.candidateTitle} numberOfLines={2}>
-                    {titleOf(media)}
-                  </ThemedText>
-                </Pressable>
-              ))}
-              <Button label="Aucune de ces œuvres : chercher" variant="outline" onPress={props.onSearch} />
-              <View style={styles.links}>
-                <Pressable onPress={props.onConfigure}>
-                  <ThemedText type="link">Le titre est faux : configurer ce site</ThemedText>
-                </Pressable>
-              </View>
-            </>
-          )}
-
-          {tracking.kind === 'matched' && (
-            <>
-              <ThemedText type="small" themeColor="textSecondary">
-                {matchedHelp(tracking, pattern)}
-              </ThemedText>
-              {numberLabel(tracking.detection) && <Button label="Marquer comme lu" onPress={props.onMarkRead} />}
-              <View style={styles.links}>
-                <Pressable onPress={props.onChange}>
-                  <ThemedText type="link">Ce n’est pas la bonne œuvre</ThemedText>
-                </Pressable>
-                <Pressable onPress={props.onConfigure}>
-                  <ThemedText type="link">Configurer ce site</ThemedText>
-                </Pressable>
+                <Button label={pattern ? 'Reconfigurer ce site' : 'Configurer ce site'} onPress={props.onConfigure} />
+                <Button label="Chercher une œuvre à la main" variant="outline" onPress={props.onSearch} />
                 <Pressable onPress={props.onIgnore}>
                   <ThemedText type="link" themeColor="textSecondary">
-                    Ne pas suivre ce site
+                    Ne pas suivre {host || 'ce site'}
                   </ThemedText>
                 </Pressable>
-              </View>
-            </>
-          )}
+              </>
+            )}
 
-          {tracking.kind === 'ignored' && (
-            <>
-              <ThemedText type="small" themeColor="textSecondary">
-                Actunime ne suit pas {host || 'ce site'}.
-              </ThemedText>
-              <Button label="Réactiver le suivi" variant="outline" onPress={props.onUnignore} />
-            </>
-          )}
-        </ScrollView>
-      )}
-    </ThemedView>
+            {tracking.kind === 'confirm' && (
+              <>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Page détectée : « {tracking.detection.title} ». Choisis l’œuvre correspondante pour que le suivi
+                  s’active.
+                </ThemedText>
+                {tracking.candidates.map((candidate) => (
+                  <Pressable key={candidate.key} onPress={() => props.onChoose(candidate)} style={styles.candidate}>
+                    <Image
+                      source={candidate.posterUrl ? { uri: candidate.posterUrl } : undefined}
+                      style={styles.poster}
+                      contentFit="cover"
+                    />
+                    <View style={styles.candidateText}>
+                      <ThemedText type="smallBold" numberOfLines={2}>
+                        {candidate.title}
+                      </ThemedText>
+                      {candidate.origin !== 'media' && (
+                        <ThemedText type="small" themeColor="warning">
+                          En attente de validation
+                        </ThemedText>
+                      )}
+                    </View>
+                  </Pressable>
+                ))}
+                <Button label="Aucune de ces œuvres : chercher" variant="outline" onPress={props.onSearch} />
+                <View style={styles.links}>
+                  <Pressable onPress={props.onConfigure}>
+                    <ThemedText type="link">Le titre est faux : configurer ce site</ThemedText>
+                  </Pressable>
+                </View>
+              </>
+            )}
+
+            {tracking.kind === 'matched' && (
+              <>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {matchedHelp(tracking, pattern)}
+                </ThemedText>
+                {numberLabel(tracking.detection) && <Button label="Marquer comme lu" onPress={props.onMarkRead} />}
+                <View style={styles.links}>
+                  <Pressable onPress={props.onChange}>
+                    <ThemedText type="link">Ce n’est pas la bonne œuvre</ThemedText>
+                  </Pressable>
+                  <Pressable onPress={props.onConfigure}>
+                    <ThemedText type="link">Configurer ce site</ThemedText>
+                  </Pressable>
+                  <Pressable onPress={props.onIgnore}>
+                    <ThemedText type="link" themeColor="textSecondary">
+                      Ne pas suivre ce site
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              </>
+            )}
+
+            {tracking.kind === 'ignored' && (
+              <>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Actunime ne suit pas {host || 'ce site'}.
+                </ThemedText>
+                <Button label="Réactiver le suivi" variant="outline" onPress={props.onUnignore} />
+              </>
+            )}
+          </ScrollView>
+        }
+      </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: { padding: Spacing.three, gap: Spacing.two, borderTopWidth: 1, borderTopColor: Colors.border, maxHeight: '45%' },
+  // Par-dessus la page : le lecteur garde toute la hauteur et ne se redimensionne jamais.
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: Spacing.three,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+  },
+  bar: {
+    alignSelf: 'stretch',
+    padding: Spacing.three,
+    gap: Spacing.two,
+    borderRadius: Radius.large,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    maxHeight: '60%',
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    maxWidth: '85%',
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: 'rgba(3, 10, 29, 0.78)',
+  },
+  pillLogo: { width: 20, height: 21 },
+  pillText: { flexShrink: 1 },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(3, 10, 29, 0.55)',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    opacity: 0.8,
+  },
+  iconLogo: { width: 22, height: 23 },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   logo: { width: 22, height: 23 },
   headerText: { flex: 1 },
-  body: { flexGrow: 0 },
+  body: { flexGrow: 0, flexShrink: 1 },
   bodyContent: { gap: Spacing.two },
   candidate: {
     flexDirection: 'row',
@@ -189,6 +338,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   poster: { width: 40, height: 56, borderRadius: Radius.small, backgroundColor: Colors.backgroundSelected },
-  candidateTitle: { flex: 1 },
+  candidateText: { flex: 1, gap: Spacing.half },
   links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.four, rowGap: Spacing.one },
 });

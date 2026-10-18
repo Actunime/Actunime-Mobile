@@ -1,16 +1,17 @@
-import { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
+import { FieldChip, PageIllustration, Stepper, fieldStyle, type PickField } from '@/components/browser/wizard-parts';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { deriveEpisodeUrlRegex } from '@/detection/core/strategies';
 import type { LearnedPattern, MangaTrackingMode, StrategyResult } from '@/detection/core/types';
 import type { PickedElement } from '@/detection/messages';
 
-type Step = 'kind' | 'strategies' | 'pick-title' | 'pick-number' | 'token' | 'tracking' | 'confirm';
-type PickField = 'title' | 'number';
+type Step = 'kind' | 'strategies' | 'title' | 'title-ok' | 'number' | 'token' | 'number-ok' | 'tracking' | 'confirm';
 
 interface IConfigWizardProps {
   visible: boolean;
@@ -22,30 +23,46 @@ interface IConfigWizardProps {
   /** Dernier élément pointé ; `seq` change à chaque choix, même sur le même élément. */
   picked: { seq: number; element: PickedElement } | null;
   onRunStrategies: () => void;
-  onStartPick: () => void;
+  onStartPick: (field: PickField) => void;
   onStopPick: () => void;
   onClose: () => void;
   onSave: (pattern: LearnedPattern) => Promise<void>;
 }
 
-const TRACKING_CHOICES: { mode: MangaTrackingMode; label: string; hint: string }[] = [
+const TRACKING_CHOICES: {
+  mode: MangaTrackingMode;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  hint: string;
+}[] = [
   {
     mode: 'scroll',
-    label: 'Automatique : fin du chapitre',
-    hint: 'Le chapitre est ajouté quand tu arrives presque en bas de la page.',
+    icon: 'flash',
+    label: 'Automatique',
+    hint: 'Le chapitre est ajouté dès que tu arrives presque en bas.',
   },
-  { mode: 'manual', label: 'Manuel', hint: 'Tu touches « Marquer comme lu » toi-même, rien n’est ajouté tout seul.' },
+  { mode: 'manual', icon: 'hand-left', label: 'À la main', hint: 'Tu touches « Marquer comme lu » quand tu as fini.' },
 ];
 
+/** Le meilleur résultat automatique : celui qui trouve à la fois un titre et un numéro, du plus fiable au moins fiable. */
+function bestStrategy(results: StrategyResult[]): StrategyResult | null {
+  const usable = results.filter((result) => result.title);
+  const complete = usable.filter((result) => result.episode !== undefined);
+  const pool = complete.length > 0 ? complete : usable;
+  return pool.slice().sort((a, b) => b.confidence - a.confidence)[0] ?? null;
+}
+
 /**
- * Assistant « Configurer ce site » (équivalent mobile de E17) : on essaie d'abord les stratégies automatiques,
- * et si aucune ne convient l'utilisateur pointe lui-même le titre puis le numéro sur la page.
+ * Assistant « Configurer ce site » (équivalent mobile de E17). On essaie d'abord la lecture automatique ; si elle
+ * ne convient pas, l'utilisateur montre lui-même le titre puis le numéro sur la page. Chaque étape tient en une
+ * phrase, avec un schéma et une couleur par champ (la même couleur surligne l'élément sur la page).
  */
 export function ConfigWizard(props: IConfigWizardProps) {
   const { visible, host, url, inferredKind, strategies, picked } = props;
   const [step, setStep] = useState<Step>('kind');
   const [kind, setKind] = useState(inferredKind);
   const [selected, setSelected] = useState<StrategyResult | null>(null);
+  const [manual, setManual] = useState(false);
   const [title, setTitle] = useState<PickedElement | null>(null);
   const [number, setNumber] = useState<{ element: PickedElement; tokenIndex: number } | null>(null);
   const [numberCandidate, setNumberCandidate] = useState<PickedElement | null>(null);
@@ -60,6 +77,7 @@ export function ConfigWizard(props: IConfigWizardProps) {
     setStep('kind');
     setKind(inferredKind);
     setSelected(null);
+    setManual(false);
     setTitle(null);
     setNumber(null);
     setNumberCandidate(null);
@@ -69,45 +87,84 @@ export function ConfigWizard(props: IConfigWizardProps) {
     setLastSeq(picked?.seq ?? 0);
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps -- remise à zéro à l'ouverture seulement
 
+  // Les résultats automatiques arrivent : on présélectionne le plus probable.
+  useEffect(() => {
+    if (step === 'strategies' && strategies && !selected) setSelected(bestStrategy(strategies));
+  }, [strategies]); // eslint-disable-line react-hooks/exhaustive-deps -- présélection à l'arrivée des résultats
+
   // Un nouvel élément pointé alimente le champ en cours de choix.
   useEffect(() => {
     if (!picked || picked.seq === lastSeq || !picking) return;
     setLastSeq(picked.seq);
     const field = picking;
     setPicking(null);
+    setError(null);
     if (field === 'title') {
       setTitle(picked.element);
-      setError(null);
-      setStep('pick-number');
+      setStep('title-ok');
       return;
     }
-    if (picked.element.tokens.length === 0) {
-      setError('Cet élément ne contient aucun nombre. Touche celui qui affiche le numéro du chapitre ou de l’épisode.');
+    const { tokens } = picked.element;
+    if (tokens.length === 0) {
+      setError('Il n’y a aucun chiffre dans cet élément. Touche celui qui affiche le numéro.');
       return;
     }
-    setError(null);
-    if (picked.element.tokens.length === 1) {
+    if (tokens.length === 1) {
       setNumber({ element: picked.element, tokenIndex: 0 });
-      setStep(kind === 'manga' ? 'tracking' : 'confirm');
+      setStep('number-ok');
     } else {
       setNumberCandidate(picked.element);
       setStep('token');
     }
   }, [picked]); // eslint-disable-line react-hooks/exhaustive-deps -- réagit au seul nouvel élément pointé
 
+  const numberField = fieldStyle('number', kind);
   const unit = kind === 'manga' ? 'chapitre' : 'épisode';
-  const manual = !selected;
+  const hasTracking = kind === 'manga';
 
-  const startPick = (field: PickField) => {
+  // Étapes affichées en haut : la lecture automatique tient en une étape, le pointage manuel en deux.
+  const labels = useMemo(() => {
+    const reading = manual ? ['Titre', kind === 'manga' ? 'Chapitre' : 'Épisode'] : ['Lecture'];
+    return ['Type', ...reading, ...(hasTracking ? ['Suivi'] : [])];
+  }, [manual, kind, hasTracking]);
+
+  const current = (() => {
+    switch (step) {
+      case 'kind':
+        return 0;
+      case 'strategies':
+      case 'title':
+      case 'title-ok':
+        return 1;
+      case 'number':
+      case 'token':
+      case 'number-ok':
+        return 2;
+      case 'tracking':
+        return labels.length - 1;
+      default:
+        return labels.length;
+    }
+  })();
+
+  const pick = (field: PickField) => {
     setError(null);
     setPicking(field);
-    props.onStartPick();
+    props.onStartPick(field);
   };
 
   const cancelPick = () => {
     setPicking(null);
     props.onStopPick();
   };
+
+  const afterReading = () => setStep(hasTracking ? 'tracking' : 'confirm');
+
+  const numberValue = (() => {
+    if (!number) return undefined;
+    const tokens = number.element.text.match(/\d{1,4}/g) ?? [];
+    return tokens[number.tokenIndex] ?? undefined;
+  })();
 
   const save = async () => {
     setSaving(true);
@@ -122,13 +179,13 @@ export function ConfigWizard(props: IConfigWizardProps) {
       const pattern: LearnedPattern = {
         host,
         kind,
-        strategy: selected?.id ?? 'manual',
+        strategy: manual ? 'manual' : (selected?.id ?? 'manual'),
         manualSelectors:
-          !selected && title && number
+          manual && title && number
             ? { title: title.selector, episode: { selector: number.element.selector, tokenIndex: number.tokenIndex } }
             : undefined,
         episodeUrlRegex: pathname ? deriveEpisodeUrlRegex(pathname) : undefined,
-        mangaTracking: kind === 'manga' ? { mode, threshold: 0.9 } : undefined,
+        mangaTracking: hasTracking ? { mode, threshold: 0.9 } : undefined,
         createdAt: now,
         updatedAt: now,
       };
@@ -141,7 +198,8 @@ export function ConfigWizard(props: IConfigWizardProps) {
     }
   };
 
-  const next = () => setStep(kind === 'manga' ? 'tracking' : 'confirm');
+  const picked1 = fieldStyle('title', kind);
+  const pickBanner = picking ? fieldStyle(picking, kind) : null;
 
   return (
     <>
@@ -150,30 +208,36 @@ export function ConfigWizard(props: IConfigWizardProps) {
           <SafeAreaView style={styles.sheet} edges={['bottom']}>
             <View style={styles.header}>
               <ThemedText type="subtitle">Configurer {host}</ThemedText>
-              <Pressable onPress={props.onClose}>
+              <Pressable onPress={props.onClose} accessibilityRole="button">
                 <ThemedText type="link">Fermer</ThemedText>
               </Pressable>
             </View>
 
+            <Stepper labels={labels} current={current} />
+
             <ScrollView contentContainerStyle={styles.content}>
               {step === 'kind' && (
                 <>
-                  <ThemedText themeColor="textSecondary" type="small">
-                    Ouvre d’abord une page de chapitre ou d’épisode de ce site, puis continue : l’assistant regarde ce
-                    que la page contient et te montre ce qu’il comprend.
-                  </ThemedText>
-                  <ThemedText type="smallBold">Que lis-tu ou regardes-tu ici ?</ThemedText>
+                  <ThemedText type="subtitle">Tu lis quoi sur ce site ?</ThemedText>
                   <View style={styles.row}>
                     {(['manga', 'anime'] as const).map((value) => (
                       <Pressable
                         key={value}
                         onPress={() => setKind(value)}
-                        style={[styles.choice, styles.flex, kind === value && styles.choiceActive]}
+                        style={[styles.bigChoice, styles.flex, kind === value && styles.choiceActive]}
                       >
+                        <Ionicons
+                          name={value === 'manga' ? 'book' : 'play-circle'}
+                          size={30}
+                          color={kind === value ? Colors.primary : Colors.textSecondary}
+                        />
                         <ThemedText type="smallBold">{value === 'manga' ? 'Manga / manhwa' : 'Anime'}</ThemedText>
                       </Pressable>
                     ))}
                   </View>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Reste sur une page d’un {unit} de ce site : l’assistant va la lire.
+                  </ThemedText>
                   <Button
                     label="Continuer"
                     onPress={() => {
@@ -186,75 +250,99 @@ export function ConfigWizard(props: IConfigWizardProps) {
 
               {step === 'strategies' && (
                 <>
-                  <ThemedText themeColor="textSecondary" type="small">
-                    Voici ce que la page permet de lire automatiquement. Choisis la ligne qui affiche le bon titre et le
-                    bon {unit}.
+                  <ThemedText type="subtitle">C’est bien ça ?</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Voici ce qu’Actunime lit sur cette page.
                   </ThemedText>
                   {strategies === null && <ActivityIndicator color={Colors.primary} />}
                   {strategies
                     ?.filter((result) => result.title)
-                    .map((result) => {
-                      const found = result.episode;
-                      return (
-                        <Pressable
-                          key={result.id}
-                          onPress={() => setSelected(result)}
-                          style={[styles.choice, selected?.id === result.id && styles.choiceActive]}
-                        >
-                          <ThemedText type="smallBold">{result.label}</ThemedText>
-                          <ThemedText type="small">
-                            {result.title}
-                            {found !== undefined ? ` · ${unit} ${found}` : ` · ${unit} non trouvé`}
-                          </ThemedText>
-                          <ThemedText type="small" themeColor="textSecondary">
-                            {result.description}
-                          </ThemedText>
-                        </Pressable>
-                      );
-                    })}
+                    .map((result) => (
+                      <Pressable
+                        key={result.id}
+                        onPress={() => setSelected(result)}
+                        style={[styles.card, selected?.id === result.id && styles.choiceActive]}
+                      >
+                        <FieldChip field="title" kind={kind} value={result.title} />
+                        <FieldChip
+                          field="number"
+                          kind={kind}
+                          value={result.episode !== undefined ? String(result.episode) : 'non trouvé'}
+                        />
+                        {selected?.id === result.id && (
+                          <Ionicons name="checkmark-circle" size={24} color={Colors.primary} style={styles.cardCheck} />
+                        )}
+                      </Pressable>
+                    ))}
                   {strategies && strategies.every((result) => !result.title) && (
                     <ThemedText type="small" themeColor="destructive">
-                      Rien n’a pu être lu automatiquement sur cette page. Es-tu bien sur une page de chapitre ou
-                      d’épisode ?
+                      Rien n’a pu être lu tout seul. Es-tu bien sur la page d’un {unit} ?
                     </ThemedText>
                   )}
-                  <Button label="Utiliser cette ligne" onPress={next} disabled={!selected} />
+                  {selected && selected.episode === undefined && (
+                    <ThemedText type="small" themeColor="warning">
+                      Le {unit} n’a pas été trouvé : ça ne suffit pas pour suivre ta lecture. Montre-le moi.
+                    </ThemedText>
+                  )}
                   <Button
-                    label="Aucune ne convient : pointer moi-même"
+                    label="Oui, c’est ça"
+                    disabled={!selected || selected.episode === undefined}
+                    onPress={() => {
+                      setManual(false);
+                      afterReading();
+                    }}
+                  />
+                  <Button
+                    label="Non, je vais te le montrer"
                     variant="outline"
-                    onPress={() => setStep('pick-title')}
+                    onPress={() => {
+                      setManual(true);
+                      setSelected(null);
+                      setStep('title');
+                    }}
                   />
                 </>
               )}
 
-              {step === 'pick-title' && (
+              {step === 'title' && (
                 <>
-                  <ThemedText themeColor="textSecondary" type="small">
-                    Étape 1 sur 2. La page va s’afficher : touche le titre de l’œuvre (pas le titre du chapitre). Il se
-                    surligne en bleu quand ton doigt est dessus.
+                  <ThemedText type="subtitle">Montre-moi le titre</ThemedText>
+                  <PageIllustration field="title" kind={kind} />
+                  <ThemedText type="small" themeColor="textSecondary">
+                    La page va s’afficher. Touche {picked1.sentence} (par exemple « {picked1.example} »).
                   </ThemedText>
-                  <Button label="Pointer le titre sur la page" onPress={() => startPick('title')} />
+                  <Button label="Je touche le titre" onPress={() => pick('title')} />
                 </>
               )}
 
-              {step === 'pick-number' && (
+              {step === 'title-ok' && title && (
                 <>
+                  <ThemedText type="subtitle">Titre choisi</ThemedText>
+                  <View style={styles.card}>
+                    <FieldChip field="title" kind={kind} value={title.text} />
+                  </View>
+                  <Button label="C’est bon, continuer" onPress={() => setStep('number')} />
+                  <Button label="Ce n’est pas ça, recommencer" variant="outline" onPress={() => pick('title')} />
+                </>
+              )}
+
+              {step === 'number' && (
+                <>
+                  <ThemedText type="subtitle">Montre-moi le {unit}</ThemedText>
+                  <PageIllustration field="number" kind={kind} />
                   <ThemedText type="small" themeColor="textSecondary">
-                    Titre retenu : « {title?.text} »
+                    Touche {numberField.sentence} (par exemple « {numberField.example} »).
                   </ThemedText>
-                  <ThemedText themeColor="textSecondary" type="small">
-                    Étape 2 sur 2. Touche maintenant le texte qui affiche le numéro du {unit}.
-                  </ThemedText>
-                  <Button label={`Pointer le numéro du ${unit}`} onPress={() => startPick('number')} />
-                  <Button label="Changer le titre" variant="outline" onPress={() => setStep('pick-title')} />
+                  <Button label={`Je touche le ${unit}`} onPress={() => pick('number')} />
+                  <Button label="Changer le titre" variant="outline" onPress={() => setStep('title')} />
                 </>
               )}
 
               {step === 'token' && numberCandidate && (
                 <>
-                  <ThemedText themeColor="textSecondary" type="small">
-                    Cet élément contient plusieurs nombres : « {numberCandidate.text} ». Touche celui qui est le numéro
-                    du {unit}.
+                  <ThemedText type="subtitle">Quel nombre est le {unit} ?</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Il y a plusieurs nombres dans « {numberCandidate.text} ». Touche le bon.
                   </ThemedText>
                   <View style={styles.row}>
                     {numberCandidate.tokens.map((token, index) => (
@@ -262,32 +350,51 @@ export function ConfigWizard(props: IConfigWizardProps) {
                         key={`${token}-${index}`}
                         onPress={() => {
                           setNumber({ element: numberCandidate, tokenIndex: index });
-                          setStep(kind === 'manga' ? 'tracking' : 'confirm');
+                          setStep('number-ok');
                         }}
-                        style={styles.choice}
+                        style={[styles.token, { borderColor: numberField.color }]}
                       >
-                        <ThemedText type="smallBold">{token}</ThemedText>
+                        <ThemedText type="title">{token}</ThemedText>
                       </Pressable>
                     ))}
                   </View>
+                  <Button label="Recommencer" variant="outline" onPress={() => pick('number')} />
+                </>
+              )}
+
+              {step === 'number-ok' && number && (
+                <>
+                  <ThemedText type="subtitle">{kind === 'manga' ? 'Chapitre' : 'Épisode'} choisi</ThemedText>
+                  <View style={styles.card}>
+                    <FieldChip field="number" kind={kind} value={numberValue ?? number.element.text} />
+                  </View>
+                  <Button label="C’est bon, continuer" onPress={afterReading} />
+                  <Button label="Ce n’est pas ça, recommencer" variant="outline" onPress={() => pick('number')} />
                 </>
               )}
 
               {step === 'tracking' && (
                 <>
-                  <ThemedText themeColor="textSecondary" type="small">
-                    Comment Actunime doit-il savoir que tu as fini un chapitre ?
-                  </ThemedText>
+                  <ThemedText type="subtitle">Quand ajouter le chapitre ?</ThemedText>
                   {TRACKING_CHOICES.map((choice) => (
                     <Pressable
                       key={choice.mode}
                       onPress={() => setMode(choice.mode)}
-                      style={[styles.choice, mode === choice.mode && styles.choiceActive]}
+                      style={[styles.card, mode === choice.mode && styles.choiceActive]}
                     >
-                      <ThemedText type="smallBold">{choice.label}</ThemedText>
-                      <ThemedText type="small" themeColor="textSecondary">
-                        {choice.hint}
-                      </ThemedText>
+                      <View style={styles.row}>
+                        <Ionicons
+                          name={choice.icon}
+                          size={26}
+                          color={mode === choice.mode ? Colors.primary : Colors.textSecondary}
+                        />
+                        <View style={styles.flex}>
+                          <ThemedText type="smallBold">{choice.label}</ThemedText>
+                          <ThemedText type="small" themeColor="textSecondary">
+                            {choice.hint}
+                          </ThemedText>
+                        </View>
+                      </View>
                     </Pressable>
                   ))}
                   <Button label="Continuer" onPress={() => setStep('confirm')} />
@@ -296,20 +403,24 @@ export function ConfigWizard(props: IConfigWizardProps) {
 
               {step === 'confirm' && (
                 <>
-                  <ThemedText type="smallBold">Récapitulatif</ThemedText>
-                  <ThemedText type="small">Site : {host}</ThemedText>
-                  <ThemedText type="small">Type : {kind === 'manga' ? 'manga / manhwa' : 'anime'}</ThemedText>
-                  <ThemedText type="small">
-                    Lecture :{' '}
-                    {manual ? `titre « ${title?.text} », numéro lu dans « ${number?.element.text} »` : selected?.label}
-                  </ThemedText>
-                  {kind === 'manga' && (
-                    <ThemedText type="small">
-                      Suivi : {TRACKING_CHOICES.find((choice) => choice.mode === mode)?.label.toLowerCase()}
+                  <ThemedText type="subtitle">Tout est prêt</ThemedText>
+                  <View style={styles.card}>
+                    <FieldChip field="title" kind={kind} value={manual ? title?.text : selected?.title} />
+                    <FieldChip
+                      field="number"
+                      kind={kind}
+                      value={
+                        manual ? numberValue : selected?.episode !== undefined ? String(selected.episode) : undefined
+                      }
+                    />
+                  </View>
+                  {hasTracking && (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Ajout : {mode === 'manual' ? 'à la main' : 'automatique en fin de chapitre'}.
                     </ThemedText>
                   )}
                   <ThemedText type="small" themeColor="textSecondary">
-                    Cette configuration reste sur ton appareil et ne concerne que ce site.
+                    Ce réglage reste sur ton appareil et ne concerne que ce site.
                   </ThemedText>
                   <Button label="Enregistrer pour ce site" onPress={save} disabled={saving} />
                 </>
@@ -325,13 +436,19 @@ export function ConfigWizard(props: IConfigWizardProps) {
         </View>
       </Modal>
 
-      {picking && (
+      {picking && pickBanner && (
         <SafeAreaView style={styles.pickBanner} edges={['bottom']} pointerEvents="box-none">
-          <View style={styles.pickCard}>
+          <View style={[styles.pickCard, { borderColor: pickBanner.color }]}>
+            <View style={[styles.pickTag, { backgroundColor: pickBanner.color }]}>
+              <Ionicons name="hand-left" size={22} color="#ffffff" />
+              <ThemedText type="smallBold" style={styles.pickTagText}>
+                {pickBanner.label}
+              </ThemedText>
+            </View>
             <ThemedText type="smallBold" style={styles.flex}>
-              {picking === 'title' ? 'Touche le titre de l’œuvre' : `Touche le numéro du ${unit}`}
+              Touche {pickBanner.sentence} sur la page
             </ThemedText>
-            <Pressable onPress={cancelPick}>
+            <Pressable onPress={cancelPick} accessibilityRole="button">
               <ThemedText type="link">Annuler</ThemedText>
             </Pressable>
           </View>
@@ -344,7 +461,7 @@ export function ConfigWizard(props: IConfigWizardProps) {
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 6, 22, 0.6)' },
   sheet: {
-    maxHeight: '85%',
+    maxHeight: '90%',
     backgroundColor: Colors.backgroundElement,
     borderTopLeftRadius: Radius.large,
     borderTopRightRadius: Radius.large,
@@ -355,17 +472,36 @@ const styles = StyleSheet.create({
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   content: { gap: Spacing.three, paddingBottom: Spacing.three },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.three },
   flex: { flex: 1 },
-  choice: {
-    gap: Spacing.one,
+  card: {
+    gap: Spacing.two,
     padding: Spacing.three,
     borderRadius: Radius.medium,
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.background,
   },
+  cardCheck: { position: 'absolute', top: Spacing.two, right: Spacing.two },
+  bigChoice: {
+    alignItems: 'center',
+    gap: Spacing.two,
+    padding: Spacing.four,
+    borderRadius: Radius.medium,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
   choiceActive: { borderColor: Colors.primary, backgroundColor: Colors.backgroundSelected },
+  token: {
+    minWidth: 88,
+    alignItems: 'center',
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.medium,
+    borderWidth: 3,
+    backgroundColor: Colors.background,
+  },
   pickBanner: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: Spacing.three },
   pickCard: {
     flexDirection: 'row',
@@ -374,7 +510,15 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderRadius: Radius.medium,
     backgroundColor: Colors.backgroundElement,
-    borderWidth: 1,
-    borderColor: Colors.primary,
+    borderWidth: 3,
   },
+  pickTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.small,
+  },
+  pickTagText: { color: '#ffffff' },
 });

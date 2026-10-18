@@ -35,7 +35,7 @@ export type InPageMessage =
 export type InPageCommand =
   | { type: 'set-pattern'; pattern: LearnedPattern | null }
   | { type: 'run-strategies' }
-  | { type: 'start-pick' }
+  | { type: 'start-pick'; label: string; color: string }
   | { type: 'stop-pick' };
 
 const MESSAGE_TYPES = ['ready', 'detection', 'progress-reached', 'strategies', 'picked', 'pick-cancelled'];
