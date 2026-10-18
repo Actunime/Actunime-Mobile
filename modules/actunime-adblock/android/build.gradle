@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.actunimeadblock'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.actunimeadblock"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+  }
+}
+
+dependencies {
+  // RequestFilter (patch de react-native-webview) et androidx.webkit (script de début de document)
+  compileOnly project(':react-native-webview')
+  implementation "androidx.webkit:webkit:1.12.1"
+
+  testImplementation "junit:junit:4.13.2"
+}

@@ -1,0 +1,3 @@
+# binaires JNI générés par `cargo ndk` (npm run build:rust)
+android/src/main/jniLibs/
+rust/target/

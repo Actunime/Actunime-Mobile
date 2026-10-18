@@ -44,3 +44,7 @@ example
 
 # bundle de détection généré (npm run build:injected)
 src/detection/injected.generated.ts
+
+# sorties de compilation Gradle des modules locaux
+modules/*/android/build/
+modules/*/android/.cxx/

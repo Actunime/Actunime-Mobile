@@ -1,0 +1,98 @@
+diff --git a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebView.java b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebView.java
+index 80c6803..2d26767 100644
+--- a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebView.java
++++ b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebView.java
+@@ -89,6 +89,9 @@ public class RNCWebView extends WebView implements LifecycleEventListener {
+         super(reactContext);
+         mMessagingJSModule = ((ThemedReactContext) this.getContext()).getReactApplicationContext().getJSModule(RNCWebViewMessagingModule.class);
+         progressChangedFilter = new ProgressChangedFilter();
++
++        RequestFilter.Delegate filter = RequestFilter.delegate;
++        if (filter != null) filter.onWebViewCreated(this);
+     }
+ 
+     public void setBasicAuthCredential(RNCBasicAuthCredential credential) {
+diff --git a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebViewClient.java b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebViewClient.java
+index 0287e1c..4153309 100644
+--- a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebViewClient.java
++++ b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebViewClient.java
+@@ -35,6 +35,7 @@ import com.reactnativecommunity.webview.events.TopShouldStartLoadWithRequestEven
+ import android.webkit.CookieManager;
+ import android.webkit.CookieSyncManager;
+ 
++import java.io.ByteArrayInputStream;
+ import java.util.concurrent.atomic.AtomicReference;
+ 
+ public class RNCWebViewClient extends WebViewClient {
+@@ -42,6 +43,8 @@ public class RNCWebViewClient extends WebViewClient {
+     protected static final int SHOULD_OVERRIDE_URL_LOADING_TIMEOUT = 250;
+ 
+     protected boolean mLastLoadFailed = false;
++    // Page affichée, lue par les threads réseau (source des requêtes pour le filtrage).
++    private volatile String mPageUrl = "";
+     protected RNCWebView.ProgressChangedFilter progressChangedFilter = null;
+     protected @Nullable RNCBasicAuthCredential basicAuthCredential = null;
+ 
+@@ -85,11 +88,29 @@ public class RNCWebViewClient extends WebViewClient {
+     public void onPageStarted(WebView webView, String url, Bitmap favicon) {
+       super.onPageStarted(webView, url, favicon);
+       mLastLoadFailed = false;
++      mPageUrl = url;
++
++      RequestFilter.Delegate filter = RequestFilter.delegate;
++      if (filter != null) filter.onPageStarted(webView, url);
+ 
+       RNCWebView reactWebView = (RNCWebView) webView;
+       reactWebView.callInjectedJavaScriptBeforeContentLoaded();
+     }
+ 
++    @Nullable
++    @Override
++    public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
++        RequestFilter.Delegate filter = RequestFilter.delegate;
++        if (filter != null) {
++            String accept = request.getRequestHeaders().get("Accept");
++            String page = request.isForMainFrame() ? request.getUrl().toString() : mPageUrl;
++            if (filter.shouldBlock(request.getUrl().toString(), page, accept, request.isForMainFrame())) {
++                return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0]));
++            }
++        }
++        return super.shouldInterceptRequest(view, request);
++    }
++
+     @Override
+     public boolean shouldOverrideUrlLoading(WebView view, String url) {
+         final RNCWebView rncWebView = (RNCWebView) view;
+diff --git a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RequestFilter.java b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RequestFilter.java
+new file mode 100644
+index 0000000..8d93cd9
+--- /dev/null
++++ b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RequestFilter.java
+@@ -0,0 +1,27 @@
++package com.reactnativecommunity.webview;
++
++import android.webkit.WebView;
++
++import androidx.annotation.Nullable;
++
++/**
++ * Point d'extension ajouté par Actunime (patch-package) : permet à un module externe de bloquer des
++ * sous-ressources (publicités, pisteurs) et de préparer chaque WebView (script de début de document),
++ * ce que react-native-webview n'expose pas.
++ */
++public final class RequestFilter {
++    public interface Delegate {
++        /** Appelé sur les threads réseau de la WebView : doit être rapide et thread-safe. */
++        boolean shouldBlock(String url, String pageUrl, @Nullable String accept, boolean isMainFrame);
++
++        /** Appelé une fois par WebView, à sa création (thread principal). */
++        void onWebViewCreated(WebView view);
++
++        /** Appelé au début de chaque navigation (thread principal). */
++        void onPageStarted(WebView view, String url);
++    }
++
++    @Nullable public static volatile Delegate delegate;
++
++    private RequestFilter() {}
++}
