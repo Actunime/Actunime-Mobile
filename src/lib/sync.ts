@@ -1,9 +1,12 @@
 import type { PageDetection } from '@/detection/messages';
 
-import { api, ApiError, mediaId, type ISearchMedia } from './api';
+import { api, ApiError, mediaId, type IListEntry, type IPendingProposal, type ISearchMedia } from './api';
 import { forgetMatch, getMatches, saveMatch, type IMatch } from './storage';
+import { fuzzyTitleMatch } from './title-match';
 
 export type PushResult = 'created' | 'updated' | 'unchanged';
+
+type Kind = 'anime' | 'manga';
 
 function normalize(value: string): string {
   return value
@@ -16,37 +19,159 @@ function normalize(value: string): string {
 
 export const matchKey = (d: Pick<PageDetection, 'kind' | 'title'>): string => `${d.kind}|${normalize(d.title)}`;
 
-export const titleOf = (m: ISearchMedia): string => m.title?.original ?? m.title?.normal ?? '—';
+/**
+ * Une œuvre que l'utilisateur peut choisir. Trois origines, comme dans l'extension :
+ * - `media` : œuvre validée du catalogue ;
+ * - `pending-entry` : œuvre en attente de validation déjà dans MA liste (`id` = entrée de liste) ;
+ * - `proposal` : proposition d'ajout en attente d'un membre, pas encore dans ma liste (`id` = proposition).
+ */
+export interface ICandidate {
+  key: string;
+  origin: 'media' | 'pending-entry' | 'proposal';
+  id: string;
+  title: string;
+  posterUrl?: string | null;
+  /** Titres alternatifs, pour reconnaître l'œuvre sous un autre nom. */
+  aliases: string[];
+}
 
-function isExactMatch(media: ISearchMedia, title: string): boolean {
+const mediaTypeOf = (kind: Kind) => (kind === 'manga' ? 'Manga' : 'Anime');
+const entryId = (e: IListEntry) => (e.id ?? e._id) as string;
+
+function fromMedia(media: ISearchMedia): ICandidate {
+  const id = mediaId(media);
+  return {
+    key: `media:${id}`,
+    origin: 'media',
+    id,
+    title: media.title?.original ?? media.title?.normal ?? '—',
+    posterUrl: media.posterUrl ?? null,
+    aliases: [media.title?.normal, ...(media.title?.alias ?? [])].filter((t): t is string => Boolean(t)),
+  };
+}
+
+function fromProposal(proposal: IPendingProposal): ICandidate | null {
+  const id = proposal.id ?? proposal._id;
+  const title = proposal.mainDependency?.title?.original;
+  if (!id || !title) return null;
+  return {
+    key: `proposal:${id}`,
+    origin: 'proposal',
+    id,
+    title,
+    posterUrl: proposal.mainDependency?.poster?.url ?? proposal.mainDependency?.poster?.file ?? null,
+    aliases: proposal.mainDependency?.title?.alias ?? [],
+  };
+}
+
+function fromPendingEntry(entry: IListEntry): ICandidate | null {
+  if (!entry.preview?.title) return null;
+  const id = entryId(entry);
+  return {
+    key: `pending-entry:${id}`,
+    origin: 'pending-entry',
+    id,
+    title: entry.preview.title,
+    posterUrl: entry.preview.coverImage ?? null,
+    aliases: [],
+  };
+}
+
+const matchOf = (candidate: ICandidate): IMatch => ({
+  kind: candidate.origin === 'media' ? 'media' : 'pending',
+  id: candidate.id,
+  title: candidate.title,
+});
+
+const isExactMatch = (candidate: ICandidate, title: string) => {
   const wanted = normalize(title);
-  const titles = [media.title?.original, media.title?.normal, ...(media.title?.alias ?? [])];
-  return titles.some((t) => t && normalize(t) === wanted);
+  return [candidate.title, ...candidate.aliases].some((t) => normalize(t) === wanted);
+};
+
+const notNull = <T>(value: T | null): value is T => value !== null;
+
+/** Mes entrées en attente de validation, du bon type (anime ou manga). */
+async function pendingEntriesFor(kind: Kind): Promise<ICandidate[]> {
+  try {
+    const entries = await api.getPendingListEntries();
+    return entries
+      .filter((entry) => entry.mediaType === mediaTypeOf(kind))
+      .map(fromPendingEntry)
+      .filter(notNull);
+  } catch {
+    return []; // l'API de liste indisponible ne doit pas empêcher de chercher dans le catalogue
+  }
 }
 
 export interface IResolution {
   match: IMatch | null;
-  candidates: ISearchMedia[];
+  candidates: ICandidate[];
 }
 
-/** Retrouve l'œuvre : association déjà confirmée, sinon correspondance exacte de titre, sinon candidats à confirmer. */
+/**
+ * Retrouve l'œuvre : association déjà confirmée, puis mes œuvres en attente de validation (même ordre que
+ * l'extension), puis correspondance exacte dans le catalogue, sinon candidats que l'utilisateur confirme.
+ */
 export async function resolve(detection: PageDetection): Promise<IResolution> {
   const key = matchKey(detection);
   const known = (await getMatches())[key];
   if (known) return { match: known, candidates: [] };
 
-  const candidates = await api.searchByKind(detection.kind, detection.title);
-  const exact = candidates.filter((c) => isExactMatch(c, detection.title));
+  const ownPending = (await pendingEntriesFor(detection.kind)).find((c) => fuzzyTitleMatch(detection.title, c.title));
+  if (ownPending) {
+    const match = matchOf(ownPending);
+    await saveMatch(key, match);
+    return { match, candidates: [] };
+  }
+
+  const [media, proposals] = await Promise.all([
+    api.searchByKind(detection.kind, detection.title).catch(() => [] as ISearchMedia[]),
+    api.searchPendingProposals(detection.kind, detection.title).catch(() => [] as IPendingProposal[]),
+  ]);
+  const catalogue = media.map(fromMedia);
+  const candidates = [...catalogue, ...proposals.map(fromProposal).filter(notNull)];
+
+  const exact = catalogue.filter((candidate) => isExactMatch(candidate, detection.title));
   if (exact.length === 1) {
-    const match = { mediaId: mediaId(exact[0]), title: titleOf(exact[0]) };
+    const match = matchOf(exact[0]);
     await saveMatch(key, match);
     return { match, candidates: [] };
   }
   return { match: null, candidates };
 }
 
-export async function confirm(detection: PageDetection, media: ISearchMedia): Promise<IMatch> {
-  const match = { mediaId: mediaId(media), title: titleOf(media) };
+/** Recherche manuelle : mes œuvres en attente d'abord, puis le catalogue, puis les propositions des membres. */
+export async function searchCandidates(kind: Kind, query: string): Promise<ICandidate[]> {
+  const [own, media, proposals] = await Promise.all([
+    pendingEntriesFor(kind),
+    api.searchByKind(kind, query, 10).catch(() => [] as ISearchMedia[]),
+    api.searchPendingProposals(kind, query, 5).catch(() => [] as IPendingProposal[]),
+  ]);
+  return [
+    ...own.filter((candidate) => fuzzyTitleMatch(query, candidate.title)),
+    ...media.map(fromMedia),
+    ...proposals.map(fromProposal).filter(notNull),
+  ];
+}
+
+/**
+ * L'utilisateur a choisi une œuvre. Une proposition d'un membre est d'abord ajoutée à ma liste (comme dans
+ * l'extension) : la progression s'écrit ensuite sur cette entrée, qui devient l'œuvre quand elle est validée.
+ */
+export async function confirm(
+  detection: Pick<PageDetection, 'kind' | 'title'>,
+  candidate: ICandidate,
+): Promise<IMatch> {
+  let match = matchOf(candidate);
+  if (candidate.origin === 'proposal') {
+    const entry = await api.createListEntryFromProposal({
+      proposalId: candidate.id,
+      mediaType: mediaTypeOf(detection.kind),
+      status: detection.kind === 'manga' ? 'READING' : 'WATCHING',
+      preview: { title: candidate.title, coverImage: candidate.posterUrl ?? undefined },
+    });
+    match = { kind: 'pending', id: entryId(entry), title: candidate.title };
+  }
   await saveMatch(matchKey(detection), match);
   return match;
 }
@@ -54,34 +179,57 @@ export async function confirm(detection: PageDetection, media: ISearchMedia): Pr
 /** Oublie l'association mémorisée pour cette détection (l'utilisateur dit que ce n'est pas la bonne œuvre). */
 export const forget = (detection: PageDetection): Promise<void> => forgetMatch(matchKey(detection));
 
+const progressField = (kind: Kind) => (kind === 'manga' ? 'chaptersRead' : 'episodesWatched');
+
+/** Entrée de ma liste correspondant à l'association, ou `null` si l'œuvre n'y est pas encore. */
+async function findEntry(match: IMatch): Promise<IListEntry | null> {
+  if (match.kind === 'pending') {
+    const entries = await api.getPendingListEntries();
+    return entries.find((entry) => entryId(entry) === match.id) ?? null;
+  }
+  try {
+    return await api.getListByMedia(match.id);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  }
+}
+
+/** Progression actuelle dans ma liste (indéfinie si l'œuvre n'y est pas), pour la barre de suivi. */
+export async function currentProgress(
+  detection: Pick<PageDetection, 'kind'>,
+  match: IMatch,
+): Promise<number | undefined> {
+  try {
+    const entry = await findEntry(match);
+    return entry ? (entry[progressField(detection.kind)] ?? 0) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Écrit la progression dans la liste, sans jamais la faire reculer (crée l'entrée si elle n'existe pas). */
 export async function pushProgress(detection: PageDetection, match: IMatch): Promise<PushResult> {
   const isManga = detection.kind === 'manga';
   const number = isManga ? detection.chapter : detection.episode;
   if (number === undefined) throw new Error(`Numéro de ${isManga ? 'chapitre' : 'épisode'} non détecté`);
 
-  let entry;
-  try {
-    entry = await api.getListByMedia(match.mediaId);
-  } catch (err) {
-    if (!(err instanceof ApiError) || err.status !== 404) throw err;
-  }
+  const entry = await findEntry(match);
+  const field = progressField(detection.kind);
+  const activeStatus = isManga ? 'READING' : 'WATCHING';
 
   if (!entry) {
+    if (match.kind === 'pending') throw new Error('Cette œuvre en attente n’est plus dans ta liste');
     await api.createListEntry({
-      mediaId: match.mediaId,
-      mediaType: isManga ? 'Manga' : 'Anime',
-      status: isManga ? 'READING' : 'WATCHING',
-      ...(isManga ? { chaptersRead: number } : { episodesWatched: number }),
+      mediaId: match.id,
+      mediaType: mediaTypeOf(detection.kind),
+      status: activeStatus,
+      [field]: number,
     });
     return 'created';
   }
 
-  const current = (isManga ? entry.chaptersRead : entry.episodesWatched) ?? 0;
-  if (number <= current) return 'unchanged';
-  await api.updateListEntry(
-    (entry.id ?? entry._id) as string,
-    isManga ? { chaptersRead: number } : { episodesWatched: number },
-  );
+  if (number <= (entry[field] ?? 0)) return 'unchanged';
+  await api.updateListEntry(entryId(entry), { [field]: number, status: activeStatus });
   return 'updated';
 }

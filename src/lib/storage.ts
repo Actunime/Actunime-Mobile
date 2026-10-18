@@ -29,15 +29,26 @@ export function clearAuth(): Promise<void> {
   return SecureStore.deleteItemAsync(AUTH_KEY);
 }
 
-/** Associations « série détectée → média Actunime » confirmées par l'utilisateur (clé : kind|titre normalisé). */
+/**
+ * Association « série détectée → œuvre Actunime » confirmée par l'utilisateur (clé : kind|titre normalisé).
+ * `media` : œuvre validée (`id` = identifiant de l'œuvre). `pending` : œuvre encore en attente de validation,
+ * suivie par une entrée de ma liste (`id` = identifiant de l'entrée).
+ */
 export interface IMatch {
-  mediaId: string;
+  kind: 'media' | 'pending';
+  id: string;
   title: string;
+}
+
+/** Les associations enregistrées par les premières versions n'avaient que `mediaId` : on les lit comme `media`. */
+function normalizeMatch(raw: Partial<IMatch> & { mediaId?: string }): IMatch {
+  return { kind: raw.kind ?? 'media', id: (raw.id ?? raw.mediaId) as string, title: raw.title ?? '' };
 }
 
 export async function getMatches(): Promise<Record<string, IMatch>> {
   const raw = await AsyncStorage.getItem(MATCHES_KEY);
-  return raw ? (JSON.parse(raw) as Record<string, IMatch>) : {};
+  const stored = raw ? (JSON.parse(raw) as Record<string, Partial<IMatch> & { mediaId?: string }>) : {};
+  return Object.fromEntries(Object.entries(stored).map(([key, value]) => [key, normalizeMatch(value)]));
 }
 
 export async function saveMatch(key: string, match: IMatch): Promise<void> {

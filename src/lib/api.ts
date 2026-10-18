@@ -64,9 +64,22 @@ export interface ISearchMedia {
 export interface IListEntry {
   id?: string;
   _id?: string;
+  mediaType?: 'Anime' | 'Manga';
   status: string;
   episodesWatched?: number;
   chaptersRead?: number;
+  /** Présent quand l'entrée pointe vers une proposition en attente de validation (pas encore d'œuvre). */
+  preview?: { title: string; coverImage?: string } | null;
+}
+
+/** Proposition d'ajout d'une œuvre, tant qu'elle n'est pas validée par la modération. */
+export interface IPendingProposal {
+  id?: string;
+  _id?: string;
+  mainDependency?: {
+    title?: { original?: string; alias?: string[] };
+    poster?: { url?: string; file?: string };
+  };
 }
 
 export const mediaId = (e: { id?: string; _id?: string }): string => (e.id ?? e._id) as string;
@@ -101,7 +114,34 @@ export const api = {
     return request<IListEntry>('/lists/create', { method: 'POST', body });
   },
 
-  updateListEntry(id: string, patch: { episodesWatched?: number; chaptersRead?: number }) {
+  /** Entrées de ma liste dont l'œuvre est encore en attente de validation. */
+  getPendingListEntries() {
+    return request<IListEntry[]>('/lists/pending');
+  },
+
+  /** Propositions d'ajout en attente (celles de tous les membres) dont le titre correspond. */
+  searchPendingProposals(kind: 'anime' | 'manga', search: string, limit = 5) {
+    return request<{ results?: IPendingProposal[]; data?: IPendingProposal[] }>('/proposals/paginate', {
+      method: 'POST',
+      body: {
+        query: { search, status: 'PENDING', mode: 'CREATION', entityType: kind === 'manga' ? 'Manga' : 'Anime' },
+        limit,
+        page: 1,
+      },
+    }).then((res) => res.results ?? res.data ?? []);
+  },
+
+  /** Ajoute à ma liste une œuvre proposée mais pas encore validée. */
+  createListEntryFromProposal(body: {
+    proposalId: string;
+    mediaType: 'Anime' | 'Manga';
+    status: string;
+    preview: { title: string; coverImage?: string };
+  }) {
+    return request<IListEntry>('/lists/from-proposal', { method: 'POST', body });
+  },
+
+  updateListEntry(id: string, patch: { episodesWatched?: number; chaptersRead?: number; status?: string }) {
     return request<IListEntry>(`/lists/${id}`, { method: 'PUT', body: patch });
   },
 };

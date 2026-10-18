@@ -4,15 +4,14 @@ import type { WebView } from 'react-native-webview';
 import { commandScript, type InPageMessage, type PageDetection } from '@/detection/messages';
 import type { LearnedPattern } from '@/detection/core/types';
 
-import { api, type ISearchMedia } from './api';
 import { getPattern, isHostIgnored, removePattern, savePattern, setHostIgnored } from './patterns';
 import type { IMatch } from './storage';
-import { confirm, forget, pushProgress, resolve, type PushResult } from './sync';
+import { confirm, currentProgress, forget, pushProgress, resolve, type ICandidate, type PushResult } from './sync';
 
 export type TrackingState =
   | { kind: 'idle' }
   | { kind: 'resolving'; detection: PageDetection }
-  | { kind: 'confirm'; detection: PageDetection; candidates: ISearchMedia[] }
+  | { kind: 'confirm'; detection: PageDetection; candidates: ICandidate[] }
   | { kind: 'matched'; detection: PageDetection; match: IMatch; progress?: number }
   | { kind: 'ignored' };
 
@@ -52,14 +51,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
     setNotice({ tone: 'error', text: err instanceof Error ? err.message : 'Erreur inattendue' });
   }, []);
 
-  const progressOf = useCallback(async (detection: PageDetection, match: IMatch) => {
-    try {
-      const entry = await api.getListByMedia(match.mediaId);
-      return (detection.kind === 'manga' ? entry.chaptersRead : entry.episodesWatched) ?? 0;
-    } catch {
-      return undefined; // pas encore dans la liste (404) ou serveur indisponible : la barre n'affiche pas de progression
-    }
-  }, []);
+  const progressOf = useCallback((detection: PageDetection, match: IMatch) => currentProgress(detection, match), []);
 
   const push = useCallback(
     async (detection: PageDetection, match: IMatch) => {
@@ -141,9 +133,14 @@ export function useTracking(webview: RefObject<WebView | null>) {
   }, [push, tracking]);
 
   const choose = useCallback(
-    async (media: ISearchMedia) => {
+    async (candidate: ICandidate) => {
       if (tracking.kind !== 'confirm') return;
-      const match = await confirm(tracking.detection, media);
+      let match: IMatch;
+      try {
+        match = await confirm(tracking.detection, candidate);
+      } catch (err) {
+        return fail(err);
+      }
       setTracking({
         kind: 'matched',
         detection: tracking.detection,
@@ -161,7 +158,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
 
   /** Œuvre et numéro choisis à la main (recherche), quand la détection a échoué ou se trompe. */
   const markManually = useCallback(
-    async (media: ISearchMedia, kind: 'anime' | 'manga', number: number) => {
+    async (candidate: ICandidate, kind: 'anime' | 'manga', number: number) => {
       const base: PageDetection = latest.current ?? {
         kind,
         title: '',
@@ -172,11 +169,11 @@ export function useTracking(webview: RefObject<WebView | null>) {
       const detection: PageDetection = {
         ...base,
         kind,
-        title: base.title || (media.title?.original ?? ''),
+        title: base.title || candidate.title,
         chapter: kind === 'manga' ? number : undefined,
         episode: kind === 'anime' ? number : undefined,
       };
-      const match = await confirm(detection, media);
+      const match = await confirm(detection, candidate);
       await push(detection, match);
     },
     [host, push],

@@ -6,8 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { api, type ISearchMedia } from '@/lib/api';
-import { titleOf } from '@/lib/sync';
+import { searchCandidates, type ICandidate } from '@/lib/sync';
 
 interface ISearchSheetProps {
   visible: boolean;
@@ -15,7 +14,7 @@ interface ISearchSheetProps {
   initialKind: 'anime' | 'manga';
   initialNumber?: number;
   onClose: () => void;
-  onSubmit: (media: ISearchMedia, kind: 'anime' | 'manga', number: number) => Promise<void>;
+  onSubmit: (candidate: ICandidate, kind: 'anime' | 'manga', number: number) => Promise<void>;
 }
 
 /** Recherche manuelle : quand la détection échoue ou se trompe, l'utilisateur choisit l'œuvre et le numéro. */
@@ -29,9 +28,9 @@ export function SearchSheet({
 }: ISearchSheetProps) {
   const [query, setQuery] = useState(initialQuery);
   const [kind, setKind] = useState(initialKind);
-  const [results, setResults] = useState<ISearchMedia[]>([]);
+  const [results, setResults] = useState<ICandidate[]>([]);
   const [loading, setLoading] = useState(false);
-  const [chosen, setChosen] = useState<ISearchMedia | null>(null);
+  const [chosen, setChosen] = useState<ICandidate | null>(null);
   const [number, setNumber] = useState(initialNumber?.toString() ?? '');
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +49,7 @@ export function SearchSheet({
     setLoading(true);
     setError(null);
     try {
-      setResults(await api.searchByKind(kind, query.trim(), 10));
+      setResults(await searchCandidates(kind, query.trim()));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Recherche impossible');
     } finally {
@@ -106,25 +105,31 @@ export function SearchSheet({
 
         {loading && <ActivityIndicator color={Colors.primary} />}
         <ScrollView contentContainerStyle={styles.results} keyboardShouldPersistTaps="handled">
-          {results.map((media) => {
-            const selected = (chosen?.id ?? chosen?._id) === (media.id ?? media._id);
-            return (
-              <Pressable
-                key={media.id ?? media._id}
-                onPress={() => setChosen(media)}
-                style={[styles.result, selected && styles.resultSelected]}
-              >
-                <Image
-                  source={media.posterUrl ? { uri: media.posterUrl } : undefined}
-                  style={styles.poster}
-                  contentFit="cover"
-                />
-                <ThemedText type="smallBold" style={styles.resultTitle} numberOfLines={2}>
-                  {titleOf(media)}
+          {results.map((candidate) => (
+            <Pressable
+              key={candidate.key}
+              onPress={() => setChosen(candidate)}
+              style={[styles.result, chosen?.key === candidate.key && styles.resultSelected]}
+            >
+              <Image
+                source={candidate.posterUrl ? { uri: candidate.posterUrl } : undefined}
+                style={styles.poster}
+                contentFit="cover"
+              />
+              <View style={styles.resultText}>
+                <ThemedText type="smallBold" numberOfLines={2}>
+                  {candidate.title}
                 </ThemedText>
-              </Pressable>
-            );
-          })}
+                {candidate.origin !== 'media' && (
+                  <ThemedText type="small" themeColor="warning">
+                    {candidate.origin === 'pending-entry'
+                      ? 'Dans ta liste, en attente de validation'
+                      : 'En attente de validation'}
+                  </ThemedText>
+                )}
+              </View>
+            </Pressable>
+          ))}
           {!loading && results.length === 0 && (
             <ThemedText type="small" themeColor="textSecondary">
               Lance une recherche pour voir les œuvres d’Actunime.
@@ -135,7 +140,7 @@ export function SearchSheet({
         {chosen && (
           <View style={styles.footer}>
             <ThemedText type="small" themeColor="textSecondary">
-              {titleOf(chosen)} : quel {unit} as-tu lu ?
+              {chosen.title} : quel {unit} as-tu lu ?
             </ThemedText>
             <TextInput
               value={number}
@@ -193,6 +198,6 @@ const styles = StyleSheet.create({
   },
   resultSelected: { borderColor: Colors.primary, backgroundColor: Colors.backgroundSelected },
   poster: { width: 40, height: 56, borderRadius: Radius.small, backgroundColor: Colors.backgroundSelected },
-  resultTitle: { flex: 1 },
+  resultText: { flex: 1, gap: Spacing.half },
   footer: { gap: Spacing.two },
 });
