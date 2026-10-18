@@ -16,8 +16,7 @@ const SCORE_THRESHOLD = 3;
 const URL_TOKENS_VIDEO =
   /\/(?:watch|episode|play|stream|video|series|show|anime|ep[-_]?\d+|s\d{1,2}e\d{1,3})(?:\/|$|\?)/i;
 
-const URL_TOKENS_MANGA =
-  /\/(?:read|reader|chapter|chapitre|scan|scans|lecture|manga|webtoon|ch[-_]?\d+)(?:\/|$|\?)/i;
+const URL_TOKENS_MANGA = /\/(?:read|reader|chapter|chapitre|scan|scans|lecture|manga|webtoon|ch[-_]?\d+)(?:\/|$|\?)/i;
 
 interface JsonLdResult {
   title?: string;
@@ -64,12 +63,7 @@ export function detectGenericFromDom(): GenericDetection | null {
   const isMangaReader = looksLikeMangaReader();
 
   if (kind === 'anime' && !hasValidVideo && !hasCrossOriginIframe) return null;
-  if (
-    kind === 'manga' &&
-    !isMangaReader &&
-    !URL_TOKENS_MANGA.test(location.pathname) &&
-    !ld.matched
-  ) {
+  if (kind === 'manga' && !isMangaReader && !URL_TOKENS_MANGA.test(location.pathname) && !ld.matched) {
     return null;
   }
 
@@ -152,9 +146,7 @@ function readMeta(property: string): string | undefined {
 
 function parseJsonLd(): JsonLdResult {
   const result: JsonLdResult = { matched: false };
-  const scripts = document.querySelectorAll<HTMLScriptElement>(
-    'script[type="application/ld+json"]',
-  );
+  const scripts = document.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]');
   for (const s of scripts) {
     let parsed: unknown;
     try {
@@ -216,22 +208,14 @@ function matchMediaLd(item: Record<string, unknown>, into: JsonLdResult): boolea
   const issueNum = item.issueNumber ?? item.chapterNumber ?? item.position;
   if (typeof issueNum === 'number' && Number.isFinite(issueNum) && into.chapter === undefined) {
     into.chapter = Math.floor(issueNum);
-  } else if (
-    typeof issueNum === 'string' &&
-    /^\d+(?:\.\d+)?$/.test(issueNum) &&
-    into.chapter === undefined
-  ) {
+  } else if (typeof issueNum === 'string' && /^\d+(?:\.\d+)?$/.test(issueNum) && into.chapter === undefined) {
     into.chapter = Math.floor(Number(issueNum));
   }
 
   const seasonNum = partOfSeason?.seasonNumber;
   if (typeof seasonNum === 'number' && Number.isFinite(seasonNum) && into.season === undefined) {
     into.season = seasonNum;
-  } else if (
-    typeof seasonNum === 'string' &&
-    /^\d+$/.test(seasonNum) &&
-    into.season === undefined
-  ) {
+  } else if (typeof seasonNum === 'string' && /^\d+$/.test(seasonNum) && into.season === undefined) {
     into.season = Number(seasonNum);
   }
 

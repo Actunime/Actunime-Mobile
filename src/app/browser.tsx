@@ -1,147 +1,233 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { BackHandler, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import { WebView, type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
 
-import { INJECTED_DETECTION } from '@/detection/injected.generated';
-import { parseInPageMessage, type PageDetection } from '@/detection/messages';
+import { ConfigWizard } from '@/components/browser/config-wizard';
+import { SearchSheet } from '@/components/browser/search-sheet';
+import { TrackingBar } from '@/components/browser/tracking-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
-import type { ISearchMedia } from '@/lib/api';
-import { confirm, pushProgress, resolve, titleOf, type PushResult } from '@/lib/sync';
-import type { IMatch } from '@/lib/storage';
+import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import type { StrategyResult } from '@/detection/core/types';
+import { INJECTED_DETECTION } from '@/detection/injected.generated';
+import { commandScript, parseInPageMessage, type PickedElement } from '@/detection/messages';
+import { resolveAddress } from '@/lib/address';
+import { useTracking } from '@/lib/use-tracking';
+import { Adblock } from '../../modules/actunime-adblock/src';
 
-const RESULT_LABEL: Record<PushResult, string> = {
-  created: 'ajouté à ta liste',
-  updated: 'progression mise à jour',
-  unchanged: 'déjà à jour',
-};
+/** Signaux de vie privée envoyés à chaque site : Do Not Track et Global Privacy Control. */
+const PRIVACY_HEADERS = { DNT: '1', 'Sec-GPC': '1' };
+
+interface IconButtonProps {
+  name: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}
+
+function IconButton({ name, label, onPress, disabled }: IconButtonProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={8}
+      style={[styles.iconButton, disabled && styles.disabled]}
+    >
+      <Ionicons name={name} size={22} color={Colors.text} />
+    </Pressable>
+  );
+}
 
 export default function BrowserScreen() {
-  const theme = useTheme();
-  const { url } = useLocalSearchParams<{ url: string }>();
+  const { url: initialUrl } = useLocalSearchParams<{ url: string }>();
   const webview = useRef<WebView>(null);
-  const [detection, setDetection] = useState<PageDetection | null>(null);
-  const [match, setMatch] = useState<IMatch | null>(null);
-  const [candidates, setCandidates] = useState<ISearchMedia[]>([]);
-  const [status, setStatus] = useState<string | null>(null);
+  const tracking = useTracking(webview);
+  // `source` n'est modifié que par une adresse saisie : le mettre à jour à chaque navigation rechargerait la page en boucle.
+  const [source, setSource] = useState(initialUrl);
+  const [pageUrl, setPageUrl] = useState(initialUrl);
+  const [address, setAddress] = useState(initialUrl);
+  const [editing, setEditing] = useState(false);
+  const [navigation, setNavigation] = useState({ canGoBack: false, canGoForward: false, loading: true });
+  const [progress, setProgress] = useState(0);
+  const [shield, setShield] = useState(true);
+  const [blocked, setBlocked] = useState(0);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [strategies, setStrategies] = useState<StrategyResult[] | null>(null);
+  const [picked, setPicked] = useState<{ seq: number; element: PickedElement } | null>(null);
+  const pickSeq = useRef(0);
 
-  const fail = (err: unknown) => setStatus(err instanceof Error ? err.message : 'Erreur inattendue');
+  // Bouton retour d'Android : page précédente du site avant de quitter le navigateur.
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!navigation.canGoBack) return false;
+      webview.current?.goBack();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [navigation.canGoBack]);
 
-  const push = useCallback(async (page: PageDetection, target: IMatch) => {
-    try {
-      const result = await pushProgress(page, target);
-      const number = page.kind === 'manga' ? `chapitre ${page.chapter}` : `épisode ${page.episode}`;
-      setStatus(`${target.title}, ${number} : ${RESULT_LABEL[result]}`);
-    } catch (err) {
-      fail(err);
-    }
+  useEffect(() => {
+    const subscription = Adblock.onBlocked((event) => setBlocked(event.count));
+    return () => subscription.remove();
   }, []);
 
+  const toggleShield = useCallback(() => {
+    const next = !shield;
+    Adblock.setEnabled(next);
+    setShield(next);
+    webview.current?.reload();
+  }, [shield]);
+
+  const onNavigationStateChange = useCallback(
+    (state: WebViewNavigation) => {
+      setNavigation({ canGoBack: state.canGoBack, canGoForward: state.canGoForward, loading: state.loading });
+      setPageUrl(state.url);
+      if (!editing) setAddress(state.url);
+    },
+    [editing],
+  );
+
+  const submitAddress = useCallback(() => {
+    const target = resolveAddress(address);
+    setEditing(false);
+    if (target) setSource(target);
+  }, [address]);
+
   const onMessage = useCallback(
-    async (event: WebViewMessageEvent) => {
+    (event: WebViewMessageEvent) => {
       const message = parseInPageMessage(event.nativeEvent.data);
       if (!message) return;
-
-      if (message.type === 'detection') {
-        setDetection(message.detection);
-        setMatch(null);
-        setCandidates([]);
-        setStatus(null);
-        if (!message.detection) return;
-        try {
-          const resolution = await resolve(message.detection);
-          setMatch(resolution.match);
-          setCandidates(resolution.candidates);
-          if (!resolution.match && resolution.candidates.length === 0) setStatus('Introuvable sur Actunime');
-        } catch (err) {
-          fail(err);
-        }
-        return;
+      if (message.type === 'strategies') return setStrategies(message.results);
+      if (message.type === 'picked') {
+        pickSeq.current += 1;
+        return setPicked({ seq: pickSeq.current, element: message.element });
       }
-
-      // Fin de chapitre atteinte : on n'écrit que si l'œuvre est identifiée (sinon l'utilisateur confirme d'abord).
-      setDetection(message.detection);
-      const resolution = await resolve(message.detection).catch(() => null);
-      if (resolution?.match) await push(message.detection, resolution.match);
-      else setStatus('Fin de chapitre atteinte, mais l’œuvre n’est pas confirmée');
+      if (message.type === 'pick-cancelled') return;
+      void tracking.onMessage(message);
     },
-    [push],
+    [tracking],
   );
 
-  const choose = useCallback(
-    async (media: ISearchMedia) => {
-      if (!detection) return;
-      const chosen = await confirm(detection, media);
-      setMatch(chosen);
-      setCandidates([]);
-    },
-    [detection],
-  );
+  const runStrategies = useCallback(() => {
+    setStrategies(null);
+    tracking.send({ type: 'run-strategies' });
+  }, [tracking]);
 
-  const number = detection?.kind === 'manga' ? detection.chapter : detection?.episode;
+  const current = 'detection' in tracking.tracking ? tracking.tracking.detection : null;
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.container}>
-        <ThemedView type="backgroundElement" style={styles.bar}>
-          <Pressable onPress={() => router.back()}>
-            <ThemedText>Retour</ThemedText>
+        <ThemedView type="backgroundElement" style={styles.toolbar}>
+          <IconButton name="close" label="Fermer le navigateur" onPress={() => router.back()} />
+          <IconButton
+            name="chevron-back"
+            label="Page précédente"
+            onPress={() => webview.current?.goBack()}
+            disabled={!navigation.canGoBack}
+          />
+          <IconButton
+            name="chevron-forward"
+            label="Page suivante"
+            onPress={() => webview.current?.goForward()}
+            disabled={!navigation.canGoForward}
+          />
+          <TextInput
+            value={address}
+            onChangeText={setAddress}
+            onFocus={() => setEditing(true)}
+            onBlur={() => setEditing(false)}
+            onSubmitEditing={submitAddress}
+            selectTextOnFocus
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            returnKeyType="go"
+            style={styles.address}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={shield ? 'Désactiver le blocage des pubs' : 'Activer le blocage des pubs'}
+            onPress={toggleShield}
+            style={styles.shield}
+          >
+            <Ionicons
+              name={shield ? 'shield-checkmark' : 'shield-outline'}
+              size={22}
+              color={shield ? Colors.primary : Colors.textSecondary}
+            />
+            {shield && blocked > 0 && (
+              <ThemedText type="smallBold" themeColor="primary">
+                {blocked}
+              </ThemedText>
+            )}
           </Pressable>
-          <Pressable onPress={() => webview.current?.goBack()}>
-            <ThemedText>Page précédente</ThemedText>
-          </Pressable>
+          <IconButton
+            name={navigation.loading ? 'stop' : 'reload'}
+            label={navigation.loading ? 'Arrêter' : 'Recharger'}
+            onPress={() => (navigation.loading ? webview.current?.stopLoading() : webview.current?.reload())}
+          />
         </ThemedView>
+        <View style={styles.progressTrack}>
+          {navigation.loading && <View style={[styles.progressBar, { width: `${Math.round(progress * 100)}%` }]} />}
+        </View>
 
         <WebView
           ref={webview}
-          source={{ uri: url }}
+          source={{ uri: source, headers: PRIVACY_HEADERS }}
           style={styles.container}
           injectedJavaScript={INJECTED_DETECTION}
           onMessage={onMessage}
+          onNavigationStateChange={onNavigationStateChange}
+          onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
           setSupportMultipleWindows={false}
+          thirdPartyCookiesEnabled={false}
+          mixedContentMode="never"
           allowsBackForwardNavigationGestures
         />
 
-        {detection && (
-          <ThemedView type="backgroundElement" style={styles.panel}>
-            <ThemedText type="smallBold">
-              {detection.title}
-              {number !== undefined
-                ? ` · ${detection.kind === 'manga' ? 'chapitre' : 'épisode'} ${number}`
-                : ''}
-            </ThemedText>
+        <TrackingBar
+          tracking={tracking.tracking}
+          notice={tracking.notice}
+          host={tracking.host}
+          pattern={tracking.pattern}
+          onMarkRead={tracking.markRead}
+          onChoose={(media) => void tracking.choose(media)}
+          onChange={tracking.change}
+          onSearch={() => setSearchOpen(true)}
+          onConfigure={() => setWizardOpen(true)}
+          onIgnore={() => void tracking.ignoreHost()}
+          onUnignore={() => void tracking.unignoreHost()}
+        />
 
-            {match ? (
-              <>
-                <ThemedText type="small">Reconnu : {match.title}</ThemedText>
-                {number !== undefined && (
-                  <Pressable
-                    onPress={() => push(detection, match)}
-                    style={[styles.button, { backgroundColor: theme.text }]}
-                  >
-                    <ThemedText style={{ color: theme.background }}>Marquer comme lu</ThemedText>
-                  </Pressable>
-                )}
-              </>
-            ) : (
-              candidates.length > 0 && (
-                <>
-                  <ThemedText type="small">C’est quelle œuvre ?</ThemedText>
-                  {candidates.map((media) => (
-                    <Pressable key={media.id ?? media._id} onPress={() => choose(media)}>
-                      <ThemedText type="link">{titleOf(media)}</ThemedText>
-                    </Pressable>
-                  ))}
-                </>
-              )
-            )}
-            {status && <ThemedText type="small">{status}</ThemedText>}
-          </ThemedView>
-        )}
+        <ConfigWizard
+          visible={wizardOpen}
+          host={tracking.host}
+          url={pageUrl}
+          inferredKind={tracking.inferredKind}
+          strategies={strategies}
+          picked={picked}
+          onRunStrategies={runStrategies}
+          onStartPick={() => webview.current?.injectJavaScript(commandScript({ type: 'start-pick' }))}
+          onStopPick={() => webview.current?.injectJavaScript(commandScript({ type: 'stop-pick' }))}
+          onClose={() => setWizardOpen(false)}
+          onSave={tracking.applyPattern}
+        />
+
+        <SearchSheet
+          visible={searchOpen}
+          initialQuery={current?.title ?? ''}
+          initialKind={current?.kind ?? tracking.inferredKind}
+          initialNumber={current ? (current.kind === 'manga' ? current.chapter : current.episode) : undefined}
+          onClose={() => setSearchOpen(false)}
+          onSubmit={tracking.markManually}
+        />
       </SafeAreaView>
     </ThemedView>
   );
@@ -149,7 +235,37 @@ export default function BrowserScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  bar: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.two },
-  panel: { padding: Spacing.three, gap: Spacing.two },
-  button: { paddingVertical: Spacing.two, borderRadius: Spacing.two, alignItems: 'center' },
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.two,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: Radius.medium },
+  disabled: { opacity: 0.35 },
+  shield: {
+    minWidth: 40,
+    height: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+  },
+  address: {
+    flex: 1,
+    height: 40,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.medium,
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    color: Colors.text,
+    fontFamily: Fonts.medium,
+    fontSize: 14,
+  },
+  progressTrack: { height: 2, backgroundColor: Colors.backgroundElement },
+  progressBar: { height: 2, backgroundColor: Colors.primary },
 });

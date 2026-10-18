@@ -42,8 +42,7 @@ const NOISE_START_PATTERNS = [
   /\b(?:streaming|stream|en\s+ligne|gratuit(?:ement)?|complet|complete|full|hd|fullhd|4k|1080p|720p|480p)\b/i,
 ];
 
-const SEO_PREFIXES =
-  /^(?:Regarder|Voir|Watch|Lire|Read)\s+(?:gratuitement\s+|en\s+ligne\s+|online\s+|free\s+)?/i;
+const SEO_PREFIXES = /^(?:Regarder|Voir|Watch|Lire|Read)\s+(?:gratuitement\s+|en\s+ligne\s+|online\s+|free\s+)?/i;
 
 /**
  * Suffixe « - SiteName » / « | SiteName » / « · SiteName ». Le segment final

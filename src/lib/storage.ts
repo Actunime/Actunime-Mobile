@@ -45,3 +45,9 @@ export async function saveMatch(key: string, match: IMatch): Promise<void> {
   matches[key] = match;
   await AsyncStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
 }
+
+export async function forgetMatch(key: string): Promise<void> {
+  const matches = await getMatches();
+  delete matches[key];
+  await AsyncStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
+}

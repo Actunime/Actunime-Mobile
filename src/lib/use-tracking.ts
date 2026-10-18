@@ -1,0 +1,229 @@
+import { useCallback, useRef, useState, type RefObject } from 'react';
+import type { WebView } from 'react-native-webview';
+
+import { commandScript, type InPageMessage, type PageDetection } from '@/detection/messages';
+import type { LearnedPattern } from '@/detection/core/types';
+
+import { api, type ISearchMedia } from './api';
+import { getPattern, isHostIgnored, removePattern, savePattern, setHostIgnored } from './patterns';
+import type { IMatch } from './storage';
+import { confirm, forget, pushProgress, resolve, type PushResult } from './sync';
+
+export type TrackingState =
+  | { kind: 'idle' }
+  | { kind: 'resolving'; detection: PageDetection }
+  | { kind: 'confirm'; detection: PageDetection; candidates: ISearchMedia[] }
+  | { kind: 'matched'; detection: PageDetection; match: IMatch; progress?: number }
+  | { kind: 'ignored' };
+
+export interface INotice {
+  tone: 'success' | 'error' | 'info';
+  text: string;
+}
+
+const RESULT_TEXT: Record<PushResult, string> = {
+  created: 'ajouté à ta liste',
+  updated: 'progression mise à jour',
+  unchanged: 'déjà à jour',
+};
+
+const numberOf = (d: PageDetection) => (d.kind === 'manga' ? d.chapter : d.episode);
+const unitOf = (d: PageDetection) => (d.kind === 'manga' ? 'chapitre' : 'épisode');
+
+/**
+ * État de suivi d'une page : détection → identification de l'œuvre → écriture de la progression.
+ * Les décisions (confirmer, ignorer, configurer le site) viennent de l'utilisateur via la barre de suivi.
+ */
+export function useTracking(webview: RefObject<WebView | null>) {
+  const [tracking, setTracking] = useState<TrackingState>({ kind: 'idle' });
+  const [notice, setNotice] = useState<INotice | null>(null);
+  const [pattern, setPattern] = useState<LearnedPattern | null>(null);
+  const [host, setHost] = useState('');
+  const [inferredKind, setInferredKind] = useState<'anime' | 'manga'>('manga');
+  // Détection la plus récente : sert aux actions qui ne reçoivent pas la détection en paramètre.
+  const latest = useRef<PageDetection | null>(null);
+
+  const send = useCallback(
+    (command: Parameters<typeof commandScript>[0]) => webview.current?.injectJavaScript(commandScript(command)),
+    [webview],
+  );
+
+  const fail = useCallback((err: unknown) => {
+    setNotice({ tone: 'error', text: err instanceof Error ? err.message : 'Erreur inattendue' });
+  }, []);
+
+  const progressOf = useCallback(async (detection: PageDetection, match: IMatch) => {
+    try {
+      const entry = await api.getListByMedia(match.mediaId);
+      return (detection.kind === 'manga' ? entry.chaptersRead : entry.episodesWatched) ?? 0;
+    } catch {
+      return undefined; // pas encore dans la liste (404) ou serveur indisponible : la barre n'affiche pas de progression
+    }
+  }, []);
+
+  const push = useCallback(
+    async (detection: PageDetection, match: IMatch) => {
+      const number = numberOf(detection);
+      if (number === undefined) return setNotice({ tone: 'error', text: `Numéro de ${unitOf(detection)} non détecté` });
+      try {
+        const result = await pushProgress(detection, match);
+        setNotice({ tone: 'success', text: `${match.title}, ${unitOf(detection)} ${number} : ${RESULT_TEXT[result]}` });
+        setTracking({ kind: 'matched', detection, match, progress: await progressOf(detection, match) });
+      } catch (err) {
+        fail(err);
+      }
+    },
+    [fail, progressOf],
+  );
+
+  const identify = useCallback(
+    async (detection: PageDetection) => {
+      latest.current = detection;
+      setTracking({ kind: 'resolving', detection });
+      try {
+        const resolution = await resolve(detection);
+        if (resolution.match) {
+          setTracking({
+            kind: 'matched',
+            detection,
+            match: resolution.match,
+            progress: await progressOf(detection, resolution.match),
+          });
+        } else {
+          setTracking({ kind: 'confirm', detection, candidates: resolution.candidates });
+        }
+      } catch (err) {
+        fail(err);
+        setTracking({ kind: 'confirm', detection, candidates: [] });
+      }
+    },
+    [fail, progressOf],
+  );
+
+  const onMessage = useCallback(
+    async (message: InPageMessage) => {
+      if (message.type === 'ready') {
+        setHost(message.host);
+        setInferredKind(message.inferredKind);
+        setNotice(null);
+        setTracking({ kind: 'idle' });
+        const [stored, ignored] = await Promise.all([getPattern(message.host), isHostIgnored(message.host)]);
+        setPattern(stored);
+        if (ignored) return setTracking({ kind: 'ignored' });
+        send({ type: 'set-pattern', pattern: stored });
+        return;
+      }
+
+      if (message.type === 'detection') {
+        setNotice(null);
+        if (!message.detection) {
+          latest.current = null;
+          setTracking((current) => (current.kind === 'ignored' ? current : { kind: 'idle' }));
+          return;
+        }
+        if (await isHostIgnored(message.detection.host)) return;
+        await identify(message.detection);
+        return;
+      }
+
+      if (message.type === 'progress-reached') {
+        // Fin de chapitre : on n'écrit que si l'œuvre est identifiée, sinon l'utilisateur confirme d'abord.
+        const resolution = await resolve(message.detection).catch(() => null);
+        if (resolution?.match) await push(message.detection, resolution.match);
+        else setNotice({ tone: 'info', text: 'Fin de chapitre atteinte : choisis l’œuvre pour l’ajouter à ta liste' });
+      }
+    },
+    [identify, push, send],
+  );
+
+  const markRead = useCallback(() => {
+    if (tracking.kind === 'matched') void push(tracking.detection, tracking.match);
+  }, [push, tracking]);
+
+  const choose = useCallback(
+    async (media: ISearchMedia) => {
+      if (tracking.kind !== 'confirm') return;
+      const match = await confirm(tracking.detection, media);
+      setTracking({
+        kind: 'matched',
+        detection: tracking.detection,
+        match,
+        progress: await progressOf(tracking.detection, match),
+      });
+    },
+    [progressOf, tracking],
+  );
+
+  /** « Ce n'est pas la bonne œuvre » : oublie l'association et repropose les candidats. */
+  const change = useCallback(() => {
+    if (tracking.kind === 'matched') void forget(tracking.detection).then(() => identify(tracking.detection));
+  }, [identify, tracking]);
+
+  /** Œuvre et numéro choisis à la main (recherche), quand la détection a échoué ou se trompe. */
+  const markManually = useCallback(
+    async (media: ISearchMedia, kind: 'anime' | 'manga', number: number) => {
+      const base: PageDetection = latest.current ?? {
+        kind,
+        title: '',
+        url: '',
+        host,
+        source: 'generic',
+      };
+      const detection: PageDetection = {
+        ...base,
+        kind,
+        title: base.title || (media.title?.original ?? ''),
+        chapter: kind === 'manga' ? number : undefined,
+        episode: kind === 'anime' ? number : undefined,
+      };
+      const match = await confirm(detection, media);
+      await push(detection, match);
+    },
+    [host, push],
+  );
+
+  const ignoreHost = useCallback(async () => {
+    await setHostIgnored(host, true);
+    setTracking({ kind: 'ignored' });
+    setNotice(null);
+  }, [host]);
+
+  const unignoreHost = useCallback(async () => {
+    await setHostIgnored(host, false);
+    setTracking({ kind: 'idle' });
+    send({ type: 'set-pattern', pattern });
+  }, [host, pattern, send]);
+
+  const applyPattern = useCallback(
+    async (next: LearnedPattern) => {
+      await savePattern(next);
+      setPattern(next);
+      send({ type: 'set-pattern', pattern: next });
+    },
+    [send],
+  );
+
+  const resetPattern = useCallback(async () => {
+    await removePattern(host);
+    setPattern(null);
+    send({ type: 'set-pattern', pattern: null });
+  }, [host, send]);
+
+  return {
+    tracking,
+    notice,
+    pattern,
+    host,
+    inferredKind,
+    send,
+    onMessage,
+    markRead,
+    choose,
+    change,
+    markManually,
+    ignoreHost,
+    unignoreHost,
+    applyPattern,
+    resetPattern,
+  };
+}

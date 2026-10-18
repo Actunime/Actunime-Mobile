@@ -1,7 +1,7 @@
 import type { PageDetection } from '@/detection/messages';
 
 import { api, ApiError, mediaId, type ISearchMedia } from './api';
-import { getMatches, saveMatch, type IMatch } from './storage';
+import { forgetMatch, getMatches, saveMatch, type IMatch } from './storage';
 
 export type PushResult = 'created' | 'updated' | 'unchanged';
 
@@ -14,8 +14,7 @@ function normalize(value: string): string {
     .trim();
 }
 
-export const matchKey = (d: Pick<PageDetection, 'kind' | 'title'>): string =>
-  `${d.kind}|${normalize(d.title)}`;
+export const matchKey = (d: Pick<PageDetection, 'kind' | 'title'>): string => `${d.kind}|${normalize(d.title)}`;
 
 export const titleOf = (m: ISearchMedia): string => m.title?.original ?? m.title?.normal ?? '—';
 
@@ -51,6 +50,9 @@ export async function confirm(detection: PageDetection, media: ISearchMedia): Pr
   await saveMatch(matchKey(detection), match);
   return match;
 }
+
+/** Oublie l'association mémorisée pour cette détection (l'utilisateur dit que ce n'est pas la bonne œuvre). */
+export const forget = (detection: PageDetection): Promise<void> => forgetMatch(matchKey(detection));
 
 /** Écrit la progression dans la liste, sans jamais la faire reculer (crée l'entrée si elle n'existe pas). */
 export async function pushProgress(detection: PageDetection, match: IMatch): Promise<PushResult> {
