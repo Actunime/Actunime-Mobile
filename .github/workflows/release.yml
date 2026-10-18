@@ -42,7 +42,38 @@ jobs:
           restore-keys: gradle-${{ runner.os }}-
 
       - name: Installation des dépendances
+        # `postinstall` applique le patch de react-native-webview (crochet de filtrage des requêtes)
         run: npm ci
+
+      - name: Tests
+        run: npm test
+
+      - name: Vérification des types
+        run: npx tsc --noEmit
+
+      - name: Toolchain Rust (moteur de filtres)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Cache Rust
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/cargo-ndk
+            modules/actunime-adblock/rust/target
+          key: rust-${{ runner.os }}-${{ hashFiles('modules/actunime-adblock/rust/Cargo.lock') }}
+          restore-keys: rust-${{ runner.os }}-
+
+      - name: Compilation du moteur de filtres pour Android
+        run: |
+          command -v cargo-ndk >/dev/null || cargo install cargo-ndk --locked
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$(ls "$ANDROID_HOME/ndk" | sort -V | tail -n1)"
+          cd modules/actunime-adblock/rust
+          cargo test --locked
+          cargo ndk -t arm64-v8a -o ../android/src/main/jniLibs build --release --locked
 
       - name: Bundle du script de détection injecté
         run: npm run build:injected
