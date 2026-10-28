@@ -1,0 +1,531 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
+import { router, usePathname, type Href } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, BackHandler, Easing, Pressable, StyleSheet, Text, View, useWindowDimensions, type GestureResponderEvent } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
+
+import { ThemedText } from '@/components/themed-text';
+import { Colors, Fonts } from '@/constants/theme';
+import { signOut, useAuth } from '@/lib/auth-store';
+import { WEB_URL } from '@/lib/config';
+import { LogoIcon } from './logo-icon';
+import { MEMBER_FAN, MEMBER_TABS, findActiveTabId, type IMobileNavItem } from './mobile-nav.config';
+import {
+  ACT_SIZE,
+  computeFanSlots,
+  pickSlot,
+  placeLabels,
+  type FanRing,
+  type IFanSlot,
+  type ILabelSize,
+} from './radial-layout';
+
+/** Durée d'appui avant que le bouton central s'ouvre en mode « glisser » (réglage du site). */
+const HOLD_MS = 260;
+/** Attente sur une action à sous-menu, doigt posé, avant d'ouvrir son sous-éventail (réglage du PO). */
+const DWELL_MS = 1000;
+/** Déplacement à partir duquel un doigt posé est considéré comme glissé. */
+const SLIDE_PX = 14;
+const FAB_SIZE = 68;
+/** Hauteur de la barre hors zone sûre (`--mobile-nav-height` du site). */
+const BAR_HEIGHT = 72;
+/** Distance du centre du bouton central au bas de la barre, hors zone sûre : 8 de marge + 2 + demi-bouton. */
+const HUB_FROM_BOTTOM = 8 + 2 + FAB_SIZE / 2;
+
+/** Retour haptique là où le site vibre (`vibrate(6/8/10/14/18)`). */
+const haptic = {
+  aim: () => void Haptics.selectionAsync().catch(() => {}),
+  open: () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}),
+  back: () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}),
+  push: () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}),
+  choose: () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}),
+};
+
+/** Ouvre la cible d'une entrée : écran natif, page du site dans le navigateur système, ou déconnexion. */
+export function openTarget(target: IMobileNavItem): void {
+  if (target.action === 'logout') void signOut();
+  else if (target.native) router.navigate(target.native as Href);
+  else if (target.path) void WebBrowser.openBrowserAsync(`${WEB_URL}${target.path}`);
+}
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+function DwellRing() {
+  const progress = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(progress, { toValue: 1, duration: DWELL_MS, easing: Easing.linear, useNativeDriver: false }).start();
+  }, [progress]);
+  const radius = (ACT_SIZE + 14) / 2 - 2;
+  const circumference = 2 * Math.PI * radius;
+  const size = ACT_SIZE + 14;
+  return (
+    <Svg width={size} height={size} style={styles.dwell} pointerEvents="none">
+      <AnimatedCircle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke={Colors.primary}
+        strokeWidth={3}
+        fill="none"
+        strokeDasharray={`${circumference}`}
+        strokeDashoffset={progress.interpolate({ inputRange: [0, 1], outputRange: [circumference, 0] })}
+        rotation={-90}
+        origin={`${size / 2}, ${size / 2}`}
+      />
+    </Svg>
+  );
+}
+
+interface IFanActProps {
+  entry: IMobileNavItem;
+  slot: IFanSlot;
+  index: number;
+  hot: boolean;
+  hubX: number;
+  hubY: number;
+  onPress: () => void;
+}
+
+/** Une action de l'éventail : sort du centre du bouton avec un léger décalage entre voisines (`mobile-nav-pop`). */
+function FanAct({ entry, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanActProps>) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(t, { toValue: 1, delay: index * 22, friction: 6, tension: 140, useNativeDriver: true }).start();
+  }, [t, index]);
+  return (
+    <Animated.View
+      style={[
+        styles.actWrap,
+        {
+          left: hubX - ACT_SIZE / 2,
+          top: hubY - ACT_SIZE / 2,
+          opacity: t,
+          transform: [
+            { translateX: t.interpolate({ inputRange: [0, 1], outputRange: [0, slot.x] }) },
+            { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [0, slot.y] }) },
+            { scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) },
+          ],
+        },
+      ]}
+    >
+      <Pressable
+        accessibilityRole="menuitem"
+        accessibilityLabel={entry.children ? `${entry.label} (sous-menu)` : entry.label}
+        onPress={onPress}
+        style={[
+          styles.act,
+          (entry.children || entry.highlight) && styles.actAccent,
+          hot && styles.actHot,
+          hot && { transform: [{ scale: 1.22 }] },
+        ]}
+      >
+        <LogoIcon name={entry.icon} size={28} hot={hot} />
+        {entry.children ? (
+          <View style={styles.more}>
+            <Ionicons name="chevron-forward" size={11} color="#fff" />
+          </View>
+        ) : null}
+      </Pressable>
+      {hot && entry.children ? <DwellRing /> : null}
+    </Animated.View>
+  );
+}
+
+/**
+ * Navigation du bas : barre à 5 emplacements dont le bouton central (photo de profil du membre) ouvre un éventail
+ * radial. Appui long puis glisser et relâcher sur une action, ou tap pour ouvrir et re-tap pour choisir ; une
+ * pause d'une seconde sur une action à sous-menu ouvre son sous-éventail. Port de `MobileNav` du site (E114) ;
+ * la géométrie vient de `radial-layout.ts`, copiée telle quelle.
+ */
+export function MobileNav() {
+  const { auth } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const pathname = usePathname();
+
+  const [open, setOpen] = useState(false);
+  /** Parents des sous-éventails ouverts, du plus haut au plus bas. */
+  const [trail, setTrail] = useState<readonly IMobileNavItem[]>([]);
+  const [hotIndex, setHotIndex] = useState<number | null>(null);
+  const [overlayHeight, setOverlayHeight] = useState(0);
+  const [labelSizes, setLabelSizes] = useState<ILabelSize[]>([]);
+
+  const items = trail.length > 0 ? (trail[trail.length - 1]!.children ?? MEMBER_FAN) : MEMBER_FAN;
+  const slots = useMemo(() => computeFanSlots(items.length), [items.length]);
+
+  // État lu par les gestes : les gestionnaires ne doivent pas se reconstruire à chaque rendu.
+  const live = useRef({ open, trail, items, slots, hotIndex });
+  live.current = { open, trail, items, slots, hotIndex };
+  const gesture = useRef({ startX: 0, startY: 0, startedOpen: false, dragging: false, slid: false, ring: 'inner' as FanRing });
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimers = useCallback(() => {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    if (dwellTimer.current) clearTimeout(dwellTimer.current);
+    holdTimer.current = null;
+    dwellTimer.current = null;
+  }, []);
+
+  const close = useCallback(() => {
+    clearTimers();
+    setOpen(false);
+    setTrail([]);
+    setHotIndex(null);
+    gesture.current.ring = 'inner';
+  }, [clearTimers]);
+
+  const openFan = useCallback(() => {
+    gesture.current.ring = 'inner';
+    setOpen(true);
+    haptic.open();
+  }, []);
+
+  const push = useCallback((parent: IMobileNavItem) => {
+    if (dwellTimer.current) clearTimeout(dwellTimer.current);
+    dwellTimer.current = null;
+    gesture.current.ring = 'inner';
+    setTrail((current) => [...current, parent]);
+    setHotIndex(null);
+    haptic.push();
+  }, []);
+
+  const pop = useCallback(() => {
+    if (dwellTimer.current) clearTimeout(dwellTimer.current);
+    dwellTimer.current = null;
+    gesture.current.ring = 'inner';
+    setTrail((current) => current.slice(0, -1));
+    setHotIndex(null);
+    haptic.back();
+  }, []);
+
+  const choose = useCallback(
+    (target: IMobileNavItem) => {
+      if (target.children) return push(target);
+      close();
+      haptic.choose();
+      openTarget(target);
+    },
+    [close, push],
+  );
+
+  /** Vise une action : après `DWELL_MS` sur un sous-menu, doigt toujours posé, son sous-éventail s'ouvre. */
+  const aim = useCallback(
+    (index: number | null) => {
+      if (live.current.hotIndex === index) return;
+      if (dwellTimer.current) clearTimeout(dwellTimer.current);
+      dwellTimer.current = null;
+      setHotIndex(index);
+      live.current.hotIndex = index;
+      if (index === null) return;
+      haptic.aim();
+      const target = live.current.items[index];
+      if (target?.children) {
+        dwellTimer.current = setTimeout(() => {
+          const stillHot = live.current.items[live.current.hotIndex ?? -1];
+          if (stillHot === target && gesture.current.dragging) push(target);
+        }, DWELL_MS);
+      }
+    },
+    [push],
+  );
+
+  const onGrant = (event: GestureResponderEvent) => {
+    const g = gesture.current;
+    g.startX = event.nativeEvent.pageX;
+    g.startY = event.nativeEvent.pageY;
+    g.startedOpen = live.current.open;
+    g.dragging = false;
+    g.slid = false;
+    if (!g.startedOpen) {
+      holdTimer.current = setTimeout(() => {
+        holdTimer.current = null;
+        g.dragging = true;
+        openFan();
+      }, HOLD_MS);
+    }
+  };
+
+  const onMove = (event: GestureResponderEvent) => {
+    const g = gesture.current;
+    const dx = event.nativeEvent.pageX - g.startX;
+    const dy = event.nativeEvent.pageY - g.startY;
+    // Un doigt qui bouge avant la fin de l'appui long n'ouvre pas l'éventail : c'est un geste de défilement manqué.
+    if (!live.current.open) return;
+    if (Math.hypot(dx, dy) > SLIDE_PX) g.slid = true;
+    if (!g.dragging && g.slid && g.startedOpen) g.dragging = true;
+    if (!g.dragging) return;
+    const picked = pickSlot({ dx, dy, slots: live.current.slots, ring: g.ring, hotIndex: live.current.hotIndex });
+    g.ring = picked.ring;
+    aim(picked.index);
+  };
+
+  const onRelease = () => {
+    const g = gesture.current;
+    if (holdTimer.current) {
+      // Tap court sur le bouton fermé : ouvre l'éventail et le laisse ouvert.
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+      openFan();
+      return;
+    }
+    if (g.dragging) {
+      g.dragging = false;
+      const aimed = live.current.hotIndex;
+      const target = aimed === null ? undefined : live.current.items[aimed];
+      if (target) choose(target);
+      // Glissé puis relâché dans le vide : retour. Appui long sans bouger : l'éventail reste ouvert.
+      else if (g.slid) (live.current.trail.length > 0 ? pop : close)();
+      return;
+    }
+    if (g.startedOpen) (live.current.trail.length > 0 ? pop : close)();
+  };
+
+  const onTerminate = () => {
+    gesture.current.dragging = false;
+    close();
+  };
+
+  // Une navigation referme l'éventail ; le bouton retour d'Android le referme (ou remonte d'un sous-menu) avant de quitter.
+  useEffect(() => {
+    close();
+  }, [pathname, close]);
+  useEffect(() => clearTimers, [clearTimers]);
+  useEffect(() => {
+    if (!open) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (live.current.trail.length > 0) pop();
+      else close();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [open, close, pop]);
+
+  // Les libellés sont mesurés puis placés là où ils ne recouvrent ni un bouton, ni un autre libellé, ni la barre.
+  useEffect(() => setLabelSizes([]), [open, items]);
+  const labelCenters = useMemo(() => {
+    const measured = labelSizes.length === items.length && labelSizes.every((size) => size?.w > 0);
+    return open && measured ? placeLabels(slots, labelSizes, width) : null;
+  }, [open, labelSizes, items.length, slots, width]);
+
+  if (!auth) return null;
+
+  const hubX = width / 2;
+  const hubY = overlayHeight - insets.bottom - HUB_FROM_BOTTOM;
+  const inSubmenu = trail.length > 0;
+  const activeTabId = findActiveTabId(MEMBER_TABS, pathname);
+  const titleY = Math.min(0, ...slots.map((slot) => slot.y)) - 86;
+  const hot = hotIndex !== null ? slots[hotIndex] : undefined;
+  const name = auth.user.displayName ?? auth.user.username;
+
+  const renderTab = (tab: IMobileNavItem) => {
+    const active = tab.id === activeTabId;
+    return (
+      <Pressable
+        key={tab.id}
+        accessibilityRole="button"
+        accessibilityState={{ selected: active }}
+        onPress={() => openTarget(tab)}
+        style={[styles.tab, active && styles.tabActive]}
+      >
+        <LogoIcon name={tab.icon} size={24} />
+        <Text style={[styles.tabLabel, active && { color: Colors.primary }]} numberOfLines={1}>
+          {tab.label}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  return (
+    <>
+      <View style={[styles.bar, { height: BAR_HEIGHT + insets.bottom, paddingBottom: 8 + insets.bottom }]}>
+        {renderTab(MEMBER_TABS[0]!)}
+        {renderTab(MEMBER_TABS[1]!)}
+        <View style={styles.hub}>
+          <View
+            accessibilityRole="button"
+            accessibilityLabel={open ? (inSubmenu ? 'Retour' : 'Fermer les actions') : 'Ouvrir les actions rapides'}
+            accessibilityState={{ expanded: open }}
+            onStartShouldSetResponder={() => true}
+            onResponderTerminationRequest={() => false}
+            onResponderGrant={onGrant}
+            onResponderMove={onMove}
+            onResponderRelease={onRelease}
+            onResponderTerminate={onTerminate}
+            style={[styles.fab, open && styles.fabOpen]}
+          >
+            {inSubmenu ? (
+              <View style={styles.fabBack}>
+                <Ionicons name="chevron-back" size={30} color={Colors.primaryForeground} />
+              </View>
+            ) : open ? (
+              <Image source={require('../../../assets/images/logo.png')} style={styles.fabLogo} contentFit="contain" />
+            ) : auth.user.avatarUrl ? (
+              <Image source={{ uri: auth.user.avatarUrl }} style={styles.fabFill} contentFit="cover" />
+            ) : (
+              <View style={styles.fabInitial}>
+                <ThemedText type="subtitle">{name.slice(0, 1).toUpperCase()}</ThemedText>
+              </View>
+            )}
+          </View>
+        </View>
+        {renderTab(MEMBER_TABS[2]!)}
+        {renderTab(MEMBER_TABS[3]!)}
+      </View>
+
+      {open ? (
+        <View pointerEvents="box-none" style={StyleSheet.absoluteFill} onLayout={(event) => setOverlayHeight(event.nativeEvent.layout.height)}>
+          <Pressable style={[styles.veil, { bottom: BAR_HEIGHT + insets.bottom }]} onPress={close} accessibilityLabel="Fermer les actions" />
+          {overlayHeight > 0 ? (
+            <>
+              {hot ? (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.ray,
+                    {
+                      left: hubX,
+                      top: hubY - 1.5,
+                      width: Math.hypot(hot.x, hot.y) - 29,
+                      transform: [{ rotate: `${(Math.atan2(hot.y, hot.x) * 180) / Math.PI}deg` }],
+                    },
+                  ]}
+                />
+              ) : null}
+              {items.map((entry, index) => (
+                <FanAct
+                  key={`${trail.length}-${entry.id}`}
+                  entry={entry}
+                  slot={slots[index]!}
+                  index={index}
+                  hot={hotIndex === index}
+                  hubX={hubX}
+                  hubY={hubY}
+                  onPress={() => {
+                    if (!gesture.current.dragging) choose(entry);
+                  }}
+                />
+              ))}
+              {/* Libellés dans une couche à part : ils passent toujours au-dessus de toutes les actions. */}
+              {items.map((entry, index) => {
+                const center = labelCenters?.[index];
+                const size = labelSizes[index];
+                return (
+                  <View
+                    key={`${trail.length}-${entry.id}-label`}
+                    pointerEvents="none"
+                    onLayout={(event) => {
+                      const { width: w, height: h } = event.nativeEvent.layout;
+                      setLabelSizes((current) => {
+                        if (current[index]?.w === w && current[index]?.h === h) return current;
+                        const next = current.slice();
+                        next[index] = { w, h };
+                        return next;
+                      });
+                    }}
+                    style={[
+                      styles.label,
+                      hotIndex === index && styles.labelHot,
+                      center && size
+                        ? { left: hubX + center.x - size.w / 2, top: hubY + center.y - size.h / 2, opacity: 1 }
+                        : { left: 0, top: 0, opacity: 0 },
+                    ]}
+                  >
+                    <Text style={[styles.labelText, hotIndex === index && { color: Colors.primaryForeground }]}>{entry.label}</Text>
+                  </View>
+                );
+              })}
+              {inSubmenu ? (
+                <View pointerEvents="none" style={[styles.titleWrap, { left: 0, right: 0, top: hubY + titleY }]}>
+                  <View style={styles.title}>
+                    <Text style={styles.titleText}>{trail.map((step) => step.label).join(' › ')}</Text>
+                  </View>
+                </View>
+              ) : null}
+            </>
+          ) : null}
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingTop: 8,
+    paddingHorizontal: 8,
+    backgroundColor: Colors.backgroundElement,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  tab: { flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 14, paddingVertical: 6 },
+  tabActive: { backgroundColor: 'rgba(0, 153, 255, 0.16)' },
+  tabLabel: { fontFamily: Fonts.medium, fontSize: 10.5, color: Colors.textSecondary },
+  hub: { width: 96, height: 52 },
+  fab: {
+    position: 'absolute',
+    bottom: 2,
+    left: (96 - FAB_SIZE) / 2,
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.backgroundElement,
+    overflow: 'hidden',
+    elevation: 8,
+  },
+  fabOpen: { transform: [{ scale: 1.12 }], borderColor: Colors.primary },
+  fabFill: { width: '100%', height: '100%' },
+  fabLogo: { flex: 1, margin: 11 },
+  fabInitial: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.backgroundSelected },
+  fabBack: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary },
+  veil: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: 'rgba(2, 6, 18, 0.72)' },
+  actWrap: { position: 'absolute', width: ACT_SIZE, height: ACT_SIZE },
+  act: {
+    width: ACT_SIZE,
+    height: ACT_SIZE,
+    borderRadius: ACT_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.backgroundElement,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    elevation: 6,
+  },
+  actAccent: { borderColor: Colors.primary },
+  actHot: { backgroundColor: Colors.primary },
+  dwell: { position: 'absolute', left: -7, top: -7 },
+  more: {
+    position: 'absolute',
+    right: -1,
+    bottom: -1,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    borderWidth: 2,
+    borderColor: Colors.backgroundElement,
+  },
+  ray: { position: 'absolute', height: 3, borderRadius: 2, backgroundColor: Colors.primary, transformOrigin: '0% 50%' },
+  label: {
+    position: 'absolute',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: 'rgba(3, 10, 29, 0.88)',
+  },
+  labelHot: { backgroundColor: Colors.primary },
+  labelText: { fontFamily: Fonts.semibold, fontSize: 12, color: Colors.text },
+  titleWrap: { position: 'absolute', alignItems: 'center' },
+  title: { paddingHorizontal: 13, paddingVertical: 5, borderRadius: 9999, backgroundColor: Colors.primary },
+  titleText: { fontFamily: Fonts.semibold, fontSize: 13, color: Colors.primaryForeground },
+});

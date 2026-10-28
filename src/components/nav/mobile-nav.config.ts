@@ -1,0 +1,139 @@
+import type { LogoIconName } from './logo-icons.data';
+
+export type MobileNavAction = 'logout';
+
+export interface IMobileNavItem {
+  readonly id: string;
+  readonly label: string;
+  readonly icon: LogoIconName;
+  /** Écran natif de l'app (route Expo Router). Prioritaire sur `path`. */
+  readonly native?: string;
+  /** Page du site, ouverte dans le navigateur système : l'écran n'existe pas dans la V1 de l'app. */
+  readonly path?: string;
+  readonly action?: MobileNavAction;
+  /** Sous-éventail ouvert par cet item (8 actions au plus). */
+  readonly children?: readonly IMobileNavItem[];
+  /** Action mise en avant (contour bleu) : contribuer. */
+  readonly highlight?: boolean;
+}
+
+const item = (
+  id: string,
+  label: string,
+  icon: LogoIconName,
+  rest: Partial<Omit<IMobileNavItem, 'id' | 'label' | 'icon'>> = {},
+): IMobileNavItem => ({ id, label, icon, ...rest });
+
+/**
+ * Les 4 raccourcis de la barre : 2 à gauche du bouton central, 2 à droite. Le site met « Mon suivi / Mes animes /
+ * Mes mangas / Recherche » ; l'app n'a pas d'en-tête, ses cinq écrans V1 sont donc répartis entre la barre
+ * (accueil, ma liste, recherche, lecture) et l'éventail (profil, dans « Mon compte »).
+ */
+export const MEMBER_TABS: readonly IMobileNavItem[] = [
+  item('home', 'Accueil', 'home', { native: '/' }),
+  item('list', 'Ma liste', 'dashboard', { native: '/list' }),
+  item('search', 'Recherche', 'search', { native: '/search' }),
+  item('reading', 'Lecture', 'manga', { native: '/reading' }),
+];
+
+const DISCOVER = item('discover', 'Découvrir', 'compass', {
+  children: [
+    item('discover-animes', 'Animes', 'anime', { native: '/search?kind=anime' }),
+    item('discover-mangas', 'Mangas', 'manga', { native: '/search?kind=manga' }),
+    item('discover-characters', 'Personnages', 'character', { path: '/personnages' }),
+    item('discover-persons', 'Personnes', 'staff', { path: '/personnes' }),
+    item('discover-tracks', 'Musiques', 'music', { path: '/musiques' }),
+    item('discover-companies', 'Sociétés', 'company', { path: '/societes' }),
+    item('discover-members', 'Membres', 'user', { path: '/membres' }),
+  ],
+});
+
+const AGENDA = item('agenda', 'Agenda', 'calendar', { path: '/planning' });
+
+const COMMUNITY = item('community', 'Communauté', 'community', {
+  children: [
+    item('community-home', 'Communauté', 'community', { path: '/communaute' }),
+    item('community-proposals', 'Propositions', 'proposal', { path: '/propositions' }),
+    item('community-top', 'Contributeurs', 'trophy', { path: '/communaute/contributeurs' }),
+    item('community-lab', 'Laboratoire', 'lab', { path: '/laboratoire' }),
+  ],
+});
+
+const ABOUT = item('about', 'À propos', 'about', {
+  children: [
+    item('about-legal', 'Mentions', 'document', { path: '/legal/mentions' }),
+    item('about-terms', 'CGU', 'terms', { path: '/legal/cgu' }),
+    item('about-privacy', 'Confidentialité', 'shield', { path: '/legal/confidentialite' }),
+    item('about-content', 'Contenus', 'document', { path: '/legal/contenus' }),
+    item('about-contact', 'Contact', 'mail', { path: '/contact' }),
+  ],
+});
+
+const CONTRIBUTE = item('contribute', 'Contribuer', 'pencil', {
+  highlight: true,
+  children: [
+    item('contribute-anime', 'Anime', 'anime', { path: '/contribute/anime' }),
+    item('contribute-manga', 'Manga', 'manga', { path: '/contribute/manga' }),
+    item('contribute-character', 'Personnage', 'character', { path: '/contribute/character' }),
+    item('contribute-person', 'Personne', 'staff', { path: '/contribute/person' }),
+    item('contribute-company', 'Société', 'company', { path: '/contribute/company' }),
+    item('contribute-track', 'Musique', 'music', { path: '/contribute/track' }),
+  ],
+});
+
+const SETTINGS = item('settings', 'Paramètres', 'settings', {
+  children: [
+    item('settings-profile', 'Profil', 'user', { path: '/settings/profile' }),
+    item('settings-notifications', 'Notifications', 'bell', { path: '/settings/notifications' }),
+    item('settings-lists', 'Import / export', 'transfer', { path: '/settings/list' }),
+    item('settings-social', 'Social', 'community', {
+      children: [
+        item('settings-friends', 'Amis', 'community', { path: '/settings/amis' }),
+        item('settings-blocks', 'Blocages', 'block', { path: '/settings/blocages' }),
+        item('settings-privacy', 'Confidentialité', 'lock', { path: '/settings/confidentialite' }),
+      ],
+    }),
+    item('settings-security-group', 'Sécurité', 'shield', {
+      children: [
+        item('settings-security', 'Sécurité', 'shield', { path: '/settings/security' }),
+        item('settings-sessions', 'Appareils', 'device', { path: '/settings/sessions' }),
+        item('settings-delete', 'Supprimer', 'trash', { path: '/settings/delete-account' }),
+      ],
+    }),
+  ],
+});
+
+const ACCOUNT = item('account', 'Mon compte', 'user', {
+  children: [
+    item('account-favorites', 'Favoris', 'heart', { path: '/suivi/favoris' }),
+    item('account-contributions', 'Contributions', 'document', { path: '/contribute/proposals' }),
+    item('account-stats', 'Statistiques', 'stats', { path: '/suivi/statistiques' }),
+    item('account-profile', 'Mon profil', 'user', { native: '/profile' }),
+    SETTINGS,
+    item('account-logout', 'Se déconnecter', 'logout', { action: 'logout' }),
+  ],
+});
+
+/** Éventail du bouton central (photo de profil → logo) : celui du site pour un membre connecté, notifications en moins. */
+export const MEMBER_FAN: readonly IMobileNavItem[] = [
+  DISCOVER,
+  AGENDA,
+  COMMUNITY,
+  CONTRIBUTE,
+  item('notifications', 'Notifications', 'bell', { path: '/notifications' }),
+  ACCOUNT,
+  ABOUT,
+];
+
+/** Raccourci de la barre correspondant à l'écran courant (route native). */
+export function findActiveTabId(tabs: readonly IMobileNavItem[], pathname: string): string | null {
+  return tabs.find((tab) => tab.native && tab.native.split('?')[0] === pathname)?.id ?? null;
+}
+
+/** Toutes les entrées de l'éventail et leur cible, pour le rapport et les tests. */
+export function flattenItems(items: readonly IMobileNavItem[], trail: string[] = []): { trail: string[]; item: IMobileNavItem }[] {
+  return items.flatMap((entry) => [
+    { trail, item: entry },
+    ...(entry.children ? flattenItems(entry.children, [...trail, entry.label]) : []),
+  ]);
+}
