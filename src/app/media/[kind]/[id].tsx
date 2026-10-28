@@ -78,7 +78,6 @@ export default function MediaScreen() {
   const data = media.data;
   const mediaType = mediaTypeOf(kind);
   const inList = entry.data ?? null;
-  const meta = [formatLabel(data.format), formatYear(data), data.status ? MEDIA_STATUS_LABELS[data.status] : null].filter(Boolean).join(' · ');
   const links = (data.links ?? []).filter((link) => /^https?:\/\//.test(link.url));
 
   return (
@@ -88,14 +87,25 @@ export default function MediaScreen() {
         {data.bannerUrl ? <Image source={{ uri: data.bannerUrl }} style={styles.banner} contentFit="cover" /> : null}
 
         <View style={styles.hero}>
-          <Poster uri={data.posterUrl} width={116} />
-          <View style={styles.heroText}>
-            <ThemedText type="subtitle">{mediaTitle(data)}</ThemedText>
-            {meta ? (
-              <ThemedText type="small" themeColor="textSecondary">
-                {meta}
-              </ThemedText>
-            ) : null}
+          <Poster uri={data.posterUrl} width={144} />
+          <ThemedText type="subtitle">{mediaTitle(data)}</ThemedText>
+          <View style={styles.badges}>
+            {[data.status ? MEDIA_STATUS_LABELS[data.status] : null, formatLabel(data.format), formatYear(data)]
+              .filter((label): label is string => Boolean(label))
+              .map((label) => (
+                <View key={label} style={styles.badge}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {label}
+                  </ThemedText>
+                </View>
+              ))}
+            {genres.data?.map((genre) => (
+              <View key={genre.id} style={[styles.badge, styles.genre]}>
+                <ThemedText type="small" themeColor="primary">
+                  {genre.name}
+                </ThemedText>
+              </View>
+            ))}
           </View>
         </View>
 
@@ -133,18 +143,6 @@ export default function MediaScreen() {
             </ThemedText>
           ) : null}
         </View>
-
-        {genres.data?.length ? (
-          <View style={styles.genres}>
-            {genres.data.map((genre) => (
-              <View key={genre.id} style={styles.genre}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {genre.name}
-                </ThemedText>
-              </View>
-            ))}
-          </View>
-        ) : null}
 
         {data.synopsis ? (
           <View style={styles.block}>
@@ -184,8 +182,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundElement,
     margin: Spacing.one,
   },
-  hero: { flexDirection: 'row', gap: Spacing.three, paddingHorizontal: Spacing.three },
-  heroText: { flex: 1, gap: Spacing.one, justifyContent: 'flex-end' },
+  hero: { gap: Spacing.three, paddingHorizontal: Spacing.three },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   facts: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.four, paddingHorizontal: Spacing.three },
   fact: { gap: Spacing.half },
   block: { gap: Spacing.three, paddingHorizontal: Spacing.three },
@@ -199,12 +197,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     backgroundColor: Colors.backgroundElement,
   },
-  genres: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, paddingHorizontal: Spacing.three },
-  genre: {
+  badge: {
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
     borderRadius: Radius.large,
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  genre: { borderColor: Colors.primary, backgroundColor: 'rgba(0, 153, 255, 0.1)' },
 });

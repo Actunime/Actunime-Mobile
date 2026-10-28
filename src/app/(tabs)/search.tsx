@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, TextInput, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
@@ -12,7 +13,12 @@ import { mediaId, type MediaKind } from '@/lib/api';
 import { useSearch } from '@/lib/queries';
 
 export default function SearchScreen() {
+  const params = useLocalSearchParams<{ kind?: string }>();
   const [kind, setKind] = useState<MediaKind>('anime');
+  // L'éventail de navigation ouvre la recherche sur animes ou mangas (`/search?kind=manga`).
+  useEffect(() => {
+    if (params.kind === 'anime' || params.kind === 'manga') setKind(params.kind);
+  }, [params.kind]);
   const [text, setText] = useState('');
   const term = useDebounced(text.trim());
   const search = useSearch(kind, term);

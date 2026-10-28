@@ -95,6 +95,6 @@ const styles = StyleSheet.create({
   avatarImage: { width: 64, height: 64 },
   names: { flex: 1 },
   counters: { flexDirection: 'row', flexWrap: 'wrap', rowGap: Spacing.three },
-  counter: { width: '50%', alignItems: 'center' },
+  counter: { flexGrow: 1, flexBasis: 120, alignItems: 'center' },
   centered: { textAlign: 'center' },
 });
