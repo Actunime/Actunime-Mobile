@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatYear, mediaTitle, progressLabel, totalOf } from './media';
+import { formatLabel, formatYear, mediaTitle, progressLabel, totalOf } from './media';
 
 describe('media', () => {
   it('affiche le titre original puis le titre normal', () => {
@@ -25,5 +25,11 @@ describe('media', () => {
   it('extrait l’année de début', () => {
     expect(formatYear({ date: { start: '2026-01-16T00:00:00.000Z' } })).toBe('2026');
     expect(formatYear({})).toBeNull();
+  });
+
+  it('rend le format lisible', () => {
+    expect(formatLabel('SERIE_COURTE')).toBe('Série courte');
+    expect(formatLabel('LIGHT_NOVEL')).toBe('Light novel');
+    expect(formatLabel('UNKNOWN')).toBeNull();
   });
 });

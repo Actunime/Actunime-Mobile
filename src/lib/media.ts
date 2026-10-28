@@ -34,3 +34,21 @@ export function formatYear(media?: IMedia | null): string | null {
   const year = new Date(start).getFullYear();
   return Number.isNaN(year) ? null : String(year);
 }
+
+const FORMAT_LABELS: Record<string, string> = {
+  SERIE: 'Série',
+  SERIE_COURTE: 'Série courte',
+  FILM: 'Film',
+  ONA: 'ONA',
+  OVA: 'OVA',
+  SPECIAL: 'Spécial',
+  MANGA: 'Manga',
+  UNKNOWN: '',
+};
+
+/** Format lisible (`SERIE_COURTE` devient « Série courte ») ; un format inconnu est passé en minuscules capitalisées. */
+export function formatLabel(format?: string): string | null {
+  if (!format) return null;
+  const label = FORMAT_LABELS[format] ?? format.charAt(0) + format.slice(1).toLowerCase().replace(/_/g, ' ');
+  return label || null;
+}
