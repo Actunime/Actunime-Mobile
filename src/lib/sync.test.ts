@@ -38,7 +38,7 @@ vi.mock('./api', () => {
   };
 });
 
-import { api, ApiError } from './api';
+import { api, ApiError, type IListEntry } from './api';
 import { confirm, currentProgress, pushProgress, resolve, searchCandidates } from './sync';
 
 const mocked = vi.mocked(api);
@@ -53,7 +53,7 @@ const detection = (overrides: Partial<PageDetection> = {}): PageDetection => ({
   ...overrides,
 });
 
-const pendingEntry = {
+const pendingEntry: IListEntry = {
   id: 'e1',
   mediaType: 'Manga' as const,
   status: 'READING',

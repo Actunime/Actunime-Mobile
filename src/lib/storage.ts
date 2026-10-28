@@ -4,18 +4,27 @@ import * as SecureStore from 'expo-secure-store';
 export interface IAuthState {
   accessToken: string;
   expiresAt: number;
+  /** Jeton de renouvellement : absent tant que l'API ne le renvoie pas (anciennes sessions comprises). */
+  refreshToken?: string;
+  refreshExpiresAt?: number;
   user: { id: string; username: string; displayName?: string; avatarUrl?: string | null };
 }
 
 const AUTH_KEY = 'actunime.auth';
 const MATCHES_KEY = 'actunime.matches';
 
+/** Une session reste utilisable tant que le jeton d'accès ou, à défaut, le jeton de renouvellement n'est pas expiré. */
+export function isSessionUsable(auth: IAuthState, now = Date.now()): boolean {
+  if (auth.expiresAt > now) return true;
+  return Boolean(auth.refreshToken && (auth.refreshExpiresAt ?? 0) > now);
+}
+
 export async function getAuth(): Promise<IAuthState | null> {
   const raw = await SecureStore.getItemAsync(AUTH_KEY);
   if (!raw) return null;
   try {
     const auth = JSON.parse(raw) as IAuthState;
-    return auth.expiresAt > Date.now() ? auth : null;
+    return isSessionUsable(auth) ? auth : null;
   } catch {
     return null;
   }

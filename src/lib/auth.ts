@@ -4,6 +4,7 @@ import { api } from './api';
 import { AUTH_REDIRECT_URL, WEB_URL } from './config';
 import { createPkcePair, createState } from './pkce';
 import { signIn } from './auth-store';
+import { sessionFromTokens } from './session';
 import type { IAuthState } from './storage';
 
 const SCOPES = ['profile:read', 'lists:read', 'lists:write', 'progress:write'];
@@ -32,12 +33,7 @@ export async function login(): Promise<IAuthState> {
   if (!code) throw new AuthError('Code d’autorisation manquant');
 
   const exchanged = await api.exchangeCode(code, verifier);
-  const auth: IAuthState = {
-    accessToken: exchanged.accessToken,
-    // marge d'une minute : on préfère redemander une connexion que d'écrire avec un jeton expiré
-    expiresAt: Date.now() + exchanged.expiresIn * 1000 - 60_000,
-    user: exchanged.user,
-  };
+  const auth = sessionFromTokens(exchanged, exchanged.user);
   await signIn(auth);
   return auth;
 }
