@@ -52,3 +52,36 @@ export function formatLabel(format?: string): string | null {
   const label = FORMAT_LABELS[format] ?? format.charAt(0) + format.slice(1).toLowerCase().replace(/_/g, ' ');
   return label || null;
 }
+
+const LINK_LABELS: Record<string, string> = {
+  'official site': 'Site officiel',
+  twitter: 'X (Twitter)',
+  x: 'X (Twitter)',
+  youtube: 'YouTube',
+  wikipedia: 'Wikipédia',
+  'official twitter': 'X officiel',
+};
+
+/** Libellé français d'un lien d'œuvre (les noms venus de MyAnimeList sont en anglais) ; le nom d'un service reste tel quel. */
+export function linkLabel(link: { url: string; name?: string }): string {
+  const name = link.name?.trim();
+  if (!name) return new URL(link.url).hostname.replace(/^www\./, '');
+  return LINK_LABELS[name.toLowerCase()] ?? name;
+}
+
+/** Couleur de la pastille de statut de l'œuvre : en cours en vert, bientôt en orange, terminé neutre. */
+export function statusTone(status?: string): 'success' | 'warning' | 'destructive' | 'neutral' {
+  if (status === 'AIRING') return 'success';
+  if (status === 'SOON' || status === 'PAUSED' || status === 'POSTONED') return 'warning';
+  if (status === 'STOPPED') return 'destructive';
+  return 'neutral';
+}
+
+/** Date longue en français (« 16 janvier 2026 »), ou `null` si absente ou invalide. */
+export function formatLongDate(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  return `${date.getUTCDate()} ${months[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+}
