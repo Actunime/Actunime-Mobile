@@ -150,18 +150,6 @@ export function formatScore(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1).replace('.', ',');
 }
 
-/** « JJ/MM/AAAA » vers ISO ; `null` pour vide, `undefined` pour une date invalide. */
-export function parseFrenchDate(text: string): string | null | undefined {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
-  const match = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(trimmed);
-  if (!match) return undefined;
-  const [day, month, year] = [Number(match[1]), Number(match[2]), Number(match[3])];
-  const date = new Date(year, month - 1, day, 12, 0, 0);
-  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return undefined;
-  return date.toISOString();
-}
-
 export function formatFrenchDate(iso: string | null | undefined): string {
   if (!iso) return '';
   const date = new Date(iso);

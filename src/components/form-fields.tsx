@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { clampScore, formatFrenchDate, formatScore, parseFrenchDate } from '@/lib/list-form';
+import { clampScore, formatFrenchDate, formatScore } from '@/lib/list-form';
 
 export function Field({ label, hint, children }: Readonly<{ label: string; hint?: string; children: React.ReactNode }>) {
   return (
@@ -97,46 +97,38 @@ export function ScoreField({ value, onChange }: Readonly<{ value?: number; onCha
 
 interface IDateFieldProps {
   value: string | null;
-  /** `valid` est faux tant que le texte n'est pas une date JJ/MM/AAAA (ou vide). */
-  onChange: (value: string | null, valid: boolean) => void;
+  onChange: (value: string | null) => void;
 }
 
+/** Date choisie au sélecteur natif d'Android ; « Effacer » vide le champ. */
 export function DateField({ value, onChange }: Readonly<IDateFieldProps>) {
-  const [text, setText] = useState(formatFrenchDate(value));
-  const [invalid, setInvalid] = useState(false);
-
-  // Une date posée par le formulaire (changement de statut) remplace le texte, sans écraser une saisie en cours.
-  useEffect(() => {
-    if (parseFrenchDate(text) === undefined) return;
-    if (formatFrenchDate(value) !== text.trim()) setText(formatFrenchDate(value));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
-
+  const open = () =>
+    DateTimePickerAndroid.open({
+      value: value ? new Date(value) : new Date(),
+      mode: 'date',
+      maximumDate: new Date(),
+      onChange: (event, date) => {
+        if (event.type !== 'set' || !date) return;
+        // midi local : évite qu'un décalage de fuseau fasse changer le jour à l'enregistrement
+        onChange(new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12).toISOString());
+      },
+    });
   return (
-    <TextInput
-      value={text}
-      onChangeText={(next) => {
-        setText(next);
-        const parsed = parseFrenchDate(next);
-        setInvalid(parsed === undefined);
-        onChange(parsed ?? null, parsed !== undefined);
-      }}
-      placeholder="JJ/MM/AAAA"
-      placeholderTextColor={Colors.textSecondary}
-      keyboardType="numbers-and-punctuation"
-      maxLength={10}
-      style={[styles.input, invalid && styles.invalid]}
-    />
+    <View style={styles.row}>
+      <Pressable accessibilityRole="button" onPress={open} style={[styles.input, styles.dateButton]}>
+        <ThemedText themeColor={value ? 'text' : 'textSecondary'}>{value ? formatFrenchDate(value) : 'Choisir une date'}</ThemedText>
+      </Pressable>
+      {value ? <Chip label="Effacer" onPress={() => onChange(null)} /> : null}
+    </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   field: { gap: Spacing.two },
   fieldHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   stack: { gap: Spacing.two },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   step: {
     width: 48,
     height: 48,
@@ -159,7 +151,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   numberInput: { flex: 1, textAlign: 'center' },
-  invalid: { borderColor: Colors.destructive },
+  dateButton: { flex: 1, justifyContent: 'center' },
   disabled: { opacity: 0.4 },
   pressed: { opacity: 0.8 },
 });

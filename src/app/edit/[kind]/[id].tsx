@@ -41,7 +41,6 @@ export default function EditEntryScreen() {
 
   const entry = entryQuery.data ?? null;
   const [form, setForm] = useState<IListForm | null>(null);
-  const [dateErrors, setDateErrors] = useState<Record<string, boolean>>({});
 
   // Le formulaire part de l'entrée existante une fois qu'elle est chargée (et une seule fois).
   useEffect(() => {
@@ -62,7 +61,6 @@ export default function EditEntryScreen() {
   if (media.isError) return <ErrorState error={media.error} onRetry={() => media.refetch()} />;
 
   const update = (patch: Partial<IListForm>) => setForm((current) => (current ? { ...current, ...patch } : current));
-  const hasDateError = Object.values(dateErrors).some(Boolean);
   const busy = save.isPending || remove.isPending;
   const title = mediaTitle(media.data);
   const error = save.error ?? remove.error;
@@ -94,13 +92,7 @@ export default function EditEntryScreen() {
 
   const dateField = (key: 'startedAt' | 'completedAt' | 'onHoldSince', label: string) => (
     <Field label={label}>
-      <DateField
-        value={form[key]}
-        onChange={(value, valid) => {
-          setDateErrors((errors) => ({ ...errors, [key]: !valid }));
-          if (valid) update({ [key]: value });
-        }}
-      />
+      <DateField value={form[key]} onChange={(value) => update({ [key]: value })} />
     </Field>
   );
 
@@ -224,13 +216,8 @@ export default function EditEntryScreen() {
             Impossible d’enregistrer : {errorMessage(error)}
           </ThemedText>
         ) : null}
-        {hasDateError ? (
-          <ThemedText type="small" themeColor="destructive">
-            Une date n’est pas valide (JJ/MM/AAAA).
-          </ThemedText>
-        ) : null}
 
-        <Button label={busy ? 'Enregistrement…' : entry ? 'Enregistrer' : 'Ajouter à ma liste'} onPress={submit} disabled={busy || hasDateError} />
+        <Button label={busy ? 'Enregistrement…' : entry ? 'Enregistrer' : 'Ajouter à ma liste'} onPress={submit} disabled={busy} />
         <View style={styles.row}>
           <View style={styles.flex}>
             <Button label="Annuler" variant="outline" onPress={() => router.back()} disabled={busy} />
