@@ -196,13 +196,13 @@ export default function MediaScreen() {
             </Fold>
           ) : null}
           {info.length > 0 ? (
-            <Fold title="Général">
+            <Fold title="Informations">
               {info.map((row) => (
                 <InfoRow key={row.label} {...row} />
               ))}
             </Fold>
           ) : null}
-          <Fold title={mediaType === 'Anime' ? 'Regarder' : 'Lire'}>
+          <Fold title="Liens externes">
             {links.slice(0, 6).map((link) => (
               <Button key={link.url} label={linkLabel(link)} variant="outline" onPress={() => openInBrowser(link.url)} />
             ))}
