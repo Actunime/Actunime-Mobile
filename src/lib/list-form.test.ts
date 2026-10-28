@@ -8,7 +8,6 @@ import {
   disabledReason,
   entryToForm,
   formatFrenchDate,
-  parseFrenchDate,
   statusesFor,
 } from './list-form';
 
@@ -92,10 +91,9 @@ describe('note et dates', () => {
     expect(clampScore(-1)).toBe(0);
   });
 
-  it('lit une date JJ/MM/AAAA et refuse une date impossible', () => {
-    expect(formatFrenchDate(parseFrenchDate('05/03/2026'))).toBe('05/03/2026');
-    expect(parseFrenchDate('')).toBeNull();
-    expect(parseFrenchDate('31/02/2026')).toBeUndefined();
-    expect(parseFrenchDate('hier')).toBeUndefined();
+  it('formate une date en JJ/MM/AAAA, vide si absente ou invalide', () => {
+    expect(formatFrenchDate(new Date(2026, 2, 5, 12).toISOString())).toBe('05/03/2026');
+    expect(formatFrenchDate(null)).toBe('');
+    expect(formatFrenchDate('pas une date')).toBe('');
   });
 });
