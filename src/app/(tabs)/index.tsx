@@ -1,60 +1,87 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Chip } from '@/components/chip';
-import { MediaRail } from '@/components/media-rail';
+import { Button } from '@/components/button';
+import { ListEntryRow } from '@/components/list-entry-row';
+import { MediaRow } from '@/components/media-row';
 import { Screen } from '@/components/screen';
 import { ErrorState } from '@/components/states';
 import { ThemedText } from '@/components/themed-text';
-import { Colors, Spacing } from '@/constants/theme';
-import { mediaId, type IListEntry, type IMedia } from '@/lib/api';
+import { Colors, Radius, Spacing } from '@/constants/theme';
+import { mediaId, type IListEntry } from '@/lib/api';
 import { useAuth } from '@/lib/auth-store';
-import { progressLabel } from '@/lib/media';
-import { useMyList, useSeasonAnimes, useTrending } from '@/lib/queries';
+import { WEB_URL } from '@/lib/config';
+import { useAllMyList, useListStatistics, useQuickProgress } from '@/lib/queries';
+import { behindAnimes, dayLabel, headline, listBreakdown, shortDay, timeLabel, weekSchedule } from '@/lib/suivi';
 
-function Section({ title, right, children }: Readonly<{ title: string; right?: React.ReactNode; children: React.ReactNode }>) {
+const SEGMENT_COLORS = { primary: Colors.primary, success: Colors.success, info: '#0ea5e9', muted: 'rgba(190, 213, 255, 0.4)' } as const;
+
+function Section({ title, hint, children }: Readonly<{ title: string; hint?: string; children: React.ReactNode }>) {
   return (
     <View style={styles.section}>
-      <View style={styles.sectionHeader}>
+      <View>
         <ThemedText type="subtitle">{title}</ThemedText>
-        {right}
+        {hint ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            {hint}
+          </ThemedText>
+        ) : null}
       </View>
       {children}
     </View>
   );
 }
 
-/** Œuvres de mes entrées en cours, avec la progression en légende. */
-function useInProgress(entries: IListEntry[] | undefined) {
-  return useMemo(() => {
-    const medias: IMedia[] = [];
-    const captions = new Map<string, string>();
-    for (const entry of entries ?? []) {
-      if (!entry.media) continue;
-      const id = mediaId(entry.media);
-      medias.push(entry.media);
-      const label = progressLabel(entry, entry.media);
-      if (label) captions.set(id, label);
-    }
-    return { medias, caption: (media: IMedia) => captions.get(mediaId(media)) ?? null };
-  }, [entries]);
+function Tile({ value, label, warn }: Readonly<{ value: string | number; label: string; warn?: boolean }>) {
+  return (
+    <View style={styles.tile}>
+      <ThemedText type="title" style={[styles.tileValue, warn ? { color: Colors.warning } : null]}>
+        {value}
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        {label}
+      </ThemedText>
+    </View>
+  );
 }
 
-export default function HomeScreen() {
+/** Mon suivi : page d'ouverture du membre (retard, planning de la semaine, répartition), port de `/suivi` du site. */
+export default function SuiviScreen() {
   const { auth } = useAuth();
   const client = useQueryClient();
-  const [trendingType, setTrendingType] = useState<'Anime' | 'Manga'>('Anime');
+  const quick = useQuickProgress();
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(0);
 
-  const watching = useMyList('Anime', 'WATCHING');
-  const reading = useMyList('Manga', 'READING');
-  const trending = useTrending(trendingType);
-  const season = useSeasonAnimes();
+  const watching = useAllMyList('Anime', 'WATCHING');
+  const planned = useAllMyList('Anime', 'PLAN_TO_WATCH');
+  const reading = useAllMyList('Manga', 'READING');
+  const stats = useListStatistics();
 
-  const watchingItems = useInProgress(watching.data?.pages[0]?.results);
-  const readingItems = useInProgress(reading.data?.pages[0]?.results);
+  const animeEntries = useMemo(() => [...(watching.data ?? []), ...(planned.data ?? [])], [watching.data, planned.data]);
+  const behind = useMemo(() => behindAnimes(watching.data ?? []), [watching.data]);
+  const week = useMemo(() => weekSchedule(animeEntries), [animeEntries]);
+  const resume = useMemo(
+    () =>
+      [...(watching.data ?? []), ...(reading.data ?? [])]
+        .filter((entry) => ((entry.mediaType === 'Manga' ? entry.chaptersRead : entry.episodesWatched) ?? 0) > 0)
+        // un anime déjà dans « À rattraper » n'est pas répété ici
+        .filter((entry) => !behind.some((item) => item.entry === entry))
+        .sort((a, b) => new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime())
+        .slice(0, 5),
+    [watching.data, reading.data, behind],
+  );
+  const behindTotal = behind.reduce((sum, item) => sum + item.behind, 0);
+  const todayCount = week[0]?.items.length ?? 0;
+  const inProgress = (watching.data?.length ?? 0) + (reading.data?.length ?? 0);
+  const segments = listBreakdown(stats.data?.byStatus ?? []);
+  const segmentTotal = segments.reduce((sum, segment) => sum + segment.value, 0);
+
+  const loading = watching.isPending || planned.isPending || reading.isPending;
+  const error = watching.error ?? planned.error ?? reading.error;
+  const empty = stats.isSuccess && stats.data.total === 0;
 
   const refresh = async () => {
     setRefreshing(true);
@@ -62,75 +89,159 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
+  const increment = (entry: IListEntry) =>
+    entry.media && quick.mutate({ entry, mediaId: mediaId(entry.media) });
+
+  const day = week[selectedDay];
+
   return (
     <Screen>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />}
       >
-        <View style={styles.hello}>
-          <Image source={require('../../../assets/images/logo.png')} style={styles.logo} contentFit="contain" />
-          <View>
-            <ThemedText themeColor="textSecondary" type="small">
-              Bonjour
+        <ThemedText type="title">Mon suivi</ThemedText>
+
+        {loading ? (
+          <ActivityIndicator color={Colors.primary} />
+        ) : error ? (
+          <ErrorState error={error} onRetry={() => void refresh()} />
+        ) : empty ? (
+          <View style={styles.card}>
+            <ThemedText type="subtitle">Ta liste est vide</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Ajoute des animes ou des mangas pour retrouver ici ta progression, tes épisodes à rattraper et ton planning de la semaine.
             </ThemedText>
-            <ThemedText type="subtitle">{auth?.user.displayName ?? auth?.user.username}</ThemedText>
+            <Button label="Explorer le catalogue" onPress={() => router.navigate('/search')} />
           </View>
-        </View>
-
-        {watchingItems.medias.length > 0 && (
-          <Section title="À regarder">
-            <MediaRail kind="anime" items={watchingItems.medias} caption={watchingItems.caption} />
-          </Section>
-        )}
-        {readingItems.medias.length > 0 && (
-          <Section title="À lire">
-            <MediaRail kind="manga" items={readingItems.medias} caption={readingItems.caption} />
-          </Section>
-        )}
-
-        <Section
-          title="Tendances"
-          right={
-            <View style={styles.chips}>
-              <Chip label="Animes" active={trendingType === 'Anime'} tint={Colors.anime} onPress={() => setTrendingType('Anime')} />
-              <Chip label="Mangas" active={trendingType === 'Manga'} tint={Colors.manga} onPress={() => setTrendingType('Manga')} />
+        ) : (
+          <>
+            <View style={styles.card}>
+              <View>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {dayLabel(new Date())}
+                </ThemedText>
+                <ThemedText type="subtitle">{headline(todayCount, behindTotal)}</ThemedText>
+              </View>
+              <View style={styles.tiles}>
+                <Tile value={todayCount} label="Aujourd'hui" />
+                <Tile value={behindTotal} label="Ép. de retard" warn={behindTotal > 0} />
+                <Tile value={inProgress} label="En cours" />
+              </View>
             </View>
-          }
-        >
-          {trending.isPending ? (
-            <ActivityIndicator color={Colors.primary} />
-          ) : trending.isError ? (
-            <ErrorState error={trending.error} onRetry={() => trending.refetch()} />
-          ) : (
-            <MediaRail kind={trendingType === 'Manga' ? 'manga' : 'anime'} items={trending.data} />
-          )}
-        </Section>
 
-        <Section title="Cette saison">
-          {season.isPending ? (
-            <ActivityIndicator color={Colors.primary} />
-          ) : season.isError ? (
-            <ErrorState error={season.error} onRetry={() => season.refetch()} />
-          ) : (
-            <MediaRail kind="anime" items={season.data} />
-          )}
-        </Section>
+            {behind.length > 0 && (
+              <Section title="À rattraper" hint={`${behind.length} anime${behind.length > 1 ? 's' : ''} en retard`}>
+                {behind.slice(0, 5).map((item) => (
+                  <ListEntryRow
+                    key={(item.entry.id ?? item.entry._id) as string}
+                    entry={item.entry}
+                    note={`${item.behind} épisode${item.behind > 1 ? 's' : ''} de retard`}
+                    incrementing={quick.isPending}
+                    onIncrement={() => increment(item.entry)}
+                  />
+                ))}
+              </Section>
+            )}
+
+            {resume.length > 0 && (
+              <Section title="Reprendre">
+                {resume.map((entry) => (
+                  <ListEntryRow
+                    key={(entry.id ?? entry._id) as string}
+                    entry={entry}
+                    incrementing={quick.isPending}
+                    onIncrement={() => increment(entry)}
+                  />
+                ))}
+              </Section>
+            )}
+
+            <Section title="Ma semaine" hint="Les animes de ma liste qui sortent cette semaine">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.days}>
+                {week.map((entry, index) => (
+                  <Pressable
+                    key={entry.date.toISOString()}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: index === selectedDay }}
+                    onPress={() => setSelectedDay(index)}
+                    style={[styles.day, index === selectedDay && styles.daySelected]}
+                  >
+                    <ThemedText type="small" themeColor={index === selectedDay ? 'primary' : 'textSecondary'}>
+                      {index === 0 ? "Auj." : shortDay(entry.date)}
+                    </ThemedText>
+                    <ThemedText type="smallBold">{entry.date.getDate()}</ThemedText>
+                    <ThemedText type="small" themeColor={entry.items.length ? 'primary' : 'textSecondary'}>
+                      {entry.items.length}
+                    </ThemedText>
+                  </Pressable>
+                ))}
+              </ScrollView>
+              {day && day.items.length > 0 ? (
+                day.items.map((item) => (
+                  <MediaRow key={mediaId(item.media)} kind="anime" media={item.media} subtitle={`${dayLabel(day.date)} ${timeLabel(item.at)}`} />
+                ))
+              ) : (
+                <ThemedText type="small" themeColor="textSecondary">
+                  Aucune sortie ce jour-là dans ta liste.
+                </ThemedText>
+              )}
+            </Section>
+
+            {segments.length > 0 && (
+              <Section title="Mes chiffres">
+                <View style={styles.card}>
+                  <View style={styles.bar}>
+                    {segments.map((segment) => (
+                      <View key={segment.label} style={{ flexGrow: segment.value, backgroundColor: SEGMENT_COLORS[segment.color] }} />
+                    ))}
+                  </View>
+                  <View style={styles.legend}>
+                    {segments.map((segment) => (
+                      <View key={segment.label} style={styles.legendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: SEGMENT_COLORS[segment.color] }]} />
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {segment.label} · {segment.value}
+                        </ThemedText>
+                      </View>
+                    ))}
+                  </View>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {segmentTotal} entrées · {stats.data?.totalEpisodesWatched ?? 0} épisodes vus · {stats.data?.totalChaptersRead ?? 0} chapitres lus
+                  </ThemedText>
+                </View>
+              </Section>
+            )}
+
+            <View style={styles.card}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Amis en ligne, activité, série et objectif de la semaine sont sur le site.
+              </ThemedText>
+              <Button label="Ouvrir mon suivi sur le site" variant="outline" onPress={() => Linking.openURL(`${WEB_URL}/suivi`)} />
+            </View>
+          </>
+        )}
+        <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
+          Connecté en tant que {auth?.user.displayName ?? auth?.user.username}
+        </ThemedText>
       </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingVertical: Spacing.three, gap: Spacing.four },
-  hello: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingHorizontal: Spacing.three },
-  logo: { width: 36, height: 38 },
+  content: { padding: Spacing.three, gap: Spacing.four, paddingBottom: Spacing.five },
   section: { gap: Spacing.three },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.three,
-  },
-  chips: { flexDirection: 'row', gap: Spacing.two },
+  card: { padding: Spacing.three, gap: Spacing.three, borderRadius: Radius.large, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundElement },
+  tiles: { flexDirection: 'row', gap: Spacing.two },
+  tile: { flex: 1, padding: Spacing.two, borderRadius: Radius.medium, backgroundColor: 'rgba(255, 255, 255, 0.04)' },
+  tileValue: { fontSize: 26, lineHeight: 30 },
+  days: { gap: Spacing.two },
+  day: { width: 56, paddingVertical: Spacing.two, alignItems: 'center', gap: 2, borderRadius: Radius.medium, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundElement },
+  daySelected: { borderColor: Colors.primary, backgroundColor: Colors.backgroundSelected },
+  bar: { height: 12, flexDirection: 'row', gap: 2, borderRadius: 6, overflow: 'hidden', backgroundColor: Colors.background },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.three, rowGap: Spacing.one },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  footer: { textAlign: 'center' },
 });

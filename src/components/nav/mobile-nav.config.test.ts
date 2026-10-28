@@ -35,7 +35,7 @@ describe('configuration de la navigation', () => {
 
   it('repère le raccourci actif', () => {
     expect(findActiveTabId(MEMBER_TABS, '/list')).toBe('list');
-    expect(findActiveTabId(MEMBER_TABS, '/')).toBe('home');
+    expect(findActiveTabId(MEMBER_TABS, '/')).toBe('suivi');
     expect(findActiveTabId(MEMBER_TABS, '/profile')).toBeNull();
   });
 });
