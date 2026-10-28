@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { router, usePathname, type Href } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, BackHandler, Easing, Pressable, StyleSheet, Text, View, useWindowDimensions, type GestureResponderEvent } from 'react-native';
+import { Animated, BackHandler, Easing, Keyboard, Pressable, StyleSheet, Text, View, useWindowDimensions, type GestureResponderEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -153,6 +153,7 @@ export function MobileNav() {
   const [hotIndex, setHotIndex] = useState<number | null>(null);
   const [overlayHeight, setOverlayHeight] = useState(0);
   const [labelSizes, setLabelSizes] = useState<ILabelSize[]>([]);
+  const [keyboardShown, setKeyboardShown] = useState(false);
 
   const items = trail.length > 0 ? (trail[trail.length - 1]!.children ?? MEMBER_FAN) : MEMBER_FAN;
   const slots = useMemo(() => computeFanSlots(items.length), [items.length]);
@@ -295,6 +296,15 @@ export function MobileNav() {
     close();
   }, [pathname, close]);
   useEffect(() => clearTimers, [clearTimers]);
+  // Clavier ouvert (saisie d'une recherche) : la barre ne reste pas posée par-dessus les touches.
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardShown(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardShown(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
   useEffect(() => {
     if (!open) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -312,7 +322,7 @@ export function MobileNav() {
     return open && measured ? placeLabels(slots, labelSizes, width) : null;
   }, [open, labelSizes, items.length, slots, width]);
 
-  if (!auth) return null;
+  if (!auth || keyboardShown) return null;
 
   const hubX = width / 2;
   const hubY = overlayHeight - insets.bottom - HUB_FROM_BOTTOM;
