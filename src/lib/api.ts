@@ -80,6 +80,8 @@ export interface IMedia extends ISearchMedia {
   genres?: string[];
   episodesInfo?: { total?: number; airing?: number; durationMinutes?: number; broadcastPaused?: boolean; nextAiringDate?: string };
   chaptersInfo?: { total?: number };
+  /** Liens officiels et de lecture/streaming. */
+  links?: { url: string; name?: string }[];
   volumesInfo?: { total?: number };
   /** Moyenne communautaire : `average` n'est fournie qu'à partir de 3 notes. */
   communityScore?: { average?: number; count: number };
