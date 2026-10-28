@@ -99,7 +99,7 @@ export default function EditEntryScreen() {
   const showProgress = PROGRESS_STATUSES.includes(form.status);
 
   return (
-    <Screen edges={['bottom']}>
+    <Screen edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.media}>
           <Poster uri={media.data.posterUrl} width={48} />
