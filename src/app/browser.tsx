@@ -45,7 +45,8 @@ function IconButton({ name, label, onPress, disabled }: IconButtonProps) {
 }
 
 export default function BrowserScreen() {
-  const { url: initialUrl } = useLocalSearchParams<{ url: string }>();
+  // `t` change à chaque demande d'ouverture : rouvrir la même adresse depuis une fiche recharge quand même la page.
+  const { url: initialUrl, t: openedAt } = useLocalSearchParams<{ url: string; t?: string }>();
   const webview = useRef<WebView>(null);
   const tracking = useTracking(webview);
   // `source` n'est modifié que par une adresse saisie : le mettre à jour à chaque navigation rechargerait la page en boucle.
@@ -62,6 +63,19 @@ export default function BrowserScreen() {
   const [strategies, setStrategies] = useState<StrategyResult[] | null>(null);
   const [picked, setPicked] = useState<{ seq: number; element: PickedElement } | null>(null);
   const pickSeq = useRef(0);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Une nouvelle adresse reçue alors que l'écran est déjà ouvert (depuis une fiche) remplace la page courante.
+  const lastRequest = useRef(`${initialUrl}|${openedAt}`);
+  useEffect(() => {
+    const request = `${initialUrl}|${openedAt}`;
+    if (!initialUrl || request === lastRequest.current) return;
+    lastRequest.current = request;
+    setSource(initialUrl);
+    setPageUrl(initialUrl);
+    setAddress(initialUrl);
+    setReloadKey((key) => key + 1);
+  }, [initialUrl, openedAt]);
 
   // Bouton retour d'Android : page précédente du site avant de quitter le navigateur.
   useEffect(() => {
@@ -181,6 +195,7 @@ export default function BrowserScreen() {
 
         <View style={styles.container}>
           <WebView
+            key={reloadKey}
             ref={webview}
             source={{ uri: source, headers: PRIVACY_HEADERS }}
             style={styles.container}
