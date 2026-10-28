@@ -38,18 +38,22 @@ async function performRefresh(staleToken?: string): Promise<IAuthState | null> {
   if (staleToken && current.accessToken !== staleToken) return current;
   if (!current.refreshToken) return null;
 
-  let response: Response;
-  try {
-    response = await fetch(`${API_URL}/auth/extension/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: current.refreshToken }),
-      credentials: 'omit',
-    });
-  } catch {
-    // Réseau coupé : la session n'est pas invalidée, le renouvellement sera retenté à la prochaine requête.
-    throw new ApiError(0, 'Serveur Actunime inaccessible');
+  // Si la réponse se perd (pas de réponse HTTP), on renvoie le même jeton une fois : l'API tolère ce renvoi
+  // pendant 30 s, alors qu'abandonner laisserait un jeton déjà tourné côté serveur et perdu côté app.
+  let response: Response | null = null;
+  for (let attempt = 0; attempt < 2 && !response; attempt++) {
+    try {
+      response = await fetch(`${API_URL}/auth/extension/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: current.refreshToken }),
+        credentials: 'omit',
+      });
+    } catch {
+      // réessai immédiat ; après le second échec la session est conservée et le renouvellement sera retenté plus tard
+    }
   }
+  if (!response) throw new ApiError(0, 'Serveur Actunime inaccessible');
 
   if (response.status === 401 || response.status === 400 || response.status === 403) {
     // Expiré, révoqué ou déjà utilisé (rotation) : plus aucun moyen de rester connecté.

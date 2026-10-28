@@ -164,7 +164,8 @@ describe('requête authentifiée', () => {
     await api.getListStatistics();
 
     expect(clearAuth).not.toHaveBeenCalled();
-    expect(bearerOf(fetchMock.mock.calls[1] as [string, RequestInit])).toBe('Bearer access-1');
+    const apiCall = fetchMock.mock.calls.find(([url]) => url.endsWith('/lists/statistics'));
+    expect(bearerOf(apiCall as [string, RequestInit])).toBe('Bearer access-1');
   });
 
   it('sans jeton de renouvellement (ancienne session), un 401 déconnecte comme avant', async () => {
@@ -175,6 +176,53 @@ describe('requête authentifiée', () => {
 
     expect(refreshCalls()).toHaveLength(0);
     expect(clearAuth).toHaveBeenCalledTimes(1);
+  });
+
+  it('sur 401 d’une requête partie avec l’ancien jeton, rejoue avec le jeton courant sans nouveau renouvellement', async () => {
+    db.stored = session({ accessToken: 'access-1' });
+    fetchMock.mockImplementation(async (_url, init) => {
+      const token = (init.headers as Record<string, string>).Authorization;
+      if (token === 'Bearer access-1') {
+        // un autre appel vient de renouveler : le jeton courant en stockage n'est plus celui de la requête
+        db.stored = session({ accessToken: 'access-2', refreshToken: 'refresh-2' });
+        return json(401, { message: 'revoked' });
+      }
+      return json(200, { total: 3 });
+    });
+
+    await expect(api.getListStatistics()).resolves.toEqual({ total: 3 });
+
+    expect(refreshCalls()).toHaveLength(0);
+    expect(clearAuth).not.toHaveBeenCalled();
+  });
+
+  it('réessaie une fois le même renouvellement quand la réponse se perd', async () => {
+    db.stored = session({ expiresAt: NOW + 10_000 });
+    let attempts = 0;
+    fetchMock.mockImplementation(async (url) => {
+      if (url.endsWith('/auth/extension/refresh')) {
+        attempts += 1;
+        if (attempts === 1) throw new TypeError('network');
+        return json(200, renewedTokens);
+      }
+      return json(200, { total: 1 });
+    });
+
+    await api.getListStatistics();
+
+    expect(refreshCalls()).toHaveLength(2);
+    expect(refreshCalls().map((call) => JSON.parse(call[1].body as string).refreshToken)).toEqual(['refresh-1', 'refresh-1']);
+    expect(db.stored?.accessToken).toBe('access-2');
+  });
+
+  it('n’insiste pas au-delà d’un réessai et garde la session', async () => {
+    db.stored = session({ expiresAt: NOW - 1 });
+    fetchMock.mockRejectedValue(new TypeError('network'));
+
+    await expect(api.getListStatistics()).rejects.toMatchObject({ status: 0 });
+
+    expect(refreshCalls()).toHaveLength(2);
+    expect(clearAuth).not.toHaveBeenCalled();
   });
 
   it('lit une réponse 200 sans corps comme « aucune entrée »', async () => {
