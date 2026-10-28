@@ -10,7 +10,7 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
 }));
 vi.mock('expo-secure-store', () => ({ getItemAsync: vi.fn(), setItemAsync: vi.fn(), deleteItemAsync: vi.fn() }));
 
-import { getMatches, saveMatch } from './storage';
+import { getMatches, isSessionUsable, saveMatch, type IAuthState } from './storage';
 
 beforeEach(() => store.clear());
 
@@ -25,5 +25,25 @@ describe('associations œuvre ↔ détection', () => {
     await saveMatch('manga|x', { kind: 'pending', id: 'e1', title: 'X' });
 
     expect((await getMatches())['manga|x']).toEqual({ kind: 'pending', id: 'e1', title: 'X' });
+  });
+});
+
+describe('session utilisable', () => {
+  const base: IAuthState = { accessToken: 'a', expiresAt: 1_000, user: { id: 'u', username: 'm' } };
+
+  it('accepte un jeton d’accès encore valide', () => {
+    expect(isSessionUsable(base, 500)).toBe(true);
+  });
+
+  it('refuse un jeton expiré sans jeton de renouvellement', () => {
+    expect(isSessionUsable(base, 2_000)).toBe(false);
+  });
+
+  it('garde la session quand l’accès est expiré mais le renouvellement encore valide', () => {
+    expect(isSessionUsable({ ...base, refreshToken: 'r', refreshExpiresAt: 5_000 }, 2_000)).toBe(true);
+  });
+
+  it('refuse la session quand le renouvellement est lui aussi expiré', () => {
+    expect(isSessionUsable({ ...base, refreshToken: 'r', refreshExpiresAt: 1_500 }, 2_000)).toBe(false);
   });
 });
