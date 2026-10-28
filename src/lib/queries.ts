@@ -4,7 +4,6 @@ import {
   api,
   type IListEntry,
   type IListEntryFields,
-  type IMedia,
   type ListStatus,
   type MediaKind,
 } from './api';
@@ -47,21 +46,9 @@ export const usePendingEntries = () => useQuery({ queryKey: ['pending-entries'],
 
 export const useListStatistics = () => useQuery({ queryKey: ['list-statistics'], queryFn: api.getListStatistics });
 
-/** Les 10 œuvres en tendance, complétées par leur fiche (une œuvre introuvable est ignorée). */
-export const useTrending = (type: 'Anime' | 'Manga') =>
-  useQuery({
-    queryKey: ['trending', type],
-    staleTime: FIVE_MINUTES,
-    queryFn: async () => {
-      const ids = await api.getTrendingIds(type);
-      const kind: MediaKind = type === 'Manga' ? 'manga' : 'anime';
-      const medias = await Promise.all(ids.map((id) => api.getMedia(kind, id).catch(() => null)));
-      return medias.filter((media): media is IMedia => media !== null);
-    },
-  });
-
-export const useSeasonAnimes = () =>
-  useQuery({ queryKey: ['season'], queryFn: () => api.getSeasonAnimes(), staleTime: FIVE_MINUTES });
+/** Entrées en cours ou prévues d'un type, toutes pages : de quoi calculer retard et planning de « Mon suivi ». */
+export const useAllMyList = (mediaType: 'Anime' | 'Manga', status: ListStatus) =>
+  useQuery({ queryKey: ['my-list', 'all', mediaType, status], queryFn: () => api.getAllMyList(mediaType, status) });
 
 /** Après un changement de ma liste, tout ce qui l'affiche doit se rafraîchir. */
 function useInvalidateList() {
@@ -98,6 +85,20 @@ export function useRemoveEntry() {
   const invalidate = useInvalidateList();
   return useMutation({
     mutationFn: ({ entry }: { entry: IListEntry; mediaId: string }) => api.deleteListEntry((entry.id ?? entry._id) as string),
+    onSuccess: (_data, input) => invalidate(input.mediaId),
+  });
+}
+
+/** « +1 » de Ma liste : un épisode vu ou un chapitre lu de plus, sans ouvrir le formulaire. */
+export function useQuickProgress() {
+  const invalidate = useInvalidateList();
+  return useMutation({
+    mutationFn: ({ entry }: { entry: IListEntry; mediaId: string }) => {
+      const id = (entry.id ?? entry._id) as string;
+      return entry.mediaType === 'Manga'
+        ? api.updateListEntry(id, { chaptersRead: (entry.chaptersRead ?? 0) + 1 })
+        : api.updateListEntry(id, { episodesWatched: (entry.episodesWatched ?? 0) + 1 });
+    },
     onSuccess: (_data, input) => invalidate(input.mediaId),
   });
 }

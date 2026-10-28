@@ -2,15 +2,15 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
-import { MediaRow } from '@/components/media-row';
+import { ListEntryRow } from '@/components/list-entry-row';
 import { Screen } from '@/components/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/states';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Spacing } from '@/constants/theme';
 import { type IListEntry, type ListStatus } from '@/lib/api';
 import { ANIME_STATUSES, MANGA_STATUSES, STATUS_LABELS } from '@/lib/list-form';
-import { kindOf, progressLabel } from '@/lib/media';
-import { useMyList, usePendingEntries } from '@/lib/queries';
+import { progressLabel } from '@/lib/media';
+import { useMyList, usePendingEntries, useQuickProgress } from '@/lib/queries';
 
 const statusLine = (entry: IListEntry) =>
   [STATUS_LABELS[entry.status], progressLabel(entry, entry.media), entry.score ? `${entry.score}/10` : null]
@@ -22,6 +22,7 @@ export default function MyListScreen() {
   const [status, setStatus] = useState<ListStatus | undefined>(undefined);
   const list = useMyList(mediaType, status);
   const pending = usePendingEntries();
+  const quick = useQuickProgress();
 
   const entries = useMemo(() => list.data?.pages.flatMap((page) => page.results) ?? [], [list.data]);
   // Les entrées en attente de validation n'ont pas d'œuvre : l'API les sert à part.
@@ -69,11 +70,13 @@ export default function MyListScreen() {
           contentContainerStyle={styles.list}
           onEndReached={() => list.hasNextPage && !list.isFetchingNextPage && list.fetchNextPage()}
           onEndReachedThreshold={0.5}
-          renderItem={({ item }) =>
-            item.media ? (
-              <MediaRow kind={kindOf(item.mediaType)} media={item.media} subtitle={statusLine(item)} />
-            ) : null
-          }
+          renderItem={({ item }) => (
+            <ListEntryRow
+              entry={item}
+              incrementing={quick.isPending}
+              onIncrement={() => item.media && quick.mutate({ entry: item, mediaId: (item.media.id ?? item.media._id) as string })}
+            />
+          )}
           ListHeaderComponent={
             <>
               {total !== undefined && (

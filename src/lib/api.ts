@@ -193,22 +193,6 @@ export const api = {
     return request<IMedia>(`${kindPath(kind)}?id=${encodeURIComponent(id)}`, { auth: false });
   },
 
-  /** Animes de la saison en cours, par date de début. */
-  getSeasonAnimes(limit = 20) {
-    return request<IPage<IMedia>>('/animes', {
-      method: 'POST',
-      body: { query: { verified: true, seasonPeriod: 'current' }, sort: { 'date.start': 'asc' }, limit, page: 1 },
-      auth: false,
-    }).then((res) => res.results);
-  },
-
-  /** Identifiants des œuvres en tendance (à compléter avec `getMedia`). */
-  getTrendingIds(type: 'Anime' | 'Manga', period: '24h' | '7d' | '30d' = '7d', limit = 10) {
-    return request<{ entities: { entityId: string }[] }>(`/trending?type=${type}&period=${period}&limit=${limit}`, {
-      auth: false,
-    }).then((res) => res.entities.map((e) => e.entityId));
-  },
-
   getGenres(ids: string[]) {
     if (ids.length === 0) return Promise.resolve([] as IGenre[]);
     return request<IGenre[]>('/metadata/by-ids', {
@@ -229,6 +213,20 @@ export const api = {
       method: 'POST',
       body: { page, limit, query: { mediaType, ...(status ? { status } : {}) } },
     });
+  },
+
+  /** Toutes les entrées de ma liste pour un type et un statut (pages de 100 enchaînées), œuvres peuplées. */
+  async getAllMyList(mediaType: 'Anime' | 'Manga', status: ListStatus): Promise<IListEntry[]> {
+    const entries: IListEntry[] = [];
+    for (let page = 1; page <= 20; page++) {
+      const res = await request<IPage<IListEntry>>('/lists', {
+        method: 'POST',
+        body: { page, limit: 100, query: { mediaType, status } },
+      });
+      entries.push(...res.results);
+      if (!res.hasNextPage) break;
+    }
+    return entries;
   },
 
   getListStatistics() {
