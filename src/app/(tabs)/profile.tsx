@@ -73,7 +73,7 @@ export default function ProfileScreen() {
           />
         </ThemedView>
 
-        <Button label="Se déconnecter" variant="outline" onPress={() => signOut()} />
+        <Button label="Déconnexion" variant="outline" onPress={() => signOut()} />
       </ScrollView>
     </Screen>
   );

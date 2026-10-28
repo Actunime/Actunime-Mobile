@@ -24,7 +24,7 @@ export function Button({ label, variant = 'primary', disabled, style, ...rest }:
       ]}
       {...rest}
     >
-      <ThemedText type="smallBold" themeColor={primary ? 'primaryForeground' : 'text'}>
+      <ThemedText type="smallBold" themeColor={primary ? 'primaryForeground' : 'text'} style={styles.label}>
         {label}
       </ThemedText>
     </Pressable>
@@ -41,6 +41,8 @@ const styles = StyleSheet.create({
   },
   primary: { backgroundColor: Colors.primary },
   outline: { backgroundColor: Colors.backgroundElement, borderWidth: 1, borderColor: Colors.border },
+  /** Sans `flexShrink`, Android mesurait parfois le libellé trop étroit (« Se » pour « Se déconnecter »). */
+  label: { flexShrink: 1, textAlign: 'center' },
   disabled: { opacity: 0.4 },
   pressed: { opacity: 0.8 },
 });
