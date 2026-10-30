@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
+import { Sheen } from '@/components/ui/sheen';
 import { Pressable } from '@/components/tap';
 import { Poster } from '@/components/poster';
 import { ThemedText } from '@/components/themed-text';
@@ -35,6 +36,7 @@ export function MediaRow({ kind, media, subtitle, right }: Readonly<IMediaRowPro
   const date = formatLongDate(media.date?.start);
   return (
     <Pressable style={({ pressed }) => [styles.row, pressed && styles.pressed]} onPress={() => openMedia(kind, mediaId(media))}>
+      <Sheen />
       <Poster uri={media.posterUrl} width={72} />
       <View style={styles.body}>
         <ThemedText type="smallBold" numberOfLines={2}>
@@ -79,6 +81,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     padding: Spacing.two,
     ...Floating,
+    overflow: 'hidden',
   },
   pressed: { opacity: 0.8 },
   body: { flex: 1, gap: Spacing.one },

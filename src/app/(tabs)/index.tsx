@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import { Sheen } from '@/components/ui/sheen';
 import { Pressable } from '@/components/tap';
 import { Button } from '@/components/button';
 import { EntryCard } from '@/components/cards/entry-card';
@@ -108,6 +109,7 @@ export default function SuiviScreen() {
           <ErrorState error={error} onRetry={() => void refresh()} />
         ) : empty ? (
           <View style={styles.card}>
+            <Sheen />
             <ThemedText type="subtitle">Ta liste est vide</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               Ajoute des animes ou des mangas pour retrouver ici ta progression, tes épisodes à rattraper et ton planning de la semaine.
@@ -117,6 +119,7 @@ export default function SuiviScreen() {
         ) : (
           <>
             <View style={styles.card}>
+              <Sheen />
               <View>
                 <ThemedText type="small" themeColor="textSecondary">
                   {dayLabel(new Date())}
@@ -185,6 +188,7 @@ export default function SuiviScreen() {
             {segments.length > 0 && (
               <Section title="Mes chiffres">
                 <View style={styles.card}>
+                  <Sheen />
                   <View style={styles.bar}>
                     {segments.map((segment) => (
                       <View key={segment.label} style={{ flexGrow: segment.value, backgroundColor: SEGMENT_COLORS[segment.color] }} />
@@ -208,6 +212,8 @@ export default function SuiviScreen() {
             )}
 
             <View style={styles.card}>
+
+              <Sheen />
               <ThemedText type="small" themeColor="textSecondary">
                 Amis en ligne, activité, série et objectif de la semaine sont sur le site.
               </ThemedText>
@@ -226,7 +232,7 @@ export default function SuiviScreen() {
 const styles = StyleSheet.create({
   content: { padding: Spacing.three, gap: Spacing.four, paddingBottom: Spacing.five },
   section: { gap: Spacing.three },
-  card: { ...Floating, padding: Spacing.three, gap: Spacing.three },
+  card: { ...Floating, overflow: 'hidden', padding: Spacing.three, gap: Spacing.three },
   tiles: { flexDirection: 'row', gap: Spacing.two },
   tile: { flex: 1, padding: Spacing.two, borderRadius: Radius.medium, backgroundColor: 'rgba(255, 255, 255, 0.04)' },
   tileValue: { fontSize: 26, lineHeight: 30 },

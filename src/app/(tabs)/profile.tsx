@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
+import { Sheen } from '@/components/ui/sheen';
 import { Button } from '@/components/button';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -36,6 +37,8 @@ export default function ProfileScreen() {
         <ThemedText type="title">Profil</ThemedText>
 
         <ThemedView type="backgroundElement" style={[styles.card, styles.identity]}>
+
+          <Sheen />
           <View style={styles.avatar}>
             {auth.user.avatarUrl ? (
               <Image source={{ uri: auth.user.avatarUrl }} style={styles.avatarImage} contentFit="cover" />
@@ -55,6 +58,7 @@ export default function ProfileScreen() {
 
         {stats.data && (
           <ThemedView type="backgroundElement" style={[styles.card, styles.counters]}>
+            <Sheen />
             <Counter value={stats.data.animeCount} label="animes" />
             <Counter value={stats.data.mangaCount} label="mangas" />
             <Counter value={stats.data.episodesWatched} label="épisodes vus" />
@@ -66,6 +70,8 @@ export default function ProfileScreen() {
         )}
 
         <ThemedView type="backgroundElement" style={styles.card}>
+
+          <Sheen />
           <ThemedText type="small" themeColor="textSecondary">
             Statistiques détaillées, amis, activité et réglages du compte sont sur le site.
           </ThemedText>
@@ -84,7 +90,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   content: { padding: Spacing.three, gap: Spacing.three },
-  card: { ...Floating, padding: Spacing.three, gap: Spacing.three },
+  card: { ...Floating, overflow: 'hidden', padding: Spacing.three, gap: Spacing.three },
   identity: { flexDirection: 'row', alignItems: 'center' },
   avatar: {
     width: 64,

@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { type LucideIcon } from 'lucide-react-native';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { Sheen } from '@/components/ui/sheen';
 import { Pressable } from '@/components/tap';
 import { CardImage } from '@/components/cards/media-cards';
 import { Txt } from '@/components/tw';
@@ -26,6 +27,7 @@ export function SectionCard({
 }>) {
   return (
     <View style={styles.card} onLayout={onLayout ? (e) => onLayout(e.nativeEvent.layout.y) : undefined}>
+      <Sheen />
       <View style={styles.cardHeader}>
         <View style={styles.cardTitle}>
           {Icon ? <Icon size={20} color={Tw.color.mutedForeground} /> : null}
@@ -174,7 +176,7 @@ export function CardCarousel({
 
 const styles = StyleSheet.create({
   center: { textAlign: 'center' },
-  card: { ...Floating, paddingVertical: 16, gap: 16 },
+  card: { ...Floating, overflow: 'hidden', paddingVertical: 16, gap: 16 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 16 },
   cardTitle: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
   cardContent: { paddingHorizontal: 16 },

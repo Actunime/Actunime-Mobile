@@ -3,6 +3,7 @@ import { ArrowRight, BookOpen, Calendar, Clock, Film, Layers, Pencil, Plus, Star
 import { useState } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { Sheen } from '@/components/ui/sheen';
 import { Pressable } from '@/components/tap';
 import { ListEntryBand } from '@/components/cards/list-entry-band';
 import { Txt } from '@/components/tw';
@@ -271,6 +272,7 @@ export function MediaGridCard({ kind, media, entry, onPress, dense }: Readonly<I
         : null;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={mediaTitle(media)} onPress={onPress} style={({ pressed }) => [styles.gridCard, pressed && styles.pressed]}>
+      <Sheen />
       <View>
         <CardImage uri={media.posterUrl} kind={kind} style={styles.gridImage} />
         <View style={[styles.badgeZone, styles.badgeLeft]}>
@@ -302,6 +304,7 @@ export function MediaRowCard({
   const corner = progress != null ? `${progress}${kind === 'anime' && aired != null ? `/${aired}` : ''}` : kind === 'anime' && aired != null ? String(aired) : null;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={mediaTitle(media)} onPress={onPress} style={({ pressed }) => [styles.rowCard, pressed && styles.pressed]}>
+      <Sheen />
       <View>
         <CardImage uri={media.posterUrl} kind={kind} style={styles.rowImage} iconSize={18} />
         {corner ? (
@@ -502,6 +505,7 @@ export function MediaDetailedCard({
 
   return (
     <View style={styles.detailedCard}>
+      <Sheen />
       {compact ? (
         <Pressable
           accessibilityRole="button"
@@ -555,13 +559,13 @@ const styles = StyleSheet.create({
   gridBody: { padding: 8, gap: 4 },
   gridBodyDense: { padding: 6 },
   // Ligne compacte
-  rowCard: { ...Floating, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8 },
+  rowCard: { ...Floating, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8 },
   rowImage: { width: 48, height: 64, borderRadius: Tw.radius.lg },
   rowCorner: { position: 'absolute', top: 0, right: 0, backgroundColor: alpha(Tw.color.primary, 0.9), paddingHorizontal: 4, borderRadius: Tw.radius.sm },
   actionDefault: { height: 44, minWidth: 44, paddingHorizontal: 10, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.primary, alignItems: 'center', justifyContent: 'center' },
   actionSecondary: { width: 44, height: 44, borderRadius: Tw.radius.lg, borderWidth: 1, borderColor: Tw.color.input, backgroundColor: alpha(Tw.color.input, 0.3), alignItems: 'center', justifyContent: 'center' },
   // Détaillée
-  detailedCard: { ...Floating },
+  detailedCard: { ...Floating, overflow: 'hidden' },
   detailed: { flexDirection: 'row', gap: 12, padding: 12 },
   detailedImage: { width: 96, aspectRatio: 3 / 4, borderRadius: Tw.radius.md },
   detailedBody: { flex: 1, minWidth: 0, gap: 6 },

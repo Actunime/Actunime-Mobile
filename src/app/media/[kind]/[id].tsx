@@ -38,6 +38,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Pressable } from '@/components/tap';
 import { ListEntrySheetTrigger } from '@/components/media/list-button';
 import { CardCarousel, InfoRow, PRIMARY_PILL, Pill, STATUS_PILL, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
+import { MobileNav } from '@/components/nav/mobile-nav';
 import { ManageEntry } from '@/components/list/manage-entry';
 import { openMedia } from '@/components/media-row';
 import { Screen } from '@/components/screen';
@@ -631,6 +632,7 @@ export default function MediaScreen() {
           ) : null}
         </View>
       </ScrollView>
+      <MobileNav />
 
       <ManageEntry kind={kind} media={data} entry={entry} open={manageOpen} onClose={() => setManageOpen(false)} genres={genres.map((g) => g.name)} hideViewEntity />
 
