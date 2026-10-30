@@ -1,97 +1,271 @@
-import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { Poster } from '@/components/poster';
+import { Screen } from '@/components/screen';
+import { Pressable } from '@/components/tap';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Colors, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { Sheen } from '@/components/ui/sheen';
+import { Colors, Floating, Fonts, ScreenGutter, Spacing, Tw } from '@/constants/theme';
 import { resolveAddress } from '@/lib/address';
+import { mediaId, type IListEntry } from '@/lib/api';
+import {
+  agoLabel,
+  forgetSite,
+  getLastReads,
+  getSites,
+  lastReadKey,
+  pinSite,
+  siteHome,
+  type IBrowserSite,
+  type ILastRead,
+} from '@/lib/browsing';
+import { entryId, mediaTitle } from '@/lib/media';
+import { useAllMyList } from '@/lib/queries';
 
-/** Onglet Lecture : point d'entrée du navigateur de lecture avec suivi (écran `browser`). */
-export default function ReadingScreen() {
+const openInBrowser = (url: string) => router.push({ pathname: '/browser', params: { url, t: String(Date.now()) } });
+
+interface IResumable {
+  entry: IListEntry;
+  kind: 'anime' | 'manga';
+  title: string;
+  read: ILastRead;
+}
+
+/** Œuvres en cours de ma liste dont une page a déjà été lue dans le navigateur, la plus récente d'abord. */
+function resumables(entries: IListEntry[], reads: Record<string, ILastRead>): IResumable[] {
+  return entries
+    .flatMap((entry) => {
+      const kind = entry.mediaType === 'Manga' ? 'manga' : 'anime';
+      const id = entry.media ? mediaId(entry.media) : entryId(entry);
+      const read = reads[lastReadKey(kind, id)];
+      const title = entry.media ? mediaTitle(entry.media) : (entry.preview?.title ?? 'Sans titre');
+      return read ? [{ entry, kind, title, read } satisfies IResumable] : [];
+    })
+    .sort((a, b) => b.read.at - a.read.at)
+    .slice(0, 6);
+}
+
+function ResumeCard({ item }: Readonly<{ item: IResumable }>) {
+  const unit = item.kind === 'manga' ? 'Chapitre' : 'Épisode';
+  const openMedia = () => {
+    if (item.entry.media) router.push({ pathname: '/media/[kind]/[id]', params: { kind: item.kind, id: mediaId(item.entry.media) } });
+  };
+  return (
+    <View style={styles.card}>
+      <Sheen />
+      <Pressable accessibilityRole="button" accessibilityLabel={`Fiche de ${item.title}`} onPress={openMedia} style={styles.resumeHead}>
+        <Poster uri={item.entry.media?.posterUrl ?? item.entry.preview?.coverImage} width={48} />
+        <View style={styles.flex}>
+          <ThemedText type="smallBold" numberOfLines={2}>
+            {item.title}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            {unit} {item.read.number} · {item.read.host} · {agoLabel(item.read.at)}
+          </ThemedText>
+        </View>
+      </Pressable>
+      <Button label={`Reprendre · ${unit.toLowerCase()} ${item.read.number}`} onPress={() => openInBrowser(item.read.url)} />
+    </View>
+  );
+}
+
+function SiteRow({ site, onPin, onForget }: Readonly<{ site: IBrowserSite; onPin: () => void; onForget: () => void }>) {
+  return (
+    <View style={styles.siteRow}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Ouvrir ${site.host}`}
+        onPress={() => openInBrowser(siteHome(site))}
+        onLongPress={onForget}
+        style={styles.siteMain}
+      >
+        <View style={styles.siteLetter}>
+          <ThemedText type="smallBold" themeColor="primary">
+            {site.host.charAt(0).toUpperCase()}
+          </ThemedText>
+        </View>
+        <View style={styles.flex}>
+          <ThemedText type="smallBold" numberOfLines={1}>
+            {site.host}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {agoLabel(site.at)}
+          </ThemedText>
+        </View>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={site.pinned ? `Retirer ${site.host} de mes sites` : `Épingler ${site.host}`}
+        onPress={onPin}
+        style={styles.pin}
+      >
+        <Ionicons name={site.pinned ? 'star' : 'star-outline'} size={22} color={site.pinned ? Colors.primary : Colors.textSecondary} />
+      </Pressable>
+    </View>
+  );
+}
+
+/**
+ * Onglet Navigateur : lire ou regarder sur n'importe quel site (mangas comme animes en streaming), avec le suivi
+ * Actunime. Retrouver sa lecture d'un geste, puis ses sites ; l'adresse reste en haut pour les autres cas.
+ */
+export default function BrowserHomeScreen() {
+  const client = useQueryClient();
   const [address, setAddress] = useState('');
+  const [sites, setSites] = useState<IBrowserSite[]>([]);
+  const [reads, setReads] = useState<Record<string, ILastRead>>({});
+  const [refreshing, setRefreshing] = useState(false);
+  const watching = useAllMyList('Anime', 'WATCHING');
+  const reading = useAllMyList('Manga', 'READING');
 
-  const open = useCallback(() => {
+  // Le navigateur se ferme sur cette page : on relit ce qu'il vient d'enregistrer à chaque retour.
+  useFocusEffect(
+    useCallback(() => {
+      void Promise.all([getSites(), getLastReads()]).then(([storedSites, storedReads]) => {
+        setSites(storedSites);
+        setReads(storedReads);
+      });
+    }, []),
+  );
+
+  const items = useMemo(() => resumables([...(watching.data ?? []), ...(reading.data ?? [])], reads), [watching.data, reading.data, reads]);
+  const pinned = sites.filter((site) => site.pinned);
+  const recent = sites.filter((site) => !site.pinned);
+
+  const open = () => {
     const url = resolveAddress(address);
-    if (url) router.push({ pathname: '/browser', params: { url, t: String(Date.now()) } });
-  }, [address]);
+    if (url) openInBrowser(url);
+  };
+
+  const refresh = async () => {
+    setRefreshing(true);
+    await client.invalidateQueries({ queryKey: ['my-list'] });
+    setRefreshing(false);
+  };
+
+  const siteRows = (list: IBrowserSite[]) =>
+    list.map((site) => (
+      <SiteRow key={site.host} site={site} onPin={() => void pinSite(site.host).then(setSites)} onForget={() => void forgetSite(site.host).then(setSites)} />
+    ));
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <ThemedText type="title">Lecture</ThemedText>
+    <Screen>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />}
+      >
+        <View>
+          <ThemedText type="title">Navigateur</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Lis un manga ou regarde un anime sur le site de ton choix : ta liste se met à jour.
+          </ThemedText>
+        </View>
 
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="subtitle">Navigateur</ThemedText>
-            <ThemedText themeColor="textSecondary" type="small">
-              Ouvre un site de lecture ou de streaming : Actunime détecte l’œuvre et le chapitre.
+        <View style={styles.addressRow}>
+          <TextInput
+            value={address}
+            onChangeText={setAddress}
+            onSubmitEditing={open}
+            placeholder="Adresse du site ou recherche"
+            placeholderTextColor={Colors.textSecondary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            returnKeyType="go"
+            style={styles.input}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ouvrir"
+            disabled={!address.trim()}
+            onPress={open}
+            style={[styles.go, !address.trim() && styles.goDisabled]}
+          >
+            <Ionicons name="arrow-forward" size={22} color={Colors.primaryForeground} />
+          </Pressable>
+        </View>
+
+        {items.length > 0 ? (
+          <View style={styles.section}>
+            <ThemedText type="subtitle">Reprendre</ThemedText>
+            {items.map((item) => (
+              <ResumeCard key={`${item.kind}:${entryId(item.entry)}`} item={item} />
+            ))}
+          </View>
+        ) : null}
+
+        {pinned.length > 0 ? (
+          <View style={styles.section}>
+            <ThemedText type="subtitle">Mes sites</ThemedText>
+            <View style={styles.card}>{siteRows(pinned)}</View>
+          </View>
+        ) : null}
+
+        {recent.length > 0 ? (
+          <View style={styles.section}>
+            <ThemedText type="subtitle">Récents</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Touche l’étoile pour garder un site dans « Mes sites » ; appui long pour l’oublier.
             </ThemedText>
-            <TextInput
-              value={address}
-              onChangeText={setAddress}
-              onSubmitEditing={open}
-              placeholder="Adresse du site ou recherche"
-              placeholderTextColor={Colors.textSecondary}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              returnKeyType="go"
-              style={styles.input}
-            />
-            <Button label="Ouvrir" onPress={open} disabled={!address.trim()} />
-          </ThemedView>
+            <View style={styles.card}>{siteRows(recent)}</View>
+          </View>
+        ) : null}
 
-          <ThemedView type="backgroundElement" style={styles.card}>
+        {sites.length === 0 && items.length === 0 ? (
+          <View style={styles.card}>
+            <Sheen />
             <ThemedText type="subtitle">Comment ça marche</ThemedText>
             {[
-              'Ouvre ton site de lecture ou de streaming dans le navigateur ci-dessus.',
-              'Une barre Actunime apparaît en bas : elle te dit quelle œuvre et quel chapitre sont reconnus.',
-              'À la fin du chapitre, ta liste est mise à jour (ou touche « Marquer comme lu »).',
-              'Si rien n’est reconnu, touche « Configurer ce site » : tu montres une fois où lire le titre et le numéro.',
+              'Ouvre ton site de lecture ou de streaming avec l’adresse ci-dessus.',
+              'Une barre Actunime apparaît en bas : elle indique l’œuvre et le chapitre ou l’épisode reconnus.',
+              'À la fin, ta liste est mise à jour (ou touche « Marquer comme lu »).',
+              'Ensuite, tes sites et ta dernière lecture se retrouvent ici.',
             ].map((step, index) => (
-              <View key={step} style={styles.step}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {index + 1}. {step}
-                </ThemedText>
-              </View>
+              <ThemedText key={step} type="small" themeColor="textSecondary">
+                {index + 1}. {step}
+              </ThemedText>
             ))}
-          </ThemedView>
-        </ScrollView>
-      </SafeAreaView>
-    </ThemedView>
+          </View>
+        ) : null}
+      </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safeArea: { flex: 1 },
-  scroll: { flex: 1 },
-  content: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-    padding: Spacing.three,
-    gap: Spacing.three,
-  },
-  card: {
-    padding: Spacing.three,
-    borderRadius: Radius.large,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: Spacing.three,
-  },
-  step: { flexDirection: 'row' },
+  content: { padding: ScreenGutter, gap: Spacing.four, paddingBottom: Spacing.five },
+  flex: { flex: 1 },
+  section: { gap: Spacing.three },
+  card: { ...Floating, overflow: 'hidden', padding: Spacing.three, gap: Spacing.three },
+  addressRow: { flexDirection: 'row', gap: Spacing.two },
   input: {
+    flex: 1,
     minHeight: 48,
     paddingHorizontal: Spacing.three,
-    borderRadius: Radius.medium,
-    borderWidth: 1,
-    borderColor: Colors.input,
+    borderRadius: Tw.radius.lg,
+    backgroundColor: Colors.input,
     color: Colors.text,
     fontFamily: Fonts.medium,
     fontSize: 16,
   },
+  go: { width: 48, height: 48, borderRadius: Tw.radius.lg, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
+  goDisabled: { opacity: 0.4 },
+  resumeHead: { flexDirection: 'row', gap: Spacing.three, alignItems: 'center' },
+  siteRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  siteMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 44 },
+  siteLetter: {
+    width: 40,
+    height: 40,
+    borderRadius: Tw.radius.lg,
+    backgroundColor: Colors.backgroundSelected,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pin: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 });
