@@ -116,6 +116,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
   dot: { width: 7, height: 7, borderRadius: 4 },
-  plus: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primaryFill },
+  plus: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary },
   plusUnit: { fontSize: 10, lineHeight: 12, fontFamily: 'Outfit_500Medium' },
 });

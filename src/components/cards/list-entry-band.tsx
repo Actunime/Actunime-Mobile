@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   progressRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 8, rowGap: 2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: Tw.color.muted },
-  plus: { width: 52, height: 52, borderRadius: Tw.radius['2xl'], backgroundColor: Tw.color.primaryFill, alignItems: 'center', justifyContent: 'center' },
+  plus: { width: 52, height: 52, borderRadius: Tw.radius['2xl'], backgroundColor: Tw.color.primary, alignItems: 'center', justifyContent: 'center' },
   plusUnit: { marginTop: 2, opacity: 0.9 },
   resume: {
     flexDirection: 'row',
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: Tw.radius.lg,
     borderWidth: 1,
-    borderColor: Tw.color.input,
+    borderColor: Tw.color.border,
     backgroundColor: alpha(Tw.color.input, 0.3),
   },
 });

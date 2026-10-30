@@ -287,7 +287,7 @@ export default function MediaScreen() {
           </Svg>
           <View style={[styles.heroBack, { top: insets.top + 8 }]}>{back}</View>
           <View style={[styles.heroBody, { paddingTop: insets.top + 64 }]}>
-            <View style={[styles.poster, sagaItems.length > 0 && styles.posterRing]}>
+            <View style={styles.poster}>
               {data.posterUrl ? (
                 <Image source={{ uri: data.posterUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
               ) : anime ? (
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
   heroBody: { paddingHorizontal: ScreenGutter, paddingTop: 96, paddingBottom: 12, gap: 16 },
   poster: {
     alignSelf: 'center',
-    width: 144,
+    width: 208,
     aspectRatio: 2 / 3,
     borderRadius: Tw.radius.lg,
     overflow: 'hidden',
@@ -686,7 +686,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 12,
   },
-  posterRing: { borderWidth: 2, borderColor: Tw.color.primary },
   saga: { marginHorizontal: -16, paddingLeft: 16 },
   titleBlock: { gap: 12 },
   alias: { marginTop: 4 },
@@ -730,7 +729,7 @@ const styles = StyleSheet.create({
   linkPill: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: Tw.color.border },
   company: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8, borderRadius: Tw.radius.md, backgroundColor: alpha(Tw.color.accent, 0.1) },
   companyLogo: { width: 32, height: 32, borderRadius: Tw.radius.md, backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  companyType: { borderRadius: 999, backgroundColor: Tw.color.primaryFill, paddingHorizontal: 8, paddingVertical: 2 },
+  companyType: { borderRadius: 999, backgroundColor: Tw.color.primary, paddingHorizontal: 8, paddingVertical: 2 },
   trailer: { width: '100%', aspectRatio: 16 / 9, borderRadius: Tw.radius.lg, overflow: 'hidden', backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center' },
   play: { width: 64, height: 44, borderRadius: 12, backgroundColor: 'rgba(255, 0, 0, 0.85)', alignItems: 'center', justifyContent: 'center' },
   friendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },

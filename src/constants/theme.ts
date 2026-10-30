@@ -5,14 +5,13 @@
 export const Colors = {
   text: '#f9fafb', // --foreground
   background: '#000616', // --background
-  backgroundElement: '#07142f', // --card
-  backgroundSelected: '#102866', // --muted
+  backgroundElement: '#030a1d', // --card
+  backgroundSelected: '#0b1a40', // --muted
   textSecondary: '#bed5ff', // --muted-foreground
   primary: '#0099ff', // --primary
-  primaryFill: '#0071bd', // fond des boutons : 5,1:1 avec le texte clair (le #0099ff n'en donne que 2,8:1)
-  primaryForeground: '#eff6ff', // --primary-foreground
+  primaryForeground: '#000616', // texte sur fond primary : 6,8:1 (le clair n'en donnait que 2,8:1)
   border: 'rgba(255, 255, 255, 0.16)', // --border
-  input: '#2b4587', // --input
+  input: '#0b1a40', // --input
   destructive: '#ff6467', // --destructive
   success: '#41a867', // --success
   warning: '#d39045', // --warning
@@ -68,19 +67,18 @@ export const Tw = {
   color: {
     foreground: '#f9fafb',
     background: '#000616',
-    card: '#07142f',
-    secondary: '#07142f',
-    popover: '#0c1945',
-    muted: '#102866',
+    card: '#030a1d',
+    secondary: '#030a1d',
+    popover: '#0b1a40',
+    muted: '#0b1a40',
     mutedForeground: '#bed5ff',
     accent: '#174283',
-    input: '#2b4587',
+    input: '#0b1a40',
     ring: '#3c5aa6',
     border: 'rgba(255, 255, 255, 0.16)',
     primary: '#0099ff',
     /** Fond des boutons et pastilles pleines : texte clair à 5,1:1 (sur `primary`, 2,8:1 seulement). */
-    primaryFill: '#0071bd',
-    primaryForeground: '#eff6ff',
+      primaryForeground: '#000616',
     success: '#41a867',
     warning: '#d39045',
     destructive: '#ff6467',

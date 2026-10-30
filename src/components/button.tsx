@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primary: { backgroundColor: Colors.primaryFill },
+  primary: { backgroundColor: Colors.primary },
   outline: { backgroundColor: Colors.backgroundElement, borderWidth: 1, borderColor: Colors.border },
   /** Sans `flexShrink`, Android mesurait parfois le libellé trop étroit (« Se » pour « Se déconnecter »). */
   label: { flexShrink: 1, textAlign: 'center' },
