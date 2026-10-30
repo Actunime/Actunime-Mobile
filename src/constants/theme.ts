@@ -5,12 +5,13 @@
 export const Colors = {
   text: '#f9fafb', // --foreground
   background: '#000616', // --background
-  backgroundElement: '#030a1d', // --card
+  backgroundElement: '#07142f', // --card
   backgroundSelected: '#102866', // --muted
   textSecondary: '#bed5ff', // --muted-foreground
   primary: '#0099ff', // --primary
+  primaryFill: '#0071bd', // fond des boutons : 5,1:1 avec le texte clair (le #0099ff n'en donne que 2,8:1)
   primaryForeground: '#eff6ff', // --primary-foreground
-  border: 'rgba(255, 255, 255, 0.1)', // --border
+  border: 'rgba(255, 255, 255, 0.16)', // --border
   input: '#2b4587', // --input
   destructive: '#ff6467', // --destructive
   success: '#41a867', // --success
@@ -39,6 +40,9 @@ export const Spacing = {
   six: 64,
 } as const;
 
+/** Marge latérale unique de tous les écrans (16 dp) : le contenu ne s'en écarte jamais. */
+export const ScreenGutter = 16;
+
 /** Rayon des cartes et boutons (`--radius`: 0.45rem, arrondi pour le tactile). */
 export const Radius = { small: 8, medium: 12, large: 16 } as const;
 export const MaxContentWidth = 720;
@@ -64,16 +68,18 @@ export const Tw = {
   color: {
     foreground: '#f9fafb',
     background: '#000616',
-    card: '#030a1d',
-    secondary: '#030a1d',
+    card: '#07142f',
+    secondary: '#07142f',
     popover: '#0c1945',
     muted: '#102866',
     mutedForeground: '#bed5ff',
     accent: '#174283',
     input: '#2b4587',
     ring: '#3c5aa6',
-    border: 'rgba(255, 255, 255, 0.1)',
+    border: 'rgba(255, 255, 255, 0.16)',
     primary: '#0099ff',
+    /** Fond des boutons et pastilles pleines : texte clair à 5,1:1 (sur `primary`, 2,8:1 seulement). */
+    primaryFill: '#0071bd',
     primaryForeground: '#eff6ff',
     success: '#41a867',
     warning: '#d39045',
