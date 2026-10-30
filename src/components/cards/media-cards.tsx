@@ -137,6 +137,7 @@ export function FriendsPill({ entry, kind }: Readonly<{ entry: IListEntry; kind:
         accessibilityRole="button"
         accessibilityLabel={`Voir ce qu'ont mis les ${total} amis qui ont cette œuvre`}
         onPress={() => setOpen(true)}
+        hitSlop={8}
         style={styles.friendsPill}
       >
         <View style={styles.avatars}>
@@ -590,25 +591,13 @@ const styles = StyleSheet.create({
   },
   cardFooter: { borderTopWidth: 1, borderColor: Tw.color.border, paddingHorizontal: 12, paddingVertical: 8 },
   // Amis
-  friendsPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Tw.color.border,
-    backgroundColor: alpha(Tw.color.background, 0.6),
-    paddingVertical: 2,
-    paddingLeft: 4,
-    paddingRight: 8,
-    marginVertical: -4,
-  },
+  friendsPill: { flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: -4 },
   avatars: { flexDirection: 'row', alignItems: 'center' },
   avatarOverlap: { marginLeft: -6 },
-  avatarRing: { backgroundColor: Tw.color.background, alignItems: 'center', justifyContent: 'center' },
-  avatar: { backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarDot: { position: 'absolute', right: 0, bottom: 0, width: 8, height: 8, borderRadius: 4, borderWidth: 2, borderColor: Tw.color.background },
-  extra: { width: 24, height: 24, borderRadius: 12, backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Tw.color.background },
+  avatarRing: { backgroundColor: Tw.color.card, alignItems: 'center', justifyContent: 'center' },
+  avatar: { backgroundColor: Tw.color.input, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarDot: { position: 'absolute', right: 0, bottom: 0, width: 8, height: 8, borderRadius: 4, borderWidth: 2, borderColor: Tw.color.card },
+  extra: { width: 24, height: 24, borderRadius: 12, backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Tw.color.card },
   friendsSheet: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, gap: 4 },
   meRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: Tw.radius.md, backgroundColor: alpha(Tw.color.accent, 0.4), paddingHorizontal: 4, paddingVertical: 6 },
   meBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: Tw.color.primary, alignItems: 'center', justifyContent: 'center' },

@@ -132,6 +132,13 @@ export const Floating = {
   elevation: 6,
 } as const;
 
+/** Éclaircit une couleur `#rrggbb` en la mélangeant à du blanc (`amount` de 0 à 1) : texte lisible sur sa propre teinte. */
+export function lighten(hex: string, amount: number): string {
+  const value = hex.replace('#', '');
+  const channel = (i: number) => Math.round(parseInt(value.slice(i, i + 2), 16) + (255 - parseInt(value.slice(i, i + 2), 16)) * amount);
+  return `rgb(${channel(0)}, ${channel(2)}, ${channel(4)})`;
+}
+
 /** Couleur avec opacité (`bg-primary/10` → `alpha(Tw.color.primary, 0.1)`), pour une couleur `#rrggbb`. */
 export function alpha(hex: string, opacity: number): string {
   const value = hex.replace('#', '');

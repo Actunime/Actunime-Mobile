@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
-import { Tw, alpha } from '@/constants/theme';
+import { Tw, alpha, lighten } from '@/constants/theme';
 import type { IListEntry, MediaKind } from '@/lib/api';
 import { bandState, bumpProgress } from '@/lib/list-filter';
 import { LIST_STATUS_BAR, LIST_STATUS_META } from '@/lib/list-status';
@@ -32,7 +32,7 @@ interface IListEntryBandProps {
  */
 export function ListEntryBand({ entry, kind, total, available, onChange, onEdit, interactiveChips }: Readonly<IListEntryBandProps>) {
   const state = bandState(entry, kind, total, available);
-  const unit = kind === 'anime' ? 'Ép.' : 'Chap.';
+  const unit = kind === 'anime' ? 'Ép.' : 'Ch.';
   const meta = LIST_STATUS_META[entry.status];
   const StatusIcon = meta.icon;
   const activeStatus = kind === 'anime' ? 'WATCHING' : 'READING';
@@ -96,9 +96,9 @@ export function ListEntryBand({ entry, kind, total, available, onChange, onEdit,
               </Txt>
             </Chip>
           ) : null}
-          <Chip {...chipProps} accessibilityLabel={`Statut : ${meta.short}`} style={styles.chip}>
-            <StatusIcon size={14} color={meta.color} />
-            <Txt size="xs" weight="medium" color={meta.color}>
+          <Chip {...chipProps} accessibilityLabel={`Statut : ${meta.short}`} style={[styles.chip, { backgroundColor: alpha(meta.color, 0.22) }]}>
+            <StatusIcon size={14} color={lighten(meta.color, 0.35)} />
+            <Txt size="xs" weight="semibold" color={lighten(meta.color, 0.35)}>
               {meta.short}
             </Txt>
             {interactiveChips && onEdit ? <ChevronDown size={12} color={Tw.color.mutedForeground} /> : null}
@@ -122,8 +122,8 @@ export function ListEntryBand({ entry, kind, total, available, onChange, onEdit,
       ) : null}
       {onChange && (entry.status === 'ON_HOLD' || entry.status === 'PLAN_TO_WATCH' || entry.status === 'PLAN_TO_READ') ? (
         <Pressable accessibilityRole="button" onPress={() => onChange({ status: activeStatus })} style={styles.resume}>
-          <Play size={14} color={Tw.color.primary} />
-          <Txt size="sm" weight="medium" color={Tw.color.primary}>
+          <Play size={14} color={Tw.color.foreground} fill={Tw.color.foreground} />
+          <Txt size="sm" weight="semibold" color={Tw.color.foreground}>
             {entry.status === 'ON_HOLD' ? 'Reprendre' : 'Lancer'}
           </Txt>
         </Pressable>
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   fade: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '15%' },
   progressRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 8, rowGap: 2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: Tw.color.muted },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: alpha(Tw.color.input, 0.6) },
   plus: { width: 52, height: 52, borderRadius: Tw.radius['2xl'], backgroundColor: Tw.color.primary, alignItems: 'center', justifyContent: 'center' },
   plusUnit: { marginTop: 2, opacity: 0.9 },
   resume: {
@@ -150,8 +150,6 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: 10,
     borderRadius: Tw.radius.lg,
-    borderWidth: 1,
-    borderColor: Tw.color.input,
-    backgroundColor: alpha(Tw.color.input, 0.3),
+    backgroundColor: Tw.color.input,
   },
 });

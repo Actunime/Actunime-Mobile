@@ -33,7 +33,7 @@ const DWELL_MS = 1000;
 const SLIDE_PX = 14;
 const FAB_SIZE = 68;
 /** Hauteur de la barre hors zone sûre (`--mobile-nav-height` du site). */
-const BAR_HEIGHT = 72;
+const BAR_HEIGHT = 60;
 /** Distance du centre du bouton central au bas de la barre, hors zone sûre : 8 de marge + 2 + demi-bouton. */
 const HUB_FROM_BOTTOM = 8 + 2 + FAB_SIZE / 2;
 
@@ -469,16 +469,14 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingTop: 8,
+    paddingTop: 4,
     paddingHorizontal: 8,
     backgroundColor: Colors.backgroundElement,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
   },
-  tab: { flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 14, paddingVertical: 6 },
+  tab: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 14, paddingVertical: 6 },
   tabActive: { backgroundColor: 'rgba(0, 153, 255, 0.16)' },
   tabLabel: { fontFamily: Fonts.medium, fontSize: 12, color: Colors.textSecondary },
-  hub: { width: 96, height: 52 },
+  hub: { width: 96, height: 48 },
   fab: {
     position: 'absolute',
     bottom: 2,
