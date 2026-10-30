@@ -27,13 +27,13 @@ const item = (
 /**
  * Les 4 raccourcis de la barre : 2 à gauche du bouton central, 2 à droite. Le site met « Mon suivi / Mes animes /
  * Mes mangas / Recherche » ; l'app n'a pas d'en-tête, ses cinq écrans V1 sont donc répartis entre la barre
- * (mon suivi, ma liste, recherche, lecture) et l'éventail (profil, dans « Mon compte »).
+ * (mon suivi, ma liste, recherche, navigateur) et l'éventail (profil, dans « Mon compte »).
  */
 export const MEMBER_TABS: readonly IMobileNavItem[] = [
   item('suivi', 'Mon suivi', 'dashboard', { native: '/' }),
   item('list', 'Ma liste', 'anime', { native: '/list' }),
   item('search', 'Recherche', 'search', { native: '/search' }),
-  item('reading', 'Lecture', 'manga', { native: '/reading' }),
+  item('reading', 'Navigateur', 'globe', { native: '/reading' }),
 ];
 
 const DISCOVER = item('discover', 'Découvrir', 'compass', {
