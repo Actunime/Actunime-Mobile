@@ -92,6 +92,15 @@ export function applyLearnedPattern(pattern: LearnedPattern): DetectionResult | 
 
   if (!title) return null;
 
+  // Le titre vient de la stratégie retenue pour le site ; son numéro peut venir d'une autre (le titre de la page
+  // n'a pas toujours le numéro que l'adresse ou `og:title` donnent), avant le repli sur l'adresse.
+  if ((isManga ? chapter : episode) === undefined && pattern.strategy !== 'manual') {
+    const other = [runJsonLdStrategy(), runOgStrategy(), runDocumentTitleStrategy(), runDomSelectorsStrategy()].find(
+      (r) => r.episode !== undefined,
+    );
+    assignNumber(other?.episode);
+  }
+
   // Le numéro extrait par la stratégie choisie par l'user prime — l'URL ne
   // sert que de fallback quand la stratégie n'a pas fourni de nombre. Certains
   // sites (MangaFire…) mettent un ID interne dans le path (/chapter/3833602),

@@ -16,7 +16,8 @@ const SCORE_THRESHOLD = 3;
 const URL_TOKENS_VIDEO =
   /\/(?:watch|episode|play|stream|video|series|show|anime|ep[-_]?\d+|s\d{1,2}e\d{1,3})(?:\/|$|\?)/i;
 
-const URL_TOKENS_MANGA = /\/(?:read|reader|chapter|chapitre|scan|scans|lecture|manga|webtoon|ch[-_]?\d+)(?:\/|$|\?)/i;
+const URL_TOKENS_MANGA =
+  /\/(?:read|reader|chapter|chapitre|scan|scans|lecture|manga|webtoon|ch[-_]?\d+)(?:\/|$|\?)|[/-](?:chapter|chapitre)[-_]?\d/i;
 
 interface JsonLdResult {
   title?: string;

@@ -13,6 +13,7 @@
  */
 
 import type { StrategyResult } from '../types';
+import { isPlausibleTitle } from '../title-quality';
 
 interface UrlExtraction {
   slug?: string;
@@ -72,6 +73,16 @@ const PATTERNS: Array<{ name: string; re: RegExp; map: (m: RegExpExecArray) => U
     }),
   },
   {
+    // /title/<code>-<titre>/<identifiant>-chapter-N : le titre est le segment d'avant, l'identifiant ne l'est jamais
+    name: '/{slug}/{id}-chapter-N',
+    re: /\/([a-z0-9][a-z0-9-]{3,})\/\d+-(?:chapter|chapitre|ch)-?(\d{1,5}(?:\.\d+)?)/i,
+    map: (m) => ({
+      slug: m[1],
+      episode: Math.floor(Number(m[2])),
+      matchedPattern: '/{slug}/{id}-chapter-N',
+    }),
+  },
+  {
     name: '/{slug}-chapter-N',
     re: /\/([a-z0-9][a-z0-9-]+?)-(?:chapter|chapitre|ch)-?(\d{1,5}(?:\.\d+)?)/i,
     map: (m) => ({
@@ -103,7 +114,9 @@ export function runUrlTokensStrategy(): StrategyResult {
     if (!m) continue;
     const out = p.map(m);
 
-    const title = out.slug ? slugToTitle(out.slug, out.episode) : undefined;
+    const rawTitle = out.slug ? slugToTitle(out.slug, out.episode) : undefined;
+    // Un identifiant (« 6225159 ») n'est pas un titre : mieux vaut aucun titre qu'un faux.
+    const title = isPlausibleTitle(rawTitle) ? rawTitle : undefined;
 
     let confidence = 0;
     if (title) confidence += 0.35;
@@ -137,6 +150,8 @@ export function runUrlTokensStrategy(): StrategyResult {
 function slugToTitle(slug: string, episode?: number): string | undefined {
   if (!slug) return undefined;
   let cleaned = slug.replace(/\.[a-z0-9]+$/i, '');
+  // Code d'identifiant en tête (« z0l20-god-level-assassin ») : court, avec un chiffre, suivi de mots.
+  cleaned = cleaned.replace(/^(?=[a-z0-9]*\d)[a-z0-9]{3,8}-(?=[a-z]+-[a-z])/i, '');
   if (episode !== undefined) {
     cleaned = cleaned.replace(new RegExp(`-?(?:episode-|ep-|e|chapter-|chapitre-|ch-?)?${episode}$`, 'i'), '');
   }
