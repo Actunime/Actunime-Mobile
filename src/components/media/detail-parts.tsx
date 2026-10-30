@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Pressable } from '@/components/tap';
 import { CardImage } from '@/components/cards/media-cards';
 import { Txt } from '@/components/tw';
-import { Tw, alpha } from '@/constants/theme';
+import { Tw, alpha, Floating } from '@/constants/theme';
 import type { MediaKind } from '@/lib/api';
 
 /** Bloc de section de la fiche (`SectionCard` : `Card` `bg-card py-4`, en-tête `px-4` avec icône et compteur). */
@@ -111,7 +111,7 @@ export const PRIMARY_PILL = { color: Tw.color.primary, background: alpha(Tw.colo
 export const STATUS_PILL: Record<string, { color: string; background: string; border: string }> = {
   AIRING: { color: Tw.color.green400, background: alpha(Tw.color.green500, 0.15), border: alpha(Tw.color.green500, 0.3) },
   ENDED: { color: Tw.color.gray400, background: alpha(Tw.color.gray500, 0.15), border: alpha(Tw.color.gray500, 0.3) },
-  SOON: { color: Tw.color.blue400, background: alpha(Tw.color.blue500, 0.15), border: alpha(Tw.color.blue500, 0.3) },
+  SOON: { color: Tw.color.primary, background: alpha(Tw.color.primary, 0.15), border: alpha(Tw.color.primary, 0.3) },
   PAUSED: { color: Tw.color.yellow400, background: alpha(Tw.color.yellow500, 0.15), border: alpha(Tw.color.yellow500, 0.3) },
   STOPPED: { color: Tw.color.red400, background: alpha(Tw.color.red500, 0.15), border: alpha(Tw.color.red500, 0.3) },
   POSTONED: { color: Tw.color.orange400, background: alpha(Tw.color.orange500, 0.15), border: alpha(Tw.color.orange500, 0.3) },
@@ -174,7 +174,7 @@ export function CardCarousel({
 
 const styles = StyleSheet.create({
   center: { textAlign: 'center' },
-  card: { backgroundColor: Tw.color.card, borderRadius: 4, paddingVertical: 16, gap: 16 },
+  card: { ...Floating, paddingVertical: 16, gap: 16 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 16 },
   cardTitle: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
   cardContent: { paddingHorizontal: 16 },

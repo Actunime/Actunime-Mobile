@@ -1,6 +1,6 @@
 import { CircleCheck, CirclePause, CircleX, Bookmark, BookOpen, Layers, Play, type LucideIcon } from 'lucide-react-native';
 
-import { Tw } from '@/constants/theme';
+import { Tw, alpha } from '@/constants/theme';
 
 import type { ListStatus } from './api';
 
@@ -20,22 +20,16 @@ export const LIST_STATUS_META: Record<ListStatus, { icon: LucideIcon; color: str
 
 export const ALL_STATUS_META = { icon: Layers, color: Tw.color.primary };
 
-/** `bg-*-600/90` des barres de progression et des pastilles d'amis. */
-export const LIST_STATUS_BAR: Record<ListStatus, string> = {
-  WATCHING: 'rgba(21, 93, 252, 0.9)',
-  READING: 'rgba(21, 93, 252, 0.9)',
-  COMPLETED: 'rgba(0, 166, 62, 0.9)',
-  ON_HOLD: 'rgba(208, 135, 0, 0.9)',
-  DROPPED: 'rgba(231, 0, 11, 0.9)',
-  PLAN_TO_WATCH: 'rgba(152, 16, 250, 0.9)',
-  PLAN_TO_READ: 'rgba(152, 16, 250, 0.9)',
-};
+/** Barres de progression et pastilles d'amis : la couleur du statut (`LIST_STATUS_META`), jamais une autre nuance. */
+export const LIST_STATUS_BAR = Object.fromEntries(
+  Object.entries(LIST_STATUS_META).map(([status, meta]) => [status, alpha(meta.color, 0.9)]),
+) as Record<ListStatus, string>;
 
 /** Pastille de diffusion des cartes de recherche (`mediaStatusColorMap`). */
 export const MEDIA_STATUS_BG: Record<string, string> = {
   AIRING: Tw.color.green600,
   PAUSED: Tw.color.yellow600,
-  ENDED: Tw.color.blue600,
+  ENDED: Tw.color.input,
   STOPPED: Tw.color.red600,
   POSTONED: Tw.color.orange600,
   SOON: Tw.color.purple600,

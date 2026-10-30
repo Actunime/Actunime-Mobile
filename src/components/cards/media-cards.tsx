@@ -7,12 +7,12 @@ import { Pressable } from '@/components/tap';
 import { ListEntryBand } from '@/components/cards/list-entry-band';
 import { Txt } from '@/components/tw';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { Tw, alpha } from '@/constants/theme';
+import { Tw, alpha, Floating } from '@/constants/theme';
 import type { IFriendEntry, IListEntry, IMedia, MediaKind } from '@/lib/api';
 import { STATUS_LABELS } from '@/lib/list-form';
 import { LIST_STATUS_BAR, MEDIA_STATUS_BG } from '@/lib/list-status';
 import { MEDIA_STATUS_LABELS } from '@/lib/list-form';
-import { SOURCE_LABELS, formatReleaseDate, mediaTitle, seasonLabel, totalOf } from '@/lib/media';
+import { ANIME_FORMAT_LABELS, MANGA_FORMAT_LABELS, SOURCE_LABELS, formatReleaseDate, mediaTitle, seasonLabel, totalOf } from '@/lib/media';
 import type { IEntryPatch } from '@/lib/queries';
 import { estimatedAired } from '@/lib/suivi';
 
@@ -393,6 +393,7 @@ export function MediaDetailedCard({
   const season = seasonLabel(media.season);
   const broadcastDay = anime && status === 'AIRING' && media.format !== 'FILM' ? broadcastDayLabel(media) : null;
   const shownGenres = (genres ?? []).slice(0, 4);
+  const formatLabel = media.format ? (anime ? ANIME_FORMAT_LABELS : MANGA_FORMAT_LABELS)[media.format] ?? media.format : undefined;
 
   const body = (
     <View style={styles.detailed}>
@@ -409,7 +410,7 @@ export function MediaDetailedCard({
         {compact ? (
           <>
             <Txt size="xs" color={Tw.color.mutedForeground}>
-              {[media.format, total ? `${total} ${anime ? 'ép.' : 'chap.'}` : null].filter(Boolean).join(' · ')}
+              {[formatLabel, total ? `${total} ${anime ? 'ép.' : 'chap.'}` : null].filter(Boolean).join(' · ')}
             </Txt>
             <ScoreLine community={entry?.communityScore ?? media.communityScore} mine={entry?.score} />
           </>
@@ -417,9 +418,9 @@ export function MediaDetailedCard({
           <>
             <View style={styles.badgeRow}>
               {status && MEDIA_STATUS_LABELS[status] ? <Badge label={MEDIA_STATUS_LABELS[status]} background={MEDIA_STATUS_BG[status] ?? Tw.color.gray600} /> : null}
-              {media.format ? <Badge label={media.format} background={alpha(Tw.color.primary, 0.9)} color={Tw.color.primaryForeground} /> : null}
+              {formatLabel ? <Badge label={formatLabel} background={alpha(Tw.color.primary, 0.9)} color={Tw.color.primaryForeground} /> : null}
               {anime && sourceLabel ? <Badge label={sourceLabel} background={Tw.color.muted} color={Tw.color.foreground} /> : null}
-              {media.vf ? <Badge label="VF" background={Tw.color.blue600} /> : null}
+              {media.vf ? <Badge label="VF" background={Tw.color.input} /> : null}
             </View>
             <View style={styles.metaRow}>
               {anime && total ? <Meta icon={Film} label={`${total} eps`} /> : null}
@@ -549,18 +550,18 @@ const styles = StyleSheet.create({
   badgeRight: { right: 4, alignItems: 'flex-end' },
   scoreLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, rowGap: 2 },
   // Grille
-  gridCard: { borderRadius: Tw.radius.lg, backgroundColor: Tw.color.card, overflow: 'hidden' },
+  gridCard: { ...Floating, overflow: 'hidden' },
   gridImage: { width: '100%', aspectRatio: 3 / 4, borderTopLeftRadius: Tw.radius.lg, borderTopRightRadius: Tw.radius.lg },
   gridBody: { padding: 8, gap: 4 },
   gridBodyDense: { padding: 6 },
   // Ligne compacte
-  rowCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.card },
+  rowCard: { ...Floating, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8 },
   rowImage: { width: 48, height: 64, borderRadius: Tw.radius.lg },
   rowCorner: { position: 'absolute', top: 0, right: 0, backgroundColor: alpha(Tw.color.primary, 0.9), paddingHorizontal: 4, borderRadius: Tw.radius.sm },
   actionDefault: { height: 44, minWidth: 44, paddingHorizontal: 10, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.primary, alignItems: 'center', justifyContent: 'center' },
   actionSecondary: { width: 44, height: 44, borderRadius: Tw.radius.lg, borderWidth: 1, borderColor: Tw.color.input, backgroundColor: alpha(Tw.color.input, 0.3), alignItems: 'center', justifyContent: 'center' },
   // Détaillée
-  detailedCard: { borderRadius: Tw.radius.lg, backgroundColor: Tw.color.card, overflow: 'hidden' },
+  detailedCard: { ...Floating },
   detailed: { flexDirection: 'row', gap: 12, padding: 12 },
   detailedImage: { width: 96, aspectRatio: 3 / 4, borderRadius: Tw.radius.md },
   detailedBody: { flex: 1, minWidth: 0, gap: 6 },
@@ -596,6 +597,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingLeft: 4,
     paddingRight: 8,
+    marginVertical: -4,
   },
   avatars: { flexDirection: 'row', alignItems: 'center' },
   avatarOverlap: { marginLeft: -6 },

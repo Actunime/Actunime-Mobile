@@ -5,16 +5,16 @@ import { ActivityIndicator, Linking, RefreshControl, ScrollView, StyleSheet, Vie
 
 import { Pressable } from '@/components/tap';
 import { Button } from '@/components/button';
-import { ListEntryRow } from '@/components/list-entry-row';
+import { EntryCard } from '@/components/cards/entry-card';
 import { MediaRow } from '@/components/media-row';
 import { Screen } from '@/components/screen';
 import { ErrorState } from '@/components/states';
 import { ThemedText } from '@/components/themed-text';
-import { Colors, Radius, Spacing } from '@/constants/theme';
-import { mediaId, type IListEntry } from '@/lib/api';
+import { Colors, Floating, Radius, Spacing } from '@/constants/theme';
+import { mediaId } from '@/lib/api';
 import { useAuth } from '@/lib/auth-store';
 import { WEB_URL } from '@/lib/config';
-import { useAllMyList, useMyEntries, useQuickProgress } from '@/lib/queries';
+import { useAllMyList, useMyEntries } from '@/lib/queries';
 import { behindAnimes, dayLabel, headline, listBreakdown, listTotals, shortDay, timeLabel, weekSchedule } from '@/lib/suivi';
 
 const SEGMENT_COLORS = { primary: Colors.primary, success: Colors.success, info: '#0ea5e9', muted: 'rgba(190, 213, 255, 0.4)' } as const;
@@ -52,7 +52,6 @@ function Tile({ value, label, warn }: Readonly<{ value: string | number; label: 
 export default function SuiviScreen() {
   const { auth } = useAuth();
   const client = useQueryClient();
-  const quick = useQuickProgress();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDay, setSelectedDay] = useState(0);
 
@@ -92,8 +91,6 @@ export default function SuiviScreen() {
     setRefreshing(false);
   };
 
-  const increment = (entry: IListEntry) =>
-    entry.media && quick.mutate({ entry, mediaId: mediaId(entry.media) });
 
   const day = week[selectedDay];
 
@@ -136,12 +133,11 @@ export default function SuiviScreen() {
             {behind.length > 0 && (
               <Section title="À rattraper" hint={`${behind.length} anime${behind.length > 1 ? 's' : ''} en retard`}>
                 {behind.slice(0, 5).map((item) => (
-                  <ListEntryRow
+                  <EntryCard
                     key={(item.entry.id ?? item.entry._id) as string}
+                    kind="anime"
                     entry={item.entry}
                     note={`${item.behind} épisode${item.behind > 1 ? 's' : ''} de retard`}
-                    incrementing={quick.isPending}
-                    onIncrement={() => increment(item.entry)}
                   />
                 ))}
               </Section>
@@ -150,12 +146,7 @@ export default function SuiviScreen() {
             {resume.length > 0 && (
               <Section title="Reprendre">
                 {resume.map((entry) => (
-                  <ListEntryRow
-                    key={(entry.id ?? entry._id) as string}
-                    entry={entry}
-                    incrementing={quick.isPending}
-                    onIncrement={() => increment(entry)}
-                  />
+                  <EntryCard key={(entry.id ?? entry._id) as string} kind={entry.mediaType === 'Manga' ? 'manga' : 'anime'} entry={entry} />
                 ))}
               </Section>
             )}
@@ -235,13 +226,13 @@ export default function SuiviScreen() {
 const styles = StyleSheet.create({
   content: { padding: Spacing.three, gap: Spacing.four, paddingBottom: Spacing.five },
   section: { gap: Spacing.three },
-  card: { padding: Spacing.three, gap: Spacing.three, borderRadius: Radius.large, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundElement },
+  card: { ...Floating, padding: Spacing.three, gap: Spacing.three },
   tiles: { flexDirection: 'row', gap: Spacing.two },
   tile: { flex: 1, padding: Spacing.two, borderRadius: Radius.medium, backgroundColor: 'rgba(255, 255, 255, 0.04)' },
   tileValue: { fontSize: 26, lineHeight: 30 },
   days: { gap: Spacing.two },
-  day: { width: 56, paddingVertical: Spacing.two, alignItems: 'center', gap: 2, borderRadius: Radius.medium, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundElement },
-  daySelected: { borderColor: Colors.primary, backgroundColor: Colors.backgroundSelected },
+  day: { width: 56, paddingVertical: Spacing.two, alignItems: 'center', gap: 2, ...Floating, borderRadius: Radius.medium },
+  daySelected: { backgroundColor: Colors.input },
   bar: { height: 12, flexDirection: 'row', gap: 2, borderRadius: 6, overflow: 'hidden', backgroundColor: Colors.background },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.three, rowGap: Spacing.one },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },

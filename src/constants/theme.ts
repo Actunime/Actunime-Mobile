@@ -118,6 +118,21 @@ export const Tw = {
   },
 } as const;
 
+/**
+ * Carte flottante : surface `card`, coins arrondis, aucune bordure ; l'ombre portée (`elevation` sur Android)
+ * la détache du fond. Tous les blocs de contenu (cartes de liste, Mon suivi, fiche, profil) s'en servent.
+ */
+export const Floating = {
+  backgroundColor: Tw.color.card,
+  borderRadius: Tw.radius.xl,
+  // Sur fond sombre une ombre noire ne se voit pas : l'ombre est teintée du bleu de la marque (halo discret).
+  shadowColor: '#0099ff',
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: 0.5,
+  shadowRadius: 14,
+  elevation: 12,
+} as const;
+
 /** Couleur avec opacité (`bg-primary/10` → `alpha(Tw.color.primary, 0.1)`), pour une couleur `#rrggbb`. */
 export function alpha(hex: string, opacity: number): string {
   const value = hex.replace('#', '');

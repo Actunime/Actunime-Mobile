@@ -103,8 +103,8 @@ export default function MyListScreen() {
     const edit = () => setSheetId(id);
     const footer = pending ? (
       <View style={[styles.notice, styles.noticePending]}>
-        <Clock size={14} color={Tw.color.blue500} />
-        <Txt size="xs" weight="medium" color={Tw.color.blue500}>
+        <Clock size={14} color={Tw.color.primary} />
+        <Txt size="xs" weight="medium" color={Tw.color.primary}>
           En attente de référencement
         </Txt>
       </View>
@@ -250,6 +250,6 @@ const styles = StyleSheet.create({
   cell: { flex: 1, minWidth: 0 },
   empty: { paddingVertical: 48, textAlign: 'center' },
   notice: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: Tw.radius.sm, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
-  noticePending: { borderColor: alpha(Tw.color.blue500, 0.4), backgroundColor: alpha(Tw.color.blue500, 0.1) },
+  noticePending: { borderColor: alpha(Tw.color.primary, 0.4), backgroundColor: alpha(Tw.color.primary, 0.1) },
   noticeRejected: { borderColor: alpha(Tw.color.destructive, 0.4), backgroundColor: alpha(Tw.color.destructive, 0.1) },
 });

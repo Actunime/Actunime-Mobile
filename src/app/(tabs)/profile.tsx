@@ -5,7 +5,7 @@ import { Button } from '@/components/button';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Floating, Radius, Spacing } from '@/constants/theme';
 import { signOut, useAuth } from '@/lib/auth-store';
 import { WEB_URL } from '@/lib/config';
 import { useMyEntries } from '@/lib/queries';
@@ -84,7 +84,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   content: { padding: Spacing.three, gap: Spacing.three },
-  card: { padding: Spacing.three, borderRadius: Radius.large, borderWidth: 1, borderColor: Colors.border, gap: Spacing.three },
+  card: { ...Floating, padding: Spacing.three, gap: Spacing.three },
   identity: { flexDirection: 'row', alignItems: 'center' },
   avatar: {
     width: 64,

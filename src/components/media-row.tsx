@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { Pressable } from '@/components/tap';
 import { Poster } from '@/components/poster';
 import { ThemedText } from '@/components/themed-text';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Floating, Radius, Spacing } from '@/constants/theme';
 import { mediaId, type IMedia, type MediaKind } from '@/lib/api';
 import { formatLabel, formatLongDate, mediaTitle, statusTone } from '@/lib/media';
 import { MEDIA_STATUS_LABELS } from '@/lib/list-form';
@@ -78,10 +78,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     padding: Spacing.two,
-    borderRadius: Radius.medium,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.backgroundElement,
+    ...Floating,
   },
   pressed: { opacity: 0.8 },
   body: { flex: 1, gap: Spacing.one },
