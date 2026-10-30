@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, type RefObject } from 'react';
 import type { WebView } from 'react-native-webview';
 
+import { deriveEpisodeUrlRegex } from '@/detection/core/strategies';
 import { commandScript, type InPageMessage, type PageDetection } from '@/detection/messages';
 import type { LearnedPattern } from '@/detection/core/types';
 
@@ -69,6 +70,38 @@ export function useTracking(webview: RefObject<WebView | null>) {
     [fail, progressOf],
   );
 
+  /**
+   * Page reconnue par la phase automatique et œuvre identifiée : le réglage du site est mémorisé tout seul, sans
+   * passer par l'assistant. Corriger reste possible (« Ce n'est pas la bonne œuvre », « Configurer ce site »).
+   */
+  const rememberSite = useCallback(
+    async (detection: PageDetection) => {
+      if (detection.source !== 'auto' || !detection.strategy) return;
+      if (await getPattern(detection.host)) return;
+      let pathname = '';
+      try {
+        pathname = new URL(detection.url).pathname;
+      } catch {
+        // adresse illisible : le réglage s'applique alors à toutes les pages du site
+      }
+      const now = new Date().toISOString();
+      const learned: LearnedPattern = {
+        host: detection.host,
+        kind: detection.kind,
+        strategy: detection.strategy,
+        episodeUrlRegex: pathname ? deriveEpisodeUrlRegex(pathname) : undefined,
+        mangaTracking: detection.kind === 'manga' ? { mode: 'scroll', threshold: 0.9 } : undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await savePattern(learned);
+      setPattern(learned);
+      send({ type: 'set-pattern', pattern: learned });
+      setNotice({ tone: 'info', text: `${detection.host} reconnu automatiquement` });
+    },
+    [send],
+  );
+
   const identify = useCallback(
     async (detection: PageDetection) => {
       latest.current = detection;
@@ -76,6 +109,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
       try {
         const resolution = await resolve(detection);
         if (resolution.match) {
+          void rememberSite(detection);
           setTracking({
             kind: 'matched',
             detection,
@@ -90,7 +124,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
         setTracking({ kind: 'confirm', detection, candidates: [] });
       }
     },
-    [fail, progressOf],
+    [fail, progressOf, rememberSite],
   );
 
   const onMessage = useCallback(
@@ -145,6 +179,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
       } catch (err) {
         return fail(err);
       }
+      void rememberSite(tracking.detection);
       setTracking({
         kind: 'matched',
         detection: tracking.detection,
@@ -152,7 +187,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
         progress: await progressOf(tracking.detection, match),
       });
     },
-    [progressOf, tracking],
+    [progressOf, rememberSite, tracking],
   );
 
   /** « Ce n'est pas la bonne œuvre » : oublie l'association et repropose les candidats. */

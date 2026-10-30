@@ -193,11 +193,14 @@ export function TrackingBar(props: ITrackingBarProps) {
             {tracking.kind === 'idle' && (
               <>
                 <ThemedText type="small" themeColor="textSecondary">
-                  Ouvre une page de chapitre ou d’épisode. Si Actunime ne la reconnaît pas toute seule, configure ce
-                  site : tu lui montres une fois où se trouvent le titre et le numéro.
+                  Ouvre une page de chapitre ou d’épisode : Actunime la reconnaît toute seule.
                 </ThemedText>
-                <Button label={pattern ? 'Reconfigurer ce site' : 'Configurer ce site'} onPress={props.onConfigure} />
                 <Button label="Chercher une œuvre à la main" variant="outline" onPress={props.onSearch} />
+                <Pressable onPress={props.onConfigure}>
+                  <ThemedText type="link">
+                    {pattern ? 'Reconfigurer ce site' : 'Page non reconnue sur un chapitre ? Configurer ce site'}
+                  </ThemedText>
+                </Pressable>
                 <Pressable onPress={props.onIgnore}>
                   <ThemedText type="link" themeColor="textSecondary">
                     Ne pas suivre {host || 'ce site'}

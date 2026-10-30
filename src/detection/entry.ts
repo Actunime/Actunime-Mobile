@@ -6,6 +6,7 @@
  * L'app pilote le script par commandes (`window.__actunime.handle`) : pattern appris du site, lancement des
  * stratégies de l'assistant, mode « pointer un élément ».
  */
+import { pickAutoStrategy } from './core/auto-strategy';
 import { applyLearnedPattern } from './core/learned-engine';
 import { detectGenericFromDom, inferKind } from './core/heuristics';
 import { createNextButtonObserver } from './core/next-button';
@@ -67,6 +68,24 @@ function detectGeneric(): PageDetection | null {
     url: location.href,
     host: location.hostname,
     source: 'generic',
+  };
+}
+
+/** Phase automatique : les stratégies de l'assistant, sans réglage du site, quand la lecture simple ne trouve rien. */
+function detectAuto(): PageDetection | null {
+  const best = pickAutoStrategy(runAllStrategies());
+  if (!best?.title || best.episode === undefined) return null;
+  const kind = inferKind();
+  return {
+    kind,
+    title: best.title,
+    chapter: kind === 'manga' ? best.episode : undefined,
+    episode: kind === 'anime' ? best.episode : undefined,
+    season: best.season,
+    url: location.href,
+    host: location.hostname,
+    source: 'auto',
+    strategy: best.id,
   };
 }
 
@@ -133,10 +152,10 @@ if (!window.__actunime) {
           schedule(LEARNED_RETRY_MS);
           return;
         }
-        detection = detectGeneric();
+        detection = detectGeneric() ?? detectAuto();
       }
     } else {
-      detection = detectGeneric();
+      detection = detectGeneric() ?? detectAuto();
     }
     const key = keyOf(detection);
     if (key === lastKey) return;

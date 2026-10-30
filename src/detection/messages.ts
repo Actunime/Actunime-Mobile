@@ -1,4 +1,4 @@
-import type { LearnedPattern, StrategyResult } from './core/types';
+import type { LearnedPattern, StrategyId, StrategyResult } from './core/types';
 
 /** Détection brute d'une page de lecture/visionnage, telle que postée par le script injecté. */
 export interface PageDetection {
@@ -10,8 +10,13 @@ export interface PageDetection {
   imageUrl?: string;
   url: string;
   host: string;
-  /** `learned` = pattern configuré pour le site, `generic` = heuristiques automatiques. */
-  source: 'learned' | 'generic';
+  /**
+   * `learned` = pattern configuré (ou mémorisé) pour le site, `generic` = heuristiques de lecture de la page,
+   * `auto` = reconnue par la phase automatique (stratégies de l'assistant, sans configuration).
+   */
+  source: 'learned' | 'generic' | 'auto';
+  /** Stratégie qui a reconnu la page (`auto` seulement) : mémorisée pour le site une fois l'œuvre identifiée. */
+  strategy?: StrategyId;
 }
 
 /** Élément pointé par l'utilisateur pendant l'assistant de configuration. */
