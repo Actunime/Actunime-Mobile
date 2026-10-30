@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
   rowCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8, borderRadius: Tw.radius.lg, backgroundColor: alpha(Tw.color.accent, 0.1) },
   rowImage: { width: 48, height: 64, borderRadius: Tw.radius.lg },
   rowCorner: { position: 'absolute', top: 0, right: 0, backgroundColor: alpha(Tw.color.primary, 0.9), paddingHorizontal: 4, borderRadius: Tw.radius.sm },
-  actionDefault: { height: 32, paddingHorizontal: 10, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.primary, alignItems: 'center', justifyContent: 'center' },
+  actionDefault: { height: 44, minWidth: 44, paddingHorizontal: 10, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.primary, alignItems: 'center', justifyContent: 'center' },
   actionSecondary: { width: 40, height: 40, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.secondary, alignItems: 'center', justifyContent: 'center' },
   // Détaillée
   detailedCard: { borderRadius: Tw.radius.lg, backgroundColor: alpha(Tw.color.accent, 0.1), overflow: 'hidden' },

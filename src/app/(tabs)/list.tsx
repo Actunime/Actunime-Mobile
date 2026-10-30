@@ -148,21 +148,19 @@ export default function MyListScreen() {
   const header = (
     <View style={styles.header}>
       <View style={styles.titleRow}>
-        <View style={styles.titleLeft}>
-          <Txt size="lg" weight="semibold">
-            Ma liste
-          </Txt>
-          <KindSwitch
-            options={[
-              { value: 'anime', label: 'Animes' },
-              { value: 'manga', label: 'Mangas' },
-            ]}
-            value={kind}
-            onChange={switchKind}
-          />
-        </View>
+        <Txt size="lg" weight="semibold">
+          Ma liste
+        </Txt>
         <ListViewSwitcher value={viewMode} onChange={setViewMode} />
       </View>
+      <KindSwitch
+        options={[
+          { value: 'anime', label: 'Animes' },
+          { value: 'manga', label: 'Mangas' },
+        ]}
+        value={kind}
+        onChange={switchKind}
+      />
       <ListStatusStrip statuses={kind === 'anime' ? ANIME_STATUSES : MANGA_STATUSES} counts={counts} value={status} onChange={setStatus} />
       <FilterBar
         key={kind}
@@ -245,7 +243,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 4, paddingBottom: 24 },
   header: { gap: 12, paddingTop: 8, paddingBottom: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  titleLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
   sectionTitle: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 12 },
   sectionSpacing: { marginTop: 20 },
   sectionCount: { marginLeft: 8, opacity: 0.7 },

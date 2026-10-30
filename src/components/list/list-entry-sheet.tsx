@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   stepButton: { width: 48, height: 44, borderRadius: Tw.radius.xl, borderWidth: 1, borderColor: Tw.color.border, alignItems: 'center', justifyContent: 'center' },
   stepValue: { flex: 1, textAlign: 'center' },
   shortcuts: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  shortcut: { height: 32, borderRadius: 16, borderWidth: 1, borderColor: Tw.color.border, paddingHorizontal: 12, justifyContent: 'center' },
+  shortcut: { height: 40, borderRadius: 16, borderWidth: 1, borderColor: Tw.color.border, paddingHorizontal: 12, justifyContent: 'center' },
   more: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingTop: 4 },
   scoreGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   scoreCell: { width: '18.2%', height: 40, borderRadius: Tw.radius.xl, borderWidth: 1, borderColor: Tw.color.border, alignItems: 'center', justifyContent: 'center' },

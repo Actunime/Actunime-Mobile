@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    height: 32,
+    height: 44,
     paddingHorizontal: 10,
     borderRadius: Tw.radius.lg,
     borderWidth: 1,

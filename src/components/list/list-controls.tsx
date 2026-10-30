@@ -137,11 +137,11 @@ export function ListStatusStrip({
 
 const styles = StyleSheet.create({
   switcher: { flexDirection: 'row', alignItems: 'center', borderRadius: Tw.radius.md, borderWidth: 1, borderColor: Tw.color.border },
-  switchButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  switchButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   first: { borderTopLeftRadius: 5, borderBottomLeftRadius: 5 },
   last: { borderTopRightRadius: 5, borderBottomRightRadius: 5 },
-  kind: { flexDirection: 'row', alignSelf: 'flex-start', borderRadius: Tw.radius.lg, backgroundColor: Tw.color.muted, padding: 2 },
-  kindButton: { borderRadius: Tw.radius.md, paddingHorizontal: 16, paddingVertical: 6 },
+  kind: { flexDirection: 'row', borderRadius: Tw.radius.lg, backgroundColor: Tw.color.muted, padding: 2 },
+  kindButton: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: Tw.radius.md, paddingHorizontal: 16 },
   kindActive: { backgroundColor: Tw.color.background, elevation: 1 },
   stripWrap: { gap: 6 },
   strip: { flexDirection: 'row', gap: 4 },
