@@ -13,6 +13,7 @@ import { TrackingBar } from './tracking-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { titleAlternatives } from '@/detection/core/auto-strategy';
 import type { StrategyResult } from '@/detection/core/types';
 import { INJECTED_DETECTION } from '@/detection/injected.generated';
 import { commandScript, parseInPageMessage, type PickedElement } from '@/detection/messages';
@@ -138,6 +139,13 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
 
   const current = 'detection' in tracking.tracking ? tracking.tracking.detection : null;
 
+  // Œuvre à choisir : les autres titres de la page sont prêts avant même que l'utilisateur dise que le titre est faux.
+  const needsChoice = tracking.tracking.kind === 'confirm';
+  useEffect(() => {
+    if (needsChoice) tracking.send({ type: 'run-strategies' });
+  }, [needsChoice, current?.url]); // eslint-disable-line react-hooks/exhaustive-deps -- `send` est stable par WebView
+  const alternatives = needsChoice ? titleAlternatives(strategies ?? [], current?.title) : [];
+
   // Page de l'œuvre reconnue : la page « Navigateur » propose de la reprendre au même chapitre ou épisode.
   const state = tracking.tracking;
   useEffect(() => {
@@ -226,6 +234,8 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
               notice={tracking.notice}
               host={tracking.host}
               pattern={tracking.pattern}
+              alternatives={alternatives}
+              onPickTitle={(alternative) => void tracking.pickTitle(alternative.strategy)}
               onMarkRead={tracking.markRead}
               onChoose={(media) => void tracking.choose(media)}
               onChange={tracking.change}

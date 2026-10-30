@@ -8,6 +8,7 @@ import { Button } from '@/components/button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Radius, Spacing } from '@/constants/theme';
+import type { ITitleAlternative } from '@/detection/core/auto-strategy';
 import type { LearnedPattern } from '@/detection/core/types';
 import type { PageDetection } from '@/detection/messages';
 import type { ICandidate } from '@/lib/sync';
@@ -18,6 +19,9 @@ interface ITrackingBarProps {
   notice: INotice | null;
   host: string;
   pattern: LearnedPattern | null;
+  /** Autres titres que la page propose (lecture de ses données), pour corriger sans configurer le site. */
+  alternatives: ITitleAlternative[];
+  onPickTitle: (alternative: ITitleAlternative) => void;
   onMarkRead: () => void;
   onChoose: (candidate: ICandidate) => void;
   onChange: () => void;
@@ -198,7 +202,7 @@ export function TrackingBar(props: ITrackingBarProps) {
                 <Button label="Chercher une œuvre à la main" variant="outline" onPress={props.onSearch} />
                 <Pressable onPress={props.onConfigure}>
                   <ThemedText type="link">
-                    {pattern ? 'Reconfigurer ce site' : 'Page non reconnue sur un chapitre ? Configurer ce site'}
+                    {pattern ? 'Reconfigurer ce site' : 'Page non reconnue sur un chapitre ? Mode avancé'}
                   </ThemedText>
                 </Pressable>
                 <Pressable onPress={props.onIgnore}>
@@ -234,10 +238,29 @@ export function TrackingBar(props: ITrackingBarProps) {
                     </View>
                   </Pressable>
                 ))}
+                {props.alternatives.length > 0 && (
+                  <>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Le titre est faux ? Autres titres lus sur la page :
+                    </ThemedText>
+                    {props.alternatives.map((alternative) => (
+                      <Pressable
+                        key={`${alternative.strategy}|${alternative.title}`}
+                        accessibilityRole="button"
+                        onPress={() => props.onPickTitle(alternative)}
+                        style={styles.candidate}
+                      >
+                        <ThemedText type="smallBold" numberOfLines={2} style={styles.candidateText}>
+                          {alternative.title}
+                        </ThemedText>
+                      </Pressable>
+                    ))}
+                  </>
+                )}
                 <Button label="Aucune de ces œuvres : chercher" variant="outline" onPress={props.onSearch} />
                 <View style={styles.links}>
                   <Pressable onPress={props.onConfigure}>
-                    <ThemedText type="link">Le titre est faux : configurer ce site</ThemedText>
+                    <ThemedText type="link">Mode avancé : montrer le titre sur la page</ThemedText>
                   </Pressable>
                 </View>
               </>
@@ -254,7 +277,7 @@ export function TrackingBar(props: ITrackingBarProps) {
                     <ThemedText type="link">Ce n’est pas la bonne œuvre</ThemedText>
                   </Pressable>
                   <Pressable onPress={props.onConfigure}>
-                    <ThemedText type="link">Configurer ce site</ThemedText>
+                    <ThemedText type="link">Mode avancé</ThemedText>
                   </Pressable>
                   <Pressable onPress={props.onIgnore}>
                     <ThemedText type="link" themeColor="textSecondary">

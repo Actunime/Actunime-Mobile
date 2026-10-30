@@ -3,7 +3,7 @@ import type { WebView } from 'react-native-webview';
 
 import { deriveEpisodeUrlRegex } from '@/detection/core/strategies';
 import { commandScript, type InPageMessage, type PageDetection } from '@/detection/messages';
-import type { LearnedPattern } from '@/detection/core/types';
+import type { LearnedPattern, StrategyId } from '@/detection/core/types';
 
 import { getBrowserSettings } from './browser-settings';
 import { getPattern, isHostIgnored, removePattern, savePattern, setHostIgnored } from './patterns';
@@ -27,6 +27,26 @@ const RESULT_TEXT: Record<PushResult, string> = {
   updated: 'progression mise à jour',
   unchanged: 'déjà à jour',
 };
+
+/** Réglage d'un site à partir de la stratégie qui lit bien son titre : sert à la mémorisation automatique et au choix d'un autre titre. */
+function patternFor(detection: Pick<PageDetection, 'host' | 'kind' | 'url'>, strategy: StrategyId): LearnedPattern {
+  let pathname = '';
+  try {
+    pathname = new URL(detection.url).pathname;
+  } catch {
+    // adresse illisible : le réglage s'applique alors à toutes les pages du site
+  }
+  const now = new Date().toISOString();
+  return {
+    host: detection.host,
+    kind: detection.kind,
+    strategy,
+    episodeUrlRegex: pathname ? deriveEpisodeUrlRegex(pathname) : undefined,
+    mangaTracking: detection.kind === 'manga' ? { mode: 'scroll', threshold: 0.9 } : undefined,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 const numberOf = (d: PageDetection) => (d.kind === 'manga' ? d.chapter : d.episode);
 const unitOf = (d: PageDetection) => (d.kind === 'manga' ? 'chapitre' : 'épisode');
@@ -78,22 +98,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
     async (detection: PageDetection) => {
       if (detection.source !== 'auto' || !detection.strategy) return;
       if (await getPattern(detection.host)) return;
-      let pathname = '';
-      try {
-        pathname = new URL(detection.url).pathname;
-      } catch {
-        // adresse illisible : le réglage s'applique alors à toutes les pages du site
-      }
-      const now = new Date().toISOString();
-      const learned: LearnedPattern = {
-        host: detection.host,
-        kind: detection.kind,
-        strategy: detection.strategy,
-        episodeUrlRegex: pathname ? deriveEpisodeUrlRegex(pathname) : undefined,
-        mangaTracking: detection.kind === 'manga' ? { mode: 'scroll', threshold: 0.9 } : undefined,
-        createdAt: now,
-        updatedAt: now,
-      };
+      const learned = patternFor(detection, detection.strategy);
       await savePattern(learned);
       setPattern(learned);
       send({ type: 'set-pattern', pattern: learned });
@@ -239,6 +244,16 @@ export function useTracking(webview: RefObject<WebView | null>) {
     [send],
   );
 
+  /** « Le titre est faux » : l'utilisateur choisit parmi les titres que la page propose ; le site retient cette source. */
+  const pickTitle = useCallback(
+    async (strategy: StrategyId) => {
+      const detection = latest.current;
+      if (!detection) return;
+      await applyPattern(patternFor(detection, strategy));
+    },
+    [applyPattern],
+  );
+
   const resetPattern = useCallback(async () => {
     await removePattern(host);
     setPattern(null);
@@ -260,6 +275,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
     ignoreHost,
     unignoreHost,
     applyPattern,
+    pickTitle,
     resetPattern,
   };
 }
