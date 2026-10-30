@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { IListEntry, IMedia } from './api';
-import { behindAnimes, estimatedAired, headline, listBreakdown, nextBroadcast, weekSchedule } from './suivi';
+import { behindAnimes, estimatedAired, headline, listBreakdown, listTotals, nextBroadcast, weekSchedule } from './suivi';
 
 // mercredi 28 octobre 2026, 12:00 local
 const NOW = new Date(2026, 9, 28, 12, 0, 0);
@@ -101,5 +101,22 @@ describe('bandeau et répartition', () => {
       { label: 'En cours', value: 3, color: 'primary' },
       { label: 'En pause / abandonnés', value: 5, color: 'muted' },
     ]);
+  });
+});
+
+describe('listTotals', () => {
+  it('compte par statut, épisodes vus, chapitres lus et moyenne des notes, sans les entrées sans fiche', () => {
+    const totals = listTotals([
+      entry(weekly(1), { mediaId: 'a', episodesWatched: 5, score: 8 }),
+      entry(weekly(2), { mediaId: 'b', episodesWatched: 3, score: 6, status: 'COMPLETED' }),
+      entry(weekly(3), { mediaId: 'c', mediaType: 'Manga', chaptersRead: 10, status: 'READING' }),
+      entry(weekly(4), { mediaId: undefined, episodesWatched: 99 }),
+    ]);
+    expect(totals).toMatchObject({ total: 3, animeCount: 2, mangaCount: 1, episodesWatched: 8, chaptersRead: 10, averageScore: 7 });
+    expect(totals.byStatus).toHaveLength(3);
+  });
+
+  it('laisse la moyenne indéfinie sans aucune note', () => {
+    expect(listTotals([entry(weekly(1), { mediaId: 'a' })]).averageScore).toBeUndefined();
   });
 });
