@@ -1,246 +1,745 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import {
+  Activity,
+  ArrowLeft,
+  BarChart3,
+  BookOpen,
+  Building2,
+  Calendar,
+  ChevronDown,
+  CircleAlert,
+  Clock,
+  ExternalLink,
+  Heart,
+  Info,
+  LayoutList,
+  MessagesSquare,
+  Music,
+  Pencil,
+  Play,
+  PlayCircle,
+  Plus,
+  Share2,
+  Star,
+  TriangleAlert,
+  Tv,
+  User,
+  UserPlus,
+  Users,
+  type LucideIcon,
+} from 'lucide-react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
-import { Button } from '@/components/button';
-import { Fold } from '@/components/fold';
-import { Poster } from '@/components/poster';
+import { ListEntrySheetTrigger } from '@/components/media/list-button';
+import { CardCarousel, InfoRow, PRIMARY_PILL, Pill, STATUS_PILL, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
+import { ManageEntry } from '@/components/list/manage-entry';
+import { openMedia } from '@/components/media-row';
 import { Screen } from '@/components/screen';
 import { ErrorState, Loading } from '@/components/states';
-import { ThemedText } from '@/components/themed-text';
-import { Colors, Radius, Spacing } from '@/constants/theme';
-import type { IListEntry, IMedia, MediaKind } from '@/lib/api';
-import { MEDIA_STATUS_LABELS, STATUS_LABELS, formatScore } from '@/lib/list-form';
-import { formatLabel, formatLongDate, formatYear, linkLabel, mediaTitle, mediaTypeOf, progressLabel, statusTone } from '@/lib/media';
-import { useEntryForMedia, useGenres, useMedia } from '@/lib/queries';
+import { Txt } from '@/components/tw';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { Tw, alpha } from '@/constants/theme';
+import type { IMedia, IMediaFollowerEntry, MediaKind } from '@/lib/api';
+import { WEB_URL } from '@/lib/config';
+import { MEDIA_STATUS_LABELS, STATUS_LABELS } from '@/lib/list-form';
+import { LIST_STATUS_BAR } from '@/lib/list-status';
+import { ANIME_FORMAT_LABELS, MANGA_FORMAT_LABELS, RELATION_LABELS, SOURCE_LABELS, formatLongDate, formatReleaseDate, linkLabel, mediaTitle, seasonLabel } from '@/lib/media';
+import {
+  useIsFavorite,
+  useMedia,
+  useMediaFollowers,
+  useMediaLinks,
+  useMetadataNames,
+  useMyEntries,
+  useRelations,
+  useToggleFavorite,
+} from '@/lib/queries';
+import { nextBroadcast } from '@/lib/suivi';
 
-type IconName = React.ComponentProps<typeof Ionicons>['name'];
+const COUNTRY_LABELS: Record<string, string> = { JAPAN: 'Japon', KOREA: 'Corée du Sud', CHINA: 'Chine', OTHER: 'Autre' };
+const AUDIENCE_LABELS: Record<string, string> = { ALL: 'Tout public', TEEN: 'Adolescents', MATURE: 'Public averti' };
+const ROLE_LABELS: Record<string, string> = { PRINCIPAL: 'Principal', SECONDAIRE: 'Secondaire', FIGURANT: 'Figurant', ANTAGONISTE: 'Antagoniste', SOUTIEN: 'Soutien' };
+const TRACK_LABELS: Record<string, string> = { OPENING: 'Opening', ENDING: 'Ending', BGM: 'BGM', INSERT: 'INSERT' };
+const COMPANY_LABELS: Record<string, string> = { STUDIO: 'Studio', PRODUCER: 'Producteur', PUBLISHER: 'Editeur', LABEL: 'Label' };
+const WEEKDAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const STATUS_ORDER = ['WATCHING', 'READING', 'COMPLETED', 'ON_HOLD', 'PLAN_TO_WATCH', 'PLAN_TO_READ'] as const;
 
-const TONES = {
-  success: { color: Colors.success, background: 'rgba(65, 168, 103, 0.15)' },
-  warning: { color: Colors.warning, background: 'rgba(211, 144, 69, 0.15)' },
-  destructive: { color: Colors.destructive, background: 'rgba(255, 100, 103, 0.15)' },
-  neutral: { color: Colors.text, background: 'rgba(255, 255, 255, 0.06)' },
-  primary: { color: Colors.primary, background: 'rgba(0, 153, 255, 0.1)' },
-  muted: { color: Colors.textSecondary, background: 'rgba(255, 255, 255, 0.06)' },
-} as const;
+/** Page du site ouverte dans le navigateur du téléphone (onglets et actions hors V1). */
+const openSite = (path: string) => WebBrowser.openBrowserAsync(`${WEB_URL}${path}`).catch(() => undefined);
+/** Lien externe ouvert dans le navigateur de lecture de l'app. */
+const openInReader = (url: string) => router.push({ pathname: '/browser', params: { url, t: String(Date.now()) } });
 
-/** Pastille de la fiche (statut, format, épisodes, genre) : même famille que celles du site. */
-function Pill({ label, icon, tone = 'muted' }: Readonly<{ label: string; icon?: IconName; tone?: keyof typeof TONES }>) {
-  const { color, background } = TONES[tone];
-  return (
-    <View style={[styles.pill, { backgroundColor: background, borderColor: tone === 'primary' ? 'rgba(0, 153, 255, 0.3)' : Colors.border }]}>
-      {icon ? <Ionicons name={icon} size={12} color={color} /> : null}
-      <ThemedText type="small" style={{ color }}>
-        {label}
-      </ThemedText>
-    </View>
-  );
+/** « dans 3 jours », « dans 5 heures » (`formatDistanceToNow` du site, en plus court). */
+function fromNow(date: Date): string {
+  const minutes = Math.round((date.getTime() - Date.now()) / 60000);
+  if (minutes < 60) return `dans ${Math.max(1, minutes)} minute${minutes > 1 ? 's' : ''}`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `dans ${hours} heure${hours > 1 ? 's' : ''}`;
+  const days = Math.round(hours / 24);
+  return `dans ${days} jour${days > 1 ? 's' : ''}`;
 }
 
-const LIST_DOT: Record<string, string> = {
-  COMPLETED: Colors.success,
-  ON_HOLD: Colors.warning,
-  DROPPED: Colors.destructive,
-};
+/** Fiche incomplète : affiche, genres, synopsis, date, format ou statut manquant (`isMediaIncomplete`). */
+const isIncomplete = (m: IMedia) =>
+  !m.posterUrl || !m.genres?.length || !m.synopsis || !m.date?.start || !m.format || m.format === 'UNKNOWN' || !m.status || m.status === 'UNKNOWN';
 
-function InfoRow({ label, value }: Readonly<{ label: string; value: string }>) {
+function MemberAvatar({ member, size }: Readonly<{ member: IMediaFollowerEntry['member']; size: number }>) {
   return (
-    <View style={styles.infoRow}>
-      <ThemedText type="small" themeColor="textSecondary" style={styles.infoLabel}>
-        {label}
-      </ThemedText>
-      <ThemedText type="small" style={styles.infoValue}>
-        {value}
-      </ThemedText>
-    </View>
-  );
-}
-
-function generalInfo(kind: MediaKind, media: IMedia): { label: string; value: string }[] {
-  const rows: { label: string; value: string }[] = [];
-  const format = formatLabel(media.format);
-  if (format) rows.push({ label: 'Format', value: format });
-  if (media.status) rows.push({ label: 'Statut', value: MEDIA_STATUS_LABELS[media.status] ?? media.status });
-  const start = formatLongDate(media.date?.start);
-  if (start) rows.push({ label: kind === 'anime' ? 'Début de diffusion' : 'Début de publication', value: start });
-  const end = formatLongDate(media.date?.end);
-  if (end) rows.push({ label: 'Fin', value: end });
-  if (kind === 'anime') {
-    if (media.episodesInfo?.total) rows.push({ label: 'Épisodes', value: String(media.episodesInfo.total) });
-    if (media.episodesInfo?.durationMinutes) rows.push({ label: 'Durée', value: `${media.episodesInfo.durationMinutes} min par épisode` });
-  } else {
-    if (media.chaptersInfo?.total) rows.push({ label: 'Chapitres', value: String(media.chaptersInfo.total) });
-    if (media.volumesInfo?.total) rows.push({ label: 'Volumes', value: String(media.volumesInfo.total) });
-  }
-  return rows;
-}
-
-/** Ouvre le navigateur de lecture sur une adresse (la même page peut être rouverte : `t` change). */
-const openInBrowser = (url: string) => router.push({ pathname: '/browser', params: { url, t: String(Date.now()) } });
-
-function ListButton({ entry, loading, onPress }: Readonly<{ entry: IListEntry | null; loading: boolean; onPress: () => void }>) {
-  return (
-    <Pressable accessibilityRole="button" disabled={loading} onPress={onPress} style={({ pressed }) => [styles.listButton, loading && styles.dim, pressed && styles.pressed]}>
-      {entry ? (
-        <View style={[styles.dot, { backgroundColor: LIST_DOT[entry.status] ?? Colors.primary }]} />
+    <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
+      {member.avatarUrl ? (
+        <Image source={{ uri: member.avatarUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
       ) : (
-        <Ionicons name="add" size={20} color={Colors.primaryForeground} />
+        <Txt size="xs" color={Tw.color.mutedForeground}>
+          {(member.displayName ?? member.username).charAt(0).toUpperCase()}
+        </Txt>
       )}
-      <ThemedText type="smallBold" themeColor="primaryForeground" style={styles.listLabel} numberOfLines={1}>
-        {entry ? STATUS_LABELS[entry.status] : 'Ajouter à ma liste'}
-      </ThemedText>
-      {entry ? <Ionicons name="pencil" size={15} color={Colors.primaryForeground} /> : null}
-    </Pressable>
+    </View>
   );
 }
 
+/**
+ * Fiche anime ou manga, transposée de `Actunime-Web/src/routes/animes/$id.tsx` (et `$id/index.tsx`, onglet
+ * « Général ») : en-tête immersif avec l'affiche centrée (choix du PO), relations, titre et pastilles, membres qui
+ * suivent, barre d'actions, puis synopsis, informations, liens, studios, tags, bande-annonce, amis, communauté,
+ * personnages, staff et musiques. Les onglets propres au site (discussion, activités, statistiques) l'ouvrent.
+ */
 export default function MediaScreen() {
   const { kind, id } = useLocalSearchParams<{ kind: MediaKind; id: string }>();
   const media = useMedia(kind, id);
-  const entry = useEntryForMedia(id);
-  const genres = useGenres(media.data?.genres);
-  const [expanded, setExpanded] = useState(false);
+  const mediaType = kind === 'manga' ? 'Manga' : 'Anime';
+  const mine = useMyEntries(mediaType);
+  const entry = useMemo(() => mine.data?.find((e) => e.mediaId === id) ?? null, [mine.data, id]);
+  const relations = useRelations(kind, id);
+  const followers = useMediaFollowers(kind, id);
+  const characters = useMediaLinks(kind, id, 'characters');
+  const staffs = useMediaLinks(kind, id, 'staffs');
+  const tracks = useMediaLinks(kind, id, kind === 'anime' ? 'tracks' : 'characters');
+  const companies = useMediaLinks(kind, id, 'companies');
+  const favorite = useIsFavorite(id, mediaType);
+  const toggleFavorite = useToggleFavorite(id, mediaType);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [tabsOpen, setTabsOpen] = useState(false);
+  const insets = useSafeAreaInsets();
+  const scroll = useRef<ScrollView>(null);
+  const offsets = useRef<Record<string, number>>({});
+
+  const loaded = media.data;
+  const metaIds = useMemo(
+    () => [
+      ...(loaded?.genres ?? []),
+      ...(loaded?.themes ?? []),
+      ...(loaded?.demographics ?? []),
+      ...(loaded?.tags ?? []).map((t) => String(t.id)),
+      ...(staffs.data?.results ?? []).map((s) => (s.job !== undefined ? String(s.job) : '')).filter(Boolean),
+    ],
+    [loaded, staffs.data],
+  );
+  const meta = useMetadataNames(metaIds);
+  const nameOf = (metaId: string | number) => meta.data?.find((m) => String(m.id) === String(metaId))?.name;
+  const named = (ids?: (string | number)[]) =>
+    (ids ?? []).map((metaId) => ({ id: String(metaId), name: nameOf(metaId) })).filter((m): m is { id: string; name: string } => !!m.name);
 
   const back = (
-    <Pressable accessibilityRole="button" accessibilityLabel="Retour" hitSlop={10} onPress={() => router.back()} style={styles.back}>
-      <Ionicons name="chevron-back" size={24} color={Colors.text} />
+    <Pressable accessibilityRole="button" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/search'))} style={styles.back}>
+      <ArrowLeft size={16} color={Tw.color.foreground} />
+      <Txt size="sm">Retour</Txt>
     </Pressable>
   );
 
-  if (media.isPending) {
+  if (media.isPending || media.isError) {
     return (
       <Screen>
-        {back}
-        <Loading />
-      </Screen>
-    );
-  }
-  if (media.isError) {
-    return (
-      <Screen>
-        {back}
-        <ErrorState error={media.error} onRetry={() => media.refetch()} />
+        <View style={[styles.topBack, { paddingTop: insets.top + 8 }]}>{back}</View>
+        {media.isPending ? <Loading /> : <ErrorState error={media.error} onRetry={() => media.refetch()} />}
       </Screen>
     );
   }
 
   const data = media.data;
-  const mediaType = mediaTypeOf(kind);
-  const inList = entry.data ?? null;
+  const anime = kind === 'anime';
+  const sitePath = `/${anime ? 'animes' : 'mangas'}/${id}`;
+  const genres = named(data.genres);
+  const themes = named(data.themes);
+  const demographics = named(data.demographics);
+  const tags = named((data.tags ?? []).map((t) => t.id));
+  const formatLabel = data.format ? (anime ? ANIME_FORMAT_LABELS : MANGA_FORMAT_LABELS)[data.format] : undefined;
+  const statusPill = STATUS_PILL[data.status ?? 'UNKNOWN'] ?? STATUS_PILL.UNKNOWN!;
+  const airing = anime && data.status === 'AIRING' && data.format !== 'FILM';
+  const start = data.date?.start ? new Date(data.date.start) : null;
+  const next = airing ? nextBroadcast(data) : null;
+  const broadcastLabel = !airing
+    ? undefined
+    : data.episodesInfo?.broadcastPaused
+      ? 'Diffusion en pause'
+      : start && next && (!data.date?.startPrecision || data.date.startPrecision === 'day')
+        ? `Nouvel épisode ${WEEKDAYS[start.getDay()]} · ${fromNow(next)}`
+        : undefined;
+  const sagaItems: ICarouselItem[] = [
+    ...(relations.data?.direct ?? []).map((rel) => ({
+      rel,
+      label: [seasonLabel(rel.season), rel.label !== undefined ? RELATION_LABELS[rel.label] : undefined].filter(Boolean).join(' · ') || rel.targetType,
+    })),
+    ...(relations.data?.indirect ?? []).map((rel) => ({ rel, label: rel.targetType as string })),
+  ]
+    .filter(({ rel }) => rel.target)
+    .map(({ rel, label }) => ({
+      id: rel.id,
+      title: mediaTitle(rel.target),
+      imageUrl: rel.target?.posterUrl,
+      overlay: label,
+      onPress: () => openMedia(rel.targetType === 'Manga' ? 'manga' : 'anime', rel.targetId),
+    }));
+  const community = followers.data;
+  const friendEntries = community?.friendEntries ?? [];
+  const statusRows = STATUS_ORDER.map((status) => ({ status, n: community?.statusCounts?.[status] ?? 0 })).filter((r) => r.n > 0);
+  const statusSum = statusRows.reduce((n, r) => n + r.n, 0);
+  const memberAvatars = [...friendEntries, ...(community?.recentFollowers ?? [])]
+    .filter((e, i, all) => all.findIndex((x) => x.member.id === e.member.id) === i)
+    .slice(0, 5);
   const links = (data.links ?? []).filter((link) => /^https?:\/\//.test(link.url));
-  const aliases = data.title?.alias?.slice(0, 3).join(' / ');
-  const info = generalInfo(kind, data);
-  const total = kind === 'anime' ? data.episodesInfo?.total : data.chaptersInfo?.total;
-  const duration = data.episodesInfo?.durationMinutes;
-  const edit = () => router.push({ pathname: '/edit/[kind]/[id]', params: { kind, id } });
+  const trailer = data.trailers?.[0]?.url;
+  const youtubeId = trailer?.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/)?.[1];
+
+  const tabs: { id: string; label: string; icon: LucideIcon; section?: string; path?: string }[] = [
+    { id: 'general', label: 'Général', icon: LayoutList, section: 'top' },
+    { id: 'staffs', label: 'Staff', icon: Users, section: 'staffs' },
+    { id: 'personnages', label: 'Personnages', icon: Users, section: 'characters' },
+    ...(anime ? [{ id: 'musiques', label: 'Musiques', icon: Music, section: 'tracks' }] : []),
+    { id: 'discussion', label: 'Discussion', icon: MessagesSquare, path: `${sitePath}/discussion` },
+    { id: 'activites', label: 'Activités', icon: Activity, path: `${sitePath}/activites` },
+    { id: 'statistiques', label: 'Statistiques', icon: BarChart3, path: `${sitePath}/statistiques` },
+    ...(anime ? [{ id: 'episodes', label: 'Épisodes', icon: PlayCircle, path: `${sitePath}/episodes` }] : []),
+  ];
+  const goTab = (tab: (typeof tabs)[number]) => {
+    setTabsOpen(false);
+    if (tab.path) openSite(tab.path);
+    else scroll.current?.scrollTo({ y: tab.section === 'top' ? 0 : Math.max(0, (offsets.current[tab.section ?? ''] ?? 0) - 8), animated: true });
+  };
+  const at = (key: string) => (y: number) => {
+    offsets.current[key] = y;
+  };
+
+  type IRow = { label: string; value: React.ReactNode };
+  const infoRows = ([
+    data.source && SOURCE_LABELS[data.source] ? { label: 'Source', value: SOURCE_LABELS[data.source]! } : null,
+    data.country ? { label: 'Pays', value: COUNTRY_LABELS[data.country] ?? data.country } : null,
+    seasonLabel(data.season) ? { label: 'Saison', value: seasonLabel(data.season)! } : null,
+    data.date?.start
+      ? {
+          label: 'Date de début',
+          value: `${formatReleaseDate(data.date.start, data.date.startPrecision)?.replace(/^0/, '') ?? '-'}${start && start.getTime() > Date.now() ? ' · à venir' : ''}`,
+        }
+      : null,
+    data.date?.end ? { label: 'Date de fin', value: formatLongDate(data.date.end) ?? '-' } : null,
+    anime ? { label: 'Épisodes', value: data.episodesInfo?.total ? String(data.episodesInfo.total) : 'Inconnu' } : null,
+    anime && airing && start ? { label: 'Diffusion', value: `le ${WEEKDAYS[start.getDay()]}` } : null,
+    !anime && data.chaptersInfo?.total ? { label: 'Chapitres', value: `${data.chaptersInfo.airing ?? 0} / ${data.chaptersInfo.total}` } : null,
+    !anime && data.volumesInfo?.total ? { label: 'Volumes', value: `${data.volumesInfo.airing ?? 0} / ${data.volumesInfo.total}` } : null,
+    data.vf ? { label: 'VF', value: 'Oui' } : null,
+    data.audience ? { label: 'Public', value: AUDIENCE_LABELS[data.audience] ?? data.audience } : null,
+    demographics.length ? { label: 'Démographie', value: demographics.map((g) => <Pill key={g.id} label={g.name} {...PRIMARY_PILL} />) } : null,
+    themes.length ? { label: 'Thèmes', value: themes.map((g) => <Pill key={g.id} label={g.name} {...PRIMARY_PILL} />) } : null,
+  ] as (IRow | null)[]).filter((row): row is IRow => !!row);
+
+  const carouselOf = (what: 'characters' | 'staffs' | 'tracks'): ICarouselItem[] => {
+    const page = what === 'characters' ? characters.data : what === 'staffs' ? staffs.data : tracks.data;
+    return (page?.results ?? [])
+      .filter((rel) => rel.data)
+      .map((rel) => ({
+        id: rel.id ?? rel.data!.id,
+        title: rel.data!.name?.original ?? '',
+        imageUrl: rel.data!.avatarUrl ?? rel.data!.coverUrl,
+        subtitle:
+          what === 'characters'
+            ? ROLE_LABELS[rel.role ?? ''] ?? rel.role
+            : what === 'staffs'
+              ? rel.job !== undefined
+                ? nameOf(rel.job)
+                : undefined
+              : TRACK_LABELS[rel.type ?? rel.data!.type ?? ''] ?? rel.data!.type,
+        onPress: () => openSite(`/${what === 'characters' ? 'personnages' : what === 'staffs' ? 'personnes' : 'musiques'}/${rel.data!.id}`),
+      }));
+  };
+  const characterItems = carouselOf('characters');
+  const staffItems = carouselOf('staffs');
+  const trackItems = anime ? carouselOf('tracks') : [];
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.backRow}>{back}</View>
-        {data.bannerUrl ? <Image source={{ uri: data.bannerUrl }} style={styles.banner} contentFit="cover" /> : null}
-
-        <View style={styles.block}>
-          <Poster uri={data.posterUrl} width={144} />
-          <View style={styles.titleBlock}>
-            <ThemedText type="subtitle" style={styles.title}>
-              {mediaTitle(data)}
-            </ThemedText>
-            {aliases ? (
-              <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                {aliases}
-              </ThemedText>
+    <Screen edges={[]}>
+      <ScrollView ref={scroll} contentContainerStyle={styles.content}>
+        {/* En-tête immersif : bannière en fond, dégradé vers le fond de page, affiche centrée. */}
+        <View style={styles.hero}>
+          {data.bannerUrl ? <Image source={{ uri: data.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
+          <Svg style={StyleSheet.absoluteFill} preserveAspectRatio="none" viewBox="0 0 1 1">
+            <Defs>
+              <LinearGradient id="hero" x1="0" y1="1" x2="0" y2="0">
+                <Stop offset="0.08" stopColor={Tw.color.background} stopOpacity={1} />
+                <Stop offset="0.45" stopColor={Tw.color.background} stopOpacity={0.75} />
+                <Stop offset="1" stopColor={Tw.color.background} stopOpacity={0.1} />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="1" height="1" fill="url(#hero)" />
+          </Svg>
+          <View style={[styles.heroBack, { top: insets.top + 8 }]}>{back}</View>
+          <View style={[styles.heroBody, { paddingTop: insets.top + 64 }]}>
+            <View style={[styles.poster, sagaItems.length > 0 && styles.posterRing]}>
+              {data.posterUrl ? (
+                <Image source={{ uri: data.posterUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+              ) : anime ? (
+                <Tv size={48} color={Tw.color.mutedForeground} />
+              ) : (
+                <BookOpen size={48} color={Tw.color.mutedForeground} />
+              )}
+            </View>
+            {sagaItems.length > 0 ? (
+              <View style={styles.saga}>
+                <CardCarousel items={sagaItems} kind={kind} width={112} />
+              </View>
             ) : null}
-          </View>
-          <View style={styles.pills}>
-            {data.status ? <Pill label={MEDIA_STATUS_LABELS[data.status] ?? data.status} icon="play" tone={statusTone(data.status)} /> : null}
-            {formatLabel(data.format) ? <Pill label={formatLabel(data.format) as string} icon={kind === 'anime' ? 'tv-outline' : 'book-outline'} tone="neutral" /> : null}
-            {data.communityScore?.average !== undefined ? (
-              <Pill label={`${formatScore(data.communityScore.average)} / 10`} icon="star" tone="warning" />
-            ) : null}
-            {total ? <Pill label={`${total} ${kind === 'anime' ? 'épisodes' : 'chapitres'}`} icon="play-outline" /> : null}
-            {duration ? <Pill label={`${duration} min`} icon="time-outline" /> : null}
-            {formatYear(data) ? <Pill label={formatYear(data) as string} icon="calendar-outline" /> : null}
-            {genres.data?.map((genre) => (
-              <Pill key={genre.id} label={genre.name} tone="primary" />
-            ))}
+            <View style={styles.titleBlock}>
+              <View>
+                <Txt size="xl" weight="bold" leading={1.25} numberOfLines={3}>
+                  {data.title?.original}
+                </Txt>
+                {data.title?.alias?.length ? (
+                  <Txt size="sm" color={Tw.color.mutedForeground} numberOfLines={2} style={styles.alias}>
+                    {data.title.alias.join(' / ')}
+                  </Txt>
+                ) : null}
+              </View>
+              <View style={styles.pills}>
+                {data.status && MEDIA_STATUS_LABELS[data.status] ? <Pill icon={Play} label={MEDIA_STATUS_LABELS[data.status]!} {...statusPill} /> : null}
+                {formatLabel ? <Pill icon={anime ? Tv : BookOpen} label={formatLabel} /> : null}
+                {data.communityScore?.count ? (
+                  data.communityScore.average !== undefined ? (
+                    <Pill
+                      icon={Star}
+                      iconColor={Tw.color.amber400}
+                      iconFill={Tw.color.amber400}
+                      label={
+                        <Txt size="xs" weight="medium">
+                          {data.communityScore.average.toFixed(1).replace('.', ',')}{' '}
+                          <Txt size="xs" weight="medium" color={Tw.color.mutedForeground}>
+                            · {data.communityScore.count} notes
+                          </Txt>
+                        </Txt>
+                      }
+                    />
+                  ) : (
+                    <Pill icon={Star} iconColor={Tw.color.mutedForeground} label={`Pas encore assez de notes (${data.communityScore.count}/3)`} />
+                  )
+                ) : null}
+                {anime && data.episodesInfo?.total ? <Pill icon={Play} color={Tw.color.mutedForeground} label={`${data.episodesInfo.total} épisodes`} /> : null}
+                {!anime && data.chaptersInfo?.total ? <Pill icon={BookOpen} color={Tw.color.mutedForeground} label={`${data.chaptersInfo.total} chapitres`} /> : null}
+                {anime && data.episodesInfo?.durationMinutes ? <Pill icon={Clock} color={Tw.color.mutedForeground} label={`${data.episodesInfo.durationMinutes} min`} /> : null}
+                {broadcastLabel ? (
+                  <Pill icon={Calendar} label={broadcastLabel} color={Tw.color.purple400} background={alpha(Tw.color.purple500, 0.15)} border={alpha(Tw.color.purple500, 0.3)} />
+                ) : null}
+                {genres.map((g) => (
+                  <Pill key={g.id} label={g.name} {...PRIMARY_PILL} />
+                ))}
+              </View>
+              {community && community.count > 0 ? (
+                <Pressable onPress={() => goTab({ id: 'community', label: '', icon: Users, section: 'community' })} style={styles.socialPill}>
+                  <View style={styles.socialAvatars}>
+                    {memberAvatars.map((e, i) => (
+                      <View key={e.member.id} style={[styles.avatarRing, i > 0 && { marginLeft: -8 }]}>
+                        <MemberAvatar member={e.member} size={28} />
+                      </View>
+                    ))}
+                  </View>
+                  <Txt size="sm" color={alpha(Tw.color.foreground, 0.9)}>
+                    <Txt size="sm" weight="semibold">
+                      {community.count > 1 ? `${community.count} membres suivent` : '1 membre suit'}
+                    </Txt>
+                    {community.friendsCount > 0 ? (
+                      <Txt size="sm" weight="medium" color={Tw.color.primary}>
+                        {' '}· {community.friendsCount} {community.friendsCount > 1 ? 'amis' : 'ami'}
+                      </Txt>
+                    ) : null}
+                  </Txt>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         </View>
 
+        {isIncomplete(data) ? (
+          <View style={styles.warning}>
+            <View style={styles.warningText}>
+              <CircleAlert size={20} color={Tw.color.amber500} />
+              <Txt size="sm" weight="medium" color={Tw.color.amber500} style={styles.flex}>
+                Les informations de cette page sont incompletes.
+              </Txt>
+            </View>
+            <Pressable onPress={() => openSite(`/contribute/${kind}/new?editId=${id}`)} style={styles.warningButton}>
+              <Txt size="xs" weight="medium" color="#000">
+                Completer
+              </Txt>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {/* Barre d'actions (`MediaActionBar`, téléphone). */}
         <View style={styles.actionBar}>
-          <ListButton entry={inList} loading={entry.isPending} onPress={edit} />
-          {inList && progressLabel(inList, data) ? (
-            <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
-              {[progressLabel(inList, data), inList.score ? `${formatScore(inList.score)}/10` : null].filter(Boolean).join(' · ')}
-            </ThemedText>
-          ) : null}
-          {entry.isError ? (
-            <ThemedText type="small" themeColor="destructive">
-              Impossible de lire ton entrée : {entry.error.message}
-            </ThemedText>
-          ) : null}
+          <ListEntrySheetTrigger entry={entry} loading={mine.isPending} onPress={() => setManageOpen(true)} />
+          <Pressable accessibilityRole="button" onPress={() => setTabsOpen(true)} style={styles.tabButton}>
+            <LayoutList size={16} color={Tw.color.foreground} />
+            <Txt size="sm">Général</Txt>
+            <ChevronDown size={14} color={alpha(Tw.color.foreground, 0.6)} style={styles.tabChevron} />
+          </Pressable>
+          <View style={styles.icons}>
+            <IconButton icon={Pencil} label="Modifier" onPress={() => openSite(`/contribute/${kind}/new?editId=${id}`)} />
+            <IconButton icon={Share2} label="Partager" onPress={() => Share.share({ message: `${mediaTitle(data)} — ${WEB_URL}${sitePath}` }).catch(() => undefined)} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: !!favorite.data }}
+              onPress={() => toggleFavorite.mutate()}
+              style={styles.favorite}
+            >
+              <Heart size={16} color={favorite.data ? Tw.color.rose400 : Tw.color.foreground} fill={favorite.data ? Tw.color.rose400 : 'transparent'} />
+              <Txt size="sm" weight="medium">
+                Favori
+              </Txt>
+            </Pressable>
+            <View style={styles.iconSeparator}>
+              <IconButton icon={TriangleAlert} label="Signaler" onPress={() => openSite(sitePath)} />
+            </View>
+          </View>
         </View>
 
         <View style={styles.sections}>
           {data.synopsis ? (
-            <Fold title="Synopsis">
-              <ThemedText type="small" themeColor="textSecondary" numberOfLines={expanded ? undefined : 6}>
+            <SectionCard title="Synopsis" icon={BookOpen}>
+              <Txt size="base" color={Tw.color.mutedForeground} leading={1.625}>
                 {data.synopsis}
-              </ThemedText>
-              <Pressable onPress={() => setExpanded((value) => !value)}>
-                <ThemedText type="link">{expanded ? 'Réduire' : 'Lire la suite'}</ThemedText>
-              </Pressable>
-            </Fold>
+              </Txt>
+            </SectionCard>
           ) : null}
-          {info.length > 0 ? (
-            <Fold title="Informations">
-              {info.map((row) => (
-                <InfoRow key={row.label} {...row} />
-              ))}
-            </Fold>
-          ) : null}
-          <Fold title="Liens externes">
-            {links.slice(0, 6).map((link) => (
-              <Button key={link.url} label={linkLabel(link)} variant="outline" onPress={() => openInBrowser(link.url)} />
+
+          <SectionCard title="Informations" icon={Info}>
+            {infoRows.map((row, index) => (
+              <InfoRow key={row.label} label={row.label} value={row.value} first={index === 0} />
             ))}
-            <Button label="Ouvrir le navigateur de lecture" variant="outline" onPress={() => router.navigate('/reading')} />
-          </Fold>
+          </SectionCard>
+
+          {links.length > 0 ? (
+            <SectionCard title="Liens externes">
+              <View style={styles.wrap}>
+                {links.map((link) => (
+                  <Pressable key={link.url} onPress={() => openInReader(link.url)} style={styles.linkPill}>
+                    <Txt size="xs" weight="medium">
+                      {linkLabel(link)}
+                    </Txt>
+                    <ExternalLink size={12} color={Tw.color.foreground} />
+                  </Pressable>
+                ))}
+                <Pressable onPress={() => router.navigate('/reading')} style={styles.linkPill}>
+                  <Txt size="xs" weight="medium">
+                    Navigateur de lecture
+                  </Txt>
+                  <BookOpen size={12} color={Tw.color.foreground} />
+                </Pressable>
+              </View>
+            </SectionCard>
+          ) : null}
+
+          {(companies.data?.results ?? []).some((c) => c.data) ? (
+            <SectionCard title="Studios & Producteurs" icon={Building2}>
+              <View style={styles.stack}>
+                {companies.data!.results.filter((c) => c.data).map((c) => (
+                  <Pressable key={c.id ?? c.data!.id} onPress={() => openSite(`/societes/${c.data!.id}`)} style={styles.company}>
+                    <View style={styles.companyLogo}>
+                      {c.data!.logoUrl ? (
+                        <Image source={{ uri: c.data!.logoUrl }} style={StyleSheet.absoluteFill} contentFit="contain" />
+                      ) : (
+                        <Building2 size={20} color={Tw.color.mutedForeground} />
+                      )}
+                    </View>
+                    <Txt size="sm" weight="medium" numberOfLines={1} style={styles.flex}>
+                      {c.data!.name?.original}
+                    </Txt>
+                    {c.data!.type ? (
+                      <View style={styles.companyType}>
+                        <Txt size="xs" weight="medium" color={Tw.color.primaryForeground}>
+                          {COMPANY_LABELS[c.data!.type] ?? c.data!.type}
+                        </Txt>
+                      </View>
+                    ) : null}
+                  </Pressable>
+                ))}
+              </View>
+            </SectionCard>
+          ) : null}
+
+          <SectionCard title="Tags">
+            {tags.length ? (
+              <View style={styles.wrap}>
+                {tags.map((t) => (
+                  <Pill key={t.id} label={t.name} />
+                ))}
+              </View>
+            ) : (
+              <Txt size="sm" color={Tw.color.mutedForeground} style={styles.italic}>
+                Aucun tag.
+              </Txt>
+            )}
+          </SectionCard>
+
+          {trailer ? (
+            <SectionCard title="Bande-annonce">
+              <Pressable onPress={() => WebBrowser.openBrowserAsync(trailer).catch(() => undefined)} style={styles.trailer}>
+                {youtubeId ? <Image source={{ uri: `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
+                <View style={styles.play}>
+                  <Play size={28} color="#fff" fill="#fff" />
+                </View>
+              </Pressable>
+            </SectionCard>
+          ) : null}
+
+          <SectionCard title="Tes amis" icon={Users} count={community?.friendsCount || undefined}>
+            {friendEntries.length === 0 ? (
+              <View style={styles.inline}>
+                <UserPlus size={16} color={Tw.color.mutedForeground} />
+                <Txt size="sm" color={Tw.color.mutedForeground} style={styles.flex}>
+                  Aucun de tes amis ne suit encore cette œuvre.
+                </Txt>
+              </View>
+            ) : (
+              friendEntries.slice(0, 6).map((e) => (
+                <View key={e.member.id} style={styles.friendRow}>
+                  <MemberAvatar member={e.member} size={32} />
+                  <Txt size="sm" style={styles.flex} numberOfLines={1}>
+                    {e.member.displayName ?? e.member.username}
+                  </Txt>
+                  <View style={[styles.statusPill, { backgroundColor: LIST_STATUS_BAR[e.status] }]}>
+                    <Txt size="11" color="#fff">
+                      {STATUS_LABELS[e.status]}
+                    </Txt>
+                  </View>
+                </View>
+              ))
+            )}
+          </SectionCard>
+
+          <View onLayout={(e) => at('community')(e.nativeEvent.layout.y)}>
+            <SectionCard title="Communauté" icon={Users} count={community?.count || undefined}>
+              {!community || community.count === 0 ? (
+                <Txt size="sm" color={Tw.color.mutedForeground}>
+                  Personne n'a encore ajouté cette œuvre à sa liste publique.
+                </Txt>
+              ) : (
+                <View style={styles.communityBody}>
+                  {statusSum > 0 ? (
+                    <View style={styles.stackSmall}>
+                      <View style={styles.bar}>
+                        {statusRows.map((r) => (
+                          <View key={r.status} style={{ width: `${(r.n / statusSum) * 100}%`, backgroundColor: LIST_STATUS_BAR[r.status] }} />
+                        ))}
+                      </View>
+                      <View style={styles.legend}>
+                        {statusRows.map((r) => (
+                          <View key={r.status} style={styles.inline}>
+                            <View style={[styles.dot, { backgroundColor: LIST_STATUS_BAR[r.status] }]} />
+                            <Txt size="xs" color={Tw.color.mutedForeground}>
+                              <Txt size="xs" weight="semibold">
+                                {r.n}
+                              </Txt>{' '}
+                              {STATUS_LABELS[r.status].toLowerCase()}
+                            </Txt>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+                  {community.recentFollowers?.length ? (
+                    <View style={styles.stackSmall}>
+                      <Txt size="xs" weight="medium" color={Tw.color.mutedForeground}>
+                        Derniers à l'avoir ajoutée
+                      </Txt>
+                      <View style={styles.wrap}>
+                        {community.recentFollowers.map((e) => (
+                          <Pressable key={e.member.id} onPress={() => openSite(`/membres/${e.member.username}`)}>
+                            <MemberAvatar member={e.member} size={36} />
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+                </View>
+              )}
+            </SectionCard>
+          </View>
+
+          <SectionCard title="Activités récentes" icon={Activity} action={{ label: 'Tout voir', onPress: () => openSite(`${sitePath}/activites`) }}>
+            <Txt size="sm" color={Tw.color.mutedForeground}>
+              Le fil d'activité de l'œuvre s'ouvre sur le site.
+            </Txt>
+          </SectionCard>
+          <SectionCard title="Discussion" icon={MessagesSquare} action={{ label: 'Ouvrir', onPress: () => openSite(`${sitePath}/discussion`) }}>
+            <Txt size="sm" color={Tw.color.mutedForeground}>
+              La discussion de l'œuvre s'ouvre sur le site.
+            </Txt>
+          </SectionCard>
+
+          {characterItems.length > 0 ? (
+            <SectionCard
+              title="Personnages"
+              icon={Users}
+              count={characters.data?.total}
+              action={(characters.data?.total ?? 0) > characterItems.length ? { label: 'Voir tout', onPress: () => openSite(`${sitePath}/personnages`) } : undefined}
+              onLayout={at('characters')}
+            >
+              <CardCarousel items={characterItems} placeholder={User} />
+            </SectionCard>
+          ) : null}
+          {staffItems.length > 0 ? (
+            <SectionCard
+              title="Staff"
+              icon={Users}
+              count={staffs.data?.total}
+              action={(staffs.data?.total ?? 0) > staffItems.length ? { label: 'Voir tout', onPress: () => openSite(`${sitePath}/staffs`) } : undefined}
+              onLayout={at('staffs')}
+            >
+              <CardCarousel items={staffItems} placeholder={User} />
+            </SectionCard>
+          ) : null}
+          {anime ? (
+            trackItems.length > 0 ? (
+              <SectionCard title="Musiques" icon={Music} count={tracks.data?.total} onLayout={at('tracks')}>
+                <CardCarousel items={trackItems} placeholder={Music} />
+              </SectionCard>
+            ) : (
+              <View style={styles.emptyTracks} onLayout={(e) => at('tracks')(e.nativeEvent.layout.y)}>
+                <Txt size="sm" color={Tw.color.mutedForeground} style={styles.flex}>
+                  Cette fiche n'a pas encore de musiques.
+                </Txt>
+                <Pressable onPress={() => openSite(`/contribute/${kind}/new?editId=${id}`)} style={styles.inline}>
+                  <Pencil size={16} color={Tw.color.primary} />
+                  <Txt size="sm" weight="medium" color={Tw.color.primary}>
+                    Compléter
+                  </Txt>
+                </Pressable>
+              </View>
+            )
+          ) : null}
         </View>
       </ScrollView>
+
+      <ManageEntry kind={kind} media={data} entry={entry} open={manageOpen} onClose={() => setManageOpen(false)} genres={genres.map((g) => g.name)} hideViewEntity />
+
+      <BottomSheet open={tabsOpen} onClose={() => setTabsOpen(false)} title="Navigation">
+        <View style={styles.tabList}>
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = tab.id === 'general';
+            return (
+              <Pressable key={tab.id} onPress={() => goTab(tab)} style={[styles.tabItem, active && { backgroundColor: Tw.color.muted }]}>
+                <Icon size={20} color={active ? Tw.color.foreground : Tw.color.mutedForeground} />
+                <Txt size="sm" weight="medium" color={active ? Tw.color.foreground : Tw.color.mutedForeground} style={styles.flex}>
+                  {tab.label}
+                </Txt>
+                {tab.path ? <ExternalLink size={14} color={Tw.color.mutedForeground} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      </BottomSheet>
     </Screen>
   );
 }
 
+function IconButton({ icon: Icon, label, onPress }: Readonly<{ icon: LucideIcon; label: string; onPress: () => void }>) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.iconButton}>
+      <Icon size={16} color={Tw.color.foreground} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  content: { paddingBottom: Spacing.six, gap: Spacing.three },
-  centered: { textAlign: 'center' },
-  banner: { width: '100%', height: 120, opacity: 0.5 },
-  backRow: { paddingHorizontal: Spacing.two },
-  back: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  flex: { flex: 1 },
+  italic: { fontStyle: 'italic' },
+  inline: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  stack: { gap: 8 },
+  stackSmall: { gap: 8 },
+  content: { paddingBottom: 24 },
+  topBack: { padding: 12, paddingTop: 48 },
+  back: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: Tw.radius.md, backgroundColor: Tw.color.muted },
+  hero: { overflow: 'hidden', backgroundColor: Tw.color.muted, borderTopLeftRadius: Tw.radius.lg, borderTopRightRadius: Tw.radius.lg },
+  heroBack: { position: 'absolute', top: 44, left: 12, zIndex: 2 },
+  heroBody: { paddingHorizontal: 16, paddingTop: 96, paddingBottom: 12, gap: 16 },
+  poster: {
+    alignSelf: 'center',
+    width: 144,
+    aspectRatio: 2 / 3,
+    borderRadius: Tw.radius.lg,
+    overflow: 'hidden',
+    backgroundColor: Tw.color.muted,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.backgroundElement,
-    margin: Spacing.one,
+    elevation: 12,
   },
-  block: { gap: Spacing.three, paddingHorizontal: Spacing.three },
-  titleBlock: { gap: Spacing.one },
-  title: { fontSize: 22, lineHeight: 28 },
-  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.large, borderWidth: 1 },
-  actionBar: { gap: Spacing.two, paddingHorizontal: Spacing.three, paddingVertical: Spacing.three, borderTopWidth: 1, borderBottomWidth: 1, borderColor: Colors.border },
-  listButton: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, minHeight: 48, paddingHorizontal: Spacing.three, borderRadius: Radius.medium, backgroundColor: Colors.primary },
-  listLabel: { flex: 1 },
-  dot: { width: 9, height: 9, borderRadius: 5 },
-  dim: { opacity: 0.5 },
-  pressed: { opacity: 0.85 },
-  sections: { gap: Spacing.two, paddingHorizontal: Spacing.three },
-  infoRow: { flexDirection: 'row', gap: Spacing.three },
-  infoLabel: { width: 130 },
-  infoValue: { flex: 1 },
+  posterRing: { borderWidth: 2, borderColor: Tw.color.primary },
+  saga: { marginHorizontal: -16, paddingLeft: 16 },
+  titleBlock: { gap: 12 },
+  alias: { marginTop: 4 },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  socialPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: alpha(Tw.color.primary, 0.2),
+    backgroundColor: alpha(Tw.color.primary, 0.1),
+    paddingVertical: 4,
+    paddingLeft: 6,
+    paddingRight: 14,
+  },
+  socialAvatars: { flexDirection: 'row' },
+  avatarRing: { borderRadius: 999, borderWidth: 2, borderColor: Tw.color.background },
+  avatar: { backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  warning: {
+    marginTop: 16,
+    marginHorizontal: 4,
+    gap: 12,
+    borderRadius: Tw.radius.lg,
+    borderWidth: 1,
+    borderColor: alpha(Tw.color.amber500, 0.4),
+    backgroundColor: alpha(Tw.color.amber500, 0.1),
+    padding: 12,
+  },
+  warningText: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  warningButton: { borderRadius: Tw.radius.md, backgroundColor: Tw.color.amber500, paddingHorizontal: 12, paddingVertical: 6 },
+  actionBar: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 4, borderTopWidth: 1, borderBottomWidth: 1, borderColor: alpha(Tw.color.foreground, 0.05), marginTop: 8 },
+  tabButton: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 12, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.secondary },
+  tabChevron: { marginLeft: 'auto' },
+  icons: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 'auto' },
+  iconButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: Tw.radius.lg },
+  favorite: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 10, borderRadius: Tw.radius.lg },
+  iconSeparator: { marginLeft: 8, paddingLeft: 8, borderLeftWidth: 1, borderColor: Tw.color.border },
+  sections: { gap: 16, paddingTop: 20, paddingHorizontal: 4 },
+  linkPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: Tw.color.border },
+  company: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8, borderRadius: Tw.radius.md, backgroundColor: alpha(Tw.color.accent, 0.1) },
+  companyLogo: { width: 32, height: 32, borderRadius: Tw.radius.md, backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  companyType: { borderRadius: 999, backgroundColor: Tw.color.primary, paddingHorizontal: 8, paddingVertical: 2 },
+  trailer: { width: '100%', aspectRatio: 16 / 9, borderRadius: Tw.radius.lg, overflow: 'hidden', backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center' },
+  play: { width: 64, height: 44, borderRadius: 12, backgroundColor: 'rgba(255, 0, 0, 0.85)', alignItems: 'center', justifyContent: 'center' },
+  friendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
+  statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  communityBody: { gap: 16 },
+  bar: { flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: Tw.color.muted },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 4 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  emptyTracks: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: Tw.radius.lg, borderWidth: 1, borderStyle: 'dashed', borderColor: Tw.color.border, padding: 12 },
+  tabList: { paddingHorizontal: 16, paddingBottom: 24, gap: 4 },
+  tabItem: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: Tw.radius.lg, paddingHorizontal: 16, paddingVertical: 14 },
 });
