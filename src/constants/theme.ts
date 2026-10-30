@@ -5,13 +5,13 @@
 export const Colors = {
   text: '#f9fafb', // --foreground
   background: '#000616', // --background
-  backgroundElement: '#030a1d', // --card
-  backgroundSelected: '#0b1a40', // --muted
+  backgroundElement: '#14244f', // --card
+  backgroundSelected: '#102866', // --muted
   textSecondary: '#bed5ff', // --muted-foreground
   primary: '#0099ff', // --primary
   primaryForeground: '#000616', // texte sur fond primary : 6,8:1 (le clair n'en donnait que 2,8:1)
   border: 'rgba(255, 255, 255, 0.16)', // --border
-  input: '#0b1a40', // --input
+  input: '#2b4587', // --input
   destructive: '#ff6467', // --destructive
   success: '#41a867', // --success
   warning: '#d39045', // --warning
@@ -67,13 +67,13 @@ export const Tw = {
   color: {
     foreground: '#f9fafb',
     background: '#000616',
-    card: '#030a1d',
-    secondary: '#030a1d',
-    popover: '#0b1a40',
-    muted: '#0b1a40',
+    card: '#14244f', // proche du bleu des champs (`input`), pour que cartes et champs fassent un seul bleu
+    secondary: '#14244f',
+    popover: '#0c1945',
+    muted: '#102866',
     mutedForeground: '#bed5ff',
     accent: '#174283',
-    input: '#0b1a40',
+    input: '#2b4587',
     ring: '#3c5aa6',
     border: 'rgba(255, 255, 255, 0.16)',
     primary: '#0099ff',

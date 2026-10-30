@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: Tw.radius.lg,
     borderWidth: 1,
-    borderColor: Tw.color.border,
+    borderColor: Tw.color.input,
     backgroundColor: alpha(Tw.color.input, 0.3),
   },
 });

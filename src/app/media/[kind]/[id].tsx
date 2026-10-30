@@ -727,7 +727,7 @@ const styles = StyleSheet.create({
   iconSeparator: { marginLeft: 8, paddingLeft: 8, borderLeftWidth: 1, borderColor: Tw.color.border },
   sections: { gap: 16, paddingTop: 20, paddingHorizontal: ScreenGutter },
   linkPill: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: Tw.color.border },
-  company: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8, borderRadius: Tw.radius.md, backgroundColor: alpha(Tw.color.accent, 0.1) },
+  company: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8, borderRadius: Tw.radius.md, backgroundColor: Tw.color.card },
   companyLogo: { width: 32, height: 32, borderRadius: Tw.radius.md, backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   companyType: { borderRadius: 999, backgroundColor: Tw.color.primary, paddingHorizontal: 8, paddingVertical: 2 },
   trailer: { width: '100%', aspectRatio: 16 / 9, borderRadius: Tw.radius.lg, overflow: 'hidden', backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center' },
