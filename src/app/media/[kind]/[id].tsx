@@ -74,7 +74,7 @@ const STATUS_ORDER = ['WATCHING', 'READING', 'COMPLETED', 'ON_HOLD', 'PLAN_TO_WA
 /** Page du site ouverte dans le navigateur du téléphone (onglets et actions hors V1). */
 const openSite = (path: string) => WebBrowser.openBrowserAsync(`${WEB_URL}${path}`).catch(() => undefined);
 /** Lien externe ouvert dans le navigateur de lecture de l'app. */
-const openInReader = (url: string) => router.push({ pathname: '/browser', params: { url, t: String(Date.now()) } });
+const openInReader = (url: string) => router.navigate({ pathname: '/reading', params: { url, t: String(Date.now()) } });
 
 /** « dans 3 jours », « dans 5 heures » (`formatDistanceToNow` du site, en plus court). */
 function fromNow(date: Date): string {

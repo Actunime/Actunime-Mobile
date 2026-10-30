@@ -65,7 +65,6 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="media/[kind]/[id]" />
             <Stack.Screen name="edit/[kind]/[id]" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="browser" />
           </Stack.Protected>
           <Stack.Screen name="auth/callback" />
         </Stack>

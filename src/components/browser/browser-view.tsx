@@ -1,15 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useIsFocused } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
 
 import { Pressable } from '@/components/tap';
-import { ConfigWizard } from '@/components/browser/config-wizard';
-import { fieldStyle } from '@/components/browser/wizard-parts';
-import { SearchSheet } from '@/components/browser/search-sheet';
-import { TrackingBar } from '@/components/browser/tracking-bar';
+import { ConfigWizard } from './config-wizard';
+import { fieldStyle } from './wizard-parts';
+import { SearchSheet } from './search-sheet';
+import { TrackingBar } from './tracking-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
@@ -19,7 +19,7 @@ import { commandScript, parseInPageMessage, type PickedElement } from '@/detecti
 import { resolveAddress } from '@/lib/address';
 import { lastReadKey, recordLastRead, recordVisit } from '@/lib/browsing';
 import { useTracking } from '@/lib/use-tracking';
-import { Adblock } from '../../modules/actunime-adblock/src';
+import { Adblock } from '../../../modules/actunime-adblock/src';
 
 /** Signaux de vie privée envoyés à chaque site : Do Not Track et Global Privacy Control. */
 const PRIVACY_HEADERS = { DNT: '1', 'Sec-GPC': '1' };
@@ -46,9 +46,15 @@ function IconButton({ name, label, onPress, disabled }: IconButtonProps) {
   );
 }
 
-export default function BrowserScreen() {
-  // `t` change à chaque demande d'ouverture : rouvrir la même adresse depuis une fiche recharge quand même la page.
-  const { url: initialUrl, t: openedAt } = useLocalSearchParams<{ url: string; t?: string }>();
+interface IBrowserViewProps {
+  url: string;
+  /** Retour à la page d'accueil du navigateur (bouton Accueil, ou retour Android depuis la première page). */
+  onHome: () => void;
+}
+
+/** Page web avec barre d'outils et suivi Actunime. Une nouvelle adresse venue de l'extérieur remonte le composant (`key`). */
+export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewProps>) {
+  const focused = useIsFocused();
   const webview = useRef<WebView>(null);
   const tracking = useTracking(webview);
   // `source` n'est modifié que par une adresse saisie : le mettre à jour à chaque navigation rechargerait la page en boucle.
@@ -65,29 +71,18 @@ export default function BrowserScreen() {
   const [strategies, setStrategies] = useState<StrategyResult[] | null>(null);
   const [picked, setPicked] = useState<{ seq: number; element: PickedElement } | null>(null);
   const pickSeq = useRef(0);
-  const [reloadKey, setReloadKey] = useState(0);
 
-  // Une nouvelle adresse reçue alors que l'écran est déjà ouvert (depuis une fiche) remplace la page courante.
-  const lastRequest = useRef(`${initialUrl}|${openedAt}`);
+  // Bouton retour d'Android : page précédente du site, puis accueil du navigateur. L'onglet reste monté
+  // quand on change d'onglet : le retour ne lui appartient que tant qu'il est à l'écran.
   useEffect(() => {
-    const request = `${initialUrl}|${openedAt}`;
-    if (!initialUrl || request === lastRequest.current) return;
-    lastRequest.current = request;
-    setSource(initialUrl);
-    setPageUrl(initialUrl);
-    setAddress(initialUrl);
-    setReloadKey((key) => key + 1);
-  }, [initialUrl, openedAt]);
-
-  // Bouton retour d'Android : page précédente du site avant de quitter le navigateur.
-  useEffect(() => {
+    if (!focused) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!navigation.canGoBack) return false;
-      webview.current?.goBack();
+      if (navigation.canGoBack) webview.current?.goBack();
+      else onHome();
       return true;
     });
     return () => subscription.remove();
-  }, [navigation.canGoBack]);
+  }, [focused, navigation.canGoBack, onHome]);
 
   useEffect(() => {
     const subscription = Adblock.onBlocked((event) => setBlocked(event.count));
@@ -151,9 +146,9 @@ export default function BrowserScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <ThemedView type="backgroundElement" style={styles.toolbar}>
-          <IconButton name="close" label="Fermer le navigateur" onPress={() => router.back()} />
+          <IconButton name="home-outline" label="Accueil du navigateur" onPress={onHome} />
           <IconButton
             name="chevron-back"
             label="Page précédente"
@@ -208,7 +203,6 @@ export default function BrowserScreen() {
 
         <View style={styles.container}>
           <WebView
-            key={reloadKey}
             ref={webview}
             source={{ uri: source, headers: PRIVACY_HEADERS }}
             style={styles.container}
