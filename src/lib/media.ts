@@ -85,3 +85,84 @@ export function formatLongDate(value?: string | null): string | null {
   const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   return `${date.getUTCDate()} ${months[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 }
+
+const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+/**
+ * Date de sortie des cartes (« 06 juillet 2026 », `formatReleaseDate` de `AnimeCard`) ; une date annoncée au mois
+ * ou à l'année seulement s'affiche « mars 2027 » ou « 2027 ».
+ */
+export function formatReleaseDate(value?: string | null, precision?: 'day' | 'month' | 'year'): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  if (precision === 'year') return String(date.getUTCFullYear());
+  if (precision === 'month') return `${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+  return `${String(date.getUTCDate()).padStart(2, '0')} ${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+}
+
+/** Source de l'adaptation (`MediaSourceObj`). */
+export const SOURCE_LABELS: Record<string, string> = {
+  ORIGINAL: 'Original',
+  MANGA: 'Manga',
+  MANHWA: 'Manhwa',
+  MANHUA: 'Manhua',
+  LIGHT_NOVEL: 'Light novel',
+  VISUAL_NOVEL: 'Visual novel',
+  WEB_NOVEL: 'Web novel',
+  GAME: 'Jeu video',
+  NOVEL: 'Roman',
+  ANIME: 'Anime',
+};
+
+/** Libellés des formats de manga (`MangaFormatObj`). */
+export const MANGA_FORMAT_LABELS: Record<string, string> = {
+  MANGA: 'Manga',
+  MANHWA: 'Manhwa',
+  MANHUA: 'Manhua',
+  LIGHT_NOVEL: 'Light novel',
+  WEB_LOVEL: 'Web novel',
+  GRAPHIC_NOVEL: 'Graphic novel',
+  DOUJINSHI: 'Doujinshi',
+  ONE_SHOT: 'One shot',
+  OTHER: 'Autre',
+  UNKNOWN: 'Inconnu',
+};
+
+/** Libellés des formats d'anime (`AnimeFormatObj`), dans l'ordre des filtres du site. */
+export const ANIME_FORMAT_LABELS: Record<string, string> = {
+  SERIE: 'Série',
+  SERIE_COURTE: 'Série courte',
+  FILM: 'Film',
+  ONA: 'ONA',
+  OVA: 'OVA',
+  SPECIAL: 'Spécial',
+  UNKNOWN: 'Inconnu',
+};
+
+/** Libellé d'une relation entre œuvres, par son rang dans `MediaRelationLabelArray`. */
+export const RELATION_LABELS = [
+  'Suite',
+  'Préquelle',
+  'Histoire parallèle',
+  'Spin-off',
+  'Suite alternative',
+  'Réadaptation',
+  'Film',
+  'Manga',
+  'Manhwa',
+  'Manhua',
+  'Light novel',
+  'Visual novel',
+  'Web novel',
+  'Roman',
+  'Anime',
+  'Adaptation',
+  'Récapitulatif',
+];
+
+/** « Saison 2 », « Saison 2 Partie 1 » (`getSeasonLabel`). */
+export function seasonLabel(season?: { number: number; part?: number } | null): string | undefined {
+  if (!season) return undefined;
+  return season.part ? `Saison ${season.number} Partie ${season.part}` : `Saison ${season.number}`;
+}

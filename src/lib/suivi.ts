@@ -10,7 +10,6 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface IAiringMedia extends IMedia {
   format?: string;
-  date?: { start?: string; end?: string; startPrecision?: string };
   episodesInfo?: IMedia['episodesInfo'] & { nextAiringDate?: string };
 }
 
@@ -159,3 +158,35 @@ export function listBreakdown(byStatus: { status: ListStatus; count: number }[])
 /** Heure approximative de diffusion (« ~18:30 »). */
 export const timeLabel = (date: Date): string =>
   `~${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+export interface IListTotals {
+  byStatus: { status: ListStatus; count: number }[];
+  total: number;
+  animeCount: number;
+  mangaCount: number;
+  episodesWatched: number;
+  chaptersRead: number;
+  /** Moyenne de mes notes (entrées notées seulement), `undefined` sans note. */
+  averageScore?: number;
+}
+
+/**
+ * Totaux de ma liste calculés depuis les entrées (comme `useMyListStats` du site, dérivé du cache de la liste) :
+ * `GET /lists/statistics` ne renvoie ni épisodes vus ni note moyenne. Les œuvres en attente de référencement
+ * (sans fiche) ne comptent pas.
+ */
+export function listTotals(entries: IListEntry[]): IListTotals {
+  const counted = entries.filter((e) => e.mediaId);
+  const byStatus = new Map<ListStatus, number>();
+  for (const e of counted) byStatus.set(e.status, (byStatus.get(e.status) ?? 0) + 1);
+  const scores = counted.map((e) => e.score ?? 0).filter((s) => s > 0);
+  return {
+    byStatus: [...byStatus].map(([status, count]) => ({ status, count })),
+    total: counted.length,
+    animeCount: counted.filter((e) => e.mediaType === 'Anime').length,
+    mangaCount: counted.filter((e) => e.mediaType === 'Manga').length,
+    episodesWatched: counted.reduce((n, e) => n + (e.mediaType === 'Anime' ? e.episodesWatched ?? 0 : 0), 0),
+    chaptersRead: counted.reduce((n, e) => n + (e.mediaType === 'Manga' ? e.chaptersRead ?? 0 : 0), 0),
+    averageScore: scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : undefined,
+  };
+}
