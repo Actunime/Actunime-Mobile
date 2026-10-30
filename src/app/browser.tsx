@@ -17,6 +17,7 @@ import type { StrategyResult } from '@/detection/core/types';
 import { INJECTED_DETECTION } from '@/detection/injected.generated';
 import { commandScript, parseInPageMessage, type PickedElement } from '@/detection/messages';
 import { resolveAddress } from '@/lib/address';
+import { lastReadKey, recordLastRead, recordVisit } from '@/lib/browsing';
 import { useTracking } from '@/lib/use-tracking';
 import { Adblock } from '../../modules/actunime-adblock/src';
 
@@ -105,6 +106,7 @@ export default function BrowserScreen() {
       setNavigation({ canGoBack: state.canGoBack, canGoForward: state.canGoForward, loading: state.loading });
       setPageUrl(state.url);
       if (!editing) setAddress(state.url);
+      if (!state.loading) void recordVisit(state.url);
     },
     [editing],
   );
@@ -136,6 +138,16 @@ export default function BrowserScreen() {
   }, [tracking]);
 
   const current = 'detection' in tracking.tracking ? tracking.tracking.detection : null;
+
+  // Page de l'œuvre reconnue : la page « Navigateur » propose de la reprendre au même chapitre ou épisode.
+  const state = tracking.tracking;
+  useEffect(() => {
+    if (state.kind !== 'matched') return;
+    const { detection, match } = state;
+    const number = detection.kind === 'manga' ? detection.chapter : detection.episode;
+    if (number === undefined || !detection.url) return;
+    void recordLastRead(lastReadKey(detection.kind, match.id), { url: detection.url, number });
+  }, [state]);
 
   return (
     <ThemedView style={styles.container}>
@@ -270,11 +282,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: Radius.medium },
+  iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: Radius.medium },
   disabled: { opacity: 0.35 },
   shield: {
-    minWidth: 40,
-    height: 40,
+    minWidth: 44,
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -282,7 +294,7 @@ const styles = StyleSheet.create({
   },
   address: {
     flex: 1,
-    height: 40,
+    height: 44,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.medium,
     backgroundColor: Colors.background,
