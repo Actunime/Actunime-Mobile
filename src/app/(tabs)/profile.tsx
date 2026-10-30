@@ -8,7 +8,8 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { signOut, useAuth } from '@/lib/auth-store';
 import { WEB_URL } from '@/lib/config';
-import { useListStatistics } from '@/lib/queries';
+import { useMyEntries } from '@/lib/queries';
+import { listTotals } from '@/lib/suivi';
 
 function Counter({ value, label }: Readonly<{ value: string | number; label: string }>) {
   return (
@@ -23,7 +24,9 @@ function Counter({ value, label }: Readonly<{ value: string | number; label: str
 
 export default function ProfileScreen() {
   const { auth } = useAuth();
-  const stats = useListStatistics();
+  const animeList = useMyEntries('Anime');
+  const mangaList = useMyEntries('Manga');
+  const stats = { data: animeList.data && mangaList.data ? listTotals([...animeList.data, ...mangaList.data]) : undefined };
   if (!auth) return null;
   const name = auth.user.displayName ?? auth.user.username;
 
@@ -54,8 +57,8 @@ export default function ProfileScreen() {
           <ThemedView type="backgroundElement" style={[styles.card, styles.counters]}>
             <Counter value={stats.data.animeCount} label="animes" />
             <Counter value={stats.data.mangaCount} label="mangas" />
-            <Counter value={stats.data.totalEpisodesWatched} label="épisodes vus" />
-            <Counter value={stats.data.totalChaptersRead} label="chapitres lus" />
+            <Counter value={stats.data.episodesWatched} label="épisodes vus" />
+            <Counter value={stats.data.chaptersRead} label="chapitres lus" />
             {stats.data.averageScore ? (
               <Counter value={stats.data.averageScore.toFixed(1).replace('.', ',')} label="note moyenne" />
             ) : null}

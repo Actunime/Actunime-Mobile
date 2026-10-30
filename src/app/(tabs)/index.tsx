@@ -13,8 +13,8 @@ import { Colors, Radius, Spacing } from '@/constants/theme';
 import { mediaId, type IListEntry } from '@/lib/api';
 import { useAuth } from '@/lib/auth-store';
 import { WEB_URL } from '@/lib/config';
-import { useAllMyList, useListStatistics, useQuickProgress } from '@/lib/queries';
-import { behindAnimes, dayLabel, headline, listBreakdown, shortDay, timeLabel, weekSchedule } from '@/lib/suivi';
+import { useAllMyList, useMyEntries, useQuickProgress } from '@/lib/queries';
+import { behindAnimes, dayLabel, headline, listBreakdown, listTotals, shortDay, timeLabel, weekSchedule } from '@/lib/suivi';
 
 const SEGMENT_COLORS = { primary: Colors.primary, success: Colors.success, info: '#0ea5e9', muted: 'rgba(190, 213, 255, 0.4)' } as const;
 
@@ -58,7 +58,9 @@ export default function SuiviScreen() {
   const watching = useAllMyList('Anime', 'WATCHING');
   const planned = useAllMyList('Anime', 'PLAN_TO_WATCH');
   const reading = useAllMyList('Manga', 'READING');
-  const stats = useListStatistics();
+  const animeList = useMyEntries('Anime');
+  const mangaList = useMyEntries('Manga');
+  const totals = useMemo(() => listTotals([...(animeList.data ?? []), ...(mangaList.data ?? [])]), [animeList.data, mangaList.data]);
 
   const animeEntries = useMemo(() => [...(watching.data ?? []), ...(planned.data ?? [])], [watching.data, planned.data]);
   const behind = useMemo(() => behindAnimes(watching.data ?? []), [watching.data]);
@@ -76,12 +78,12 @@ export default function SuiviScreen() {
   const behindTotal = behind.reduce((sum, item) => sum + item.behind, 0);
   const todayCount = week[0]?.items.length ?? 0;
   const inProgress = (watching.data?.length ?? 0) + (reading.data?.length ?? 0);
-  const segments = listBreakdown(stats.data?.byStatus ?? []);
+  const segments = listBreakdown(totals.byStatus);
   const segmentTotal = segments.reduce((sum, segment) => sum + segment.value, 0);
 
   const loading = watching.isPending || planned.isPending || reading.isPending;
   const error = watching.error ?? planned.error ?? reading.error;
-  const empty = stats.isSuccess && stats.data.total === 0;
+  const empty = animeList.isSuccess && mangaList.isSuccess && totals.total === 0;
 
   const refresh = async () => {
     setRefreshing(true);
@@ -207,7 +209,7 @@ export default function SuiviScreen() {
                     ))}
                   </View>
                   <ThemedText type="small" themeColor="textSecondary">
-                    {segmentTotal} entrées · {stats.data?.totalEpisodesWatched ?? 0} épisodes vus · {stats.data?.totalChaptersRead ?? 0} chapitres lus
+                    {segmentTotal} entrées · {totals.episodesWatched} épisodes vus · {totals.chaptersRead} chapitres lus
                   </ThemedText>
                 </View>
               </Section>
