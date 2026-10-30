@@ -8,7 +8,7 @@ import type { LearnedPattern, StrategyId } from '@/detection/core/types';
 import { getBrowserSettings } from './browser-settings';
 import { getPattern, isHostIgnored, removePattern, savePattern, setHostIgnored } from './patterns';
 import type { IMatch } from './storage';
-import { confirm, currentProgress, forget, pushProgress, resolve, type ICandidate, type PushResult } from './sync';
+import { confirm, currentProgress, forget, pushProgress, quickAddWork, resolve, type ICandidate, type PushResult } from './sync';
 
 export type TrackingState =
   | { kind: 'idle' }
@@ -244,6 +244,23 @@ export function useTracking(webview: RefObject<WebView | null>) {
     [send],
   );
 
+  /** Œuvre absente d'Actunime : ajout rapide à ma liste, puis suivi normal. L'équipe relie l'œuvre ensuite. */
+  const quickAdd = useCallback(
+    async (input: { title: string; format: string; aliases: string[] }) => {
+      if (tracking.kind !== 'confirm') return;
+      const { detection } = tracking;
+      try {
+        const match = await quickAddWork(detection, input);
+        void rememberSite(detection);
+        setTracking({ kind: 'matched', detection, match, progress: await progressOf(detection, match) });
+        setNotice({ tone: 'success', text: `« ${input.title} » ajoutée à ta liste, en attente de référencement` });
+      } catch (err) {
+        fail(err);
+      }
+    },
+    [fail, progressOf, rememberSite, tracking],
+  );
+
   /** « Le titre est faux » : l'utilisateur choisit parmi les titres que la page propose ; le site retient cette source. */
   const pickTitle = useCallback(
     async (strategy: StrategyId) => {
@@ -276,6 +293,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
     unignoreHost,
     applyPattern,
     pickTitle,
+    quickAdd,
     resetPattern,
   };
 }

@@ -400,6 +400,23 @@ export const api = {
     }).then((res) => res.results ?? res.data ?? []);
   },
 
+  /**
+   * Ajout rapide d'une œuvre absente du catalogue : crée (ou rejoint) une proposition « Ajout rapide » pour l'équipe
+   * et l'entrée de liste correspondante, sans activité publique. Un jeton Bearer n'a pas besoin de Turnstile.
+   */
+  quickAdd(body: {
+    mediaType: 'Anime' | 'Manga';
+    title: string;
+    format: string;
+    status?: ListStatus;
+    aliases?: string[];
+  }) {
+    return request<{ entry: IListEntry | null; proposalId: string; joinedExisting: boolean }>('/lists/quick-add', {
+      method: 'POST',
+      body,
+    });
+  },
+
   /** Ajoute à ma liste une œuvre proposée mais pas encore validée. */
   createListEntryFromProposal(body: {
     proposalId: string;

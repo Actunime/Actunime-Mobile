@@ -176,6 +176,28 @@ export async function confirm(
   return match;
 }
 
+/**
+ * Suivre une œuvre absente du catalogue : ajout rapide (proposition pour l'équipe + entrée de liste), puis association
+ * de la page à cette entrée en attente. Le staff ou la communauté relie ensuite l'œuvre (alias, validation, fusion).
+ */
+export async function quickAddWork(
+  detection: Pick<PageDetection, 'kind' | 'title'>,
+  input: { title: string; format: string; aliases: string[] },
+): Promise<IMatch> {
+  const { entry } = await api.quickAdd({
+    mediaType: mediaTypeOf(detection.kind),
+    title: input.title,
+    format: input.format,
+    status: detection.kind === 'manga' ? 'READING' : 'WATCHING',
+    ...(input.aliases.length ? { aliases: input.aliases } : {}),
+  });
+  if (!entry) throw new Error('L’ajout n’a pas créé d’entrée dans ta liste');
+  const match: IMatch = { kind: 'pending', id: entryId(entry), title: input.title };
+  // la clé reste celle du titre détecté sur la page : les chapitres suivants retrouvent ainsi l'œuvre
+  await saveMatch(matchKey(detection), match);
+  return match;
+}
+
 /** Oublie l'association mémorisée pour cette détection (l'utilisateur dit que ce n'est pas la bonne œuvre). */
 export const forget = (detection: PageDetection): Promise<void> => forgetMatch(matchKey(detection));
 
