@@ -125,12 +125,11 @@ export const Tw = {
 export const Floating = {
   backgroundColor: Tw.color.card,
   borderRadius: Tw.radius.xl,
-  // Sur fond sombre une ombre noire ne se voit pas : l'ombre est teintée du bleu de la marque (halo discret).
-  shadowColor: '#0099ff',
-  shadowOffset: { width: 0, height: 6 },
-  shadowOpacity: 0.5,
-  shadowRadius: 14,
-  elevation: 12,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.35,
+  shadowRadius: 8,
+  elevation: 6,
 } as const;
 
 /** Couleur avec opacité (`bg-primary/10` → `alpha(Tw.color.primary, 0.1)`), pour une couleur `#rrggbb`. */
