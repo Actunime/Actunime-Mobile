@@ -177,7 +177,7 @@ export async function confirm(
 }
 
 /**
- * Suivre une œuvre absente du catalogue : ajout rapide (proposition pour l'équipe + entrée de liste), puis association
+ * Suivre une œuvre absente du catalogue : ajout rapide (proposition + entrée de liste), puis association
  * de la page à cette entrée en attente. Le staff ou la communauté relie ensuite l'œuvre (alias, validation, fusion).
  */
 export async function quickAddWork(

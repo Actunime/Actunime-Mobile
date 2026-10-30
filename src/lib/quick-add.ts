@@ -33,8 +33,8 @@ export function guessFormat(kind: MediaKind, url: string): string {
 }
 
 /**
- * Autres titres à transmettre à l'équipe : ceux que la page propose et que le membre n'a pas retenus comme titre
- * principal, sans doublon, 5 au plus (limite de l'API). Ils servent à relier l'œuvre à une fiche existante.
+ * Autres titres à garder avec l'œuvre : ceux que la page propose et que le membre n'a pas retenus comme titre
+ * principal, sans doublon, 5 au plus (limite de l'API). Ils servent à relier l'œuvre à une fiche existante (par un contributeur ou le staff).
  */
 export function aliasesFor(title: string, others: readonly string[]): string[] {
   const key = (value: string) => value.trim().toLowerCase();

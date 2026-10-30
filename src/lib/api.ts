@@ -401,7 +401,7 @@ export const api = {
   },
 
   /**
-   * Ajout rapide d'une œuvre absente du catalogue : crée (ou rejoint) une proposition « Ajout rapide » pour l'équipe
+   * Ajout rapide d'une œuvre absente du catalogue : crée (ou rejoint) une proposition « Ajout rapide »
    * et l'entrée de liste correspondante, sans activité publique. Un jeton Bearer n'a pas besoin de Turnstile.
    */
   quickAdd(body: {

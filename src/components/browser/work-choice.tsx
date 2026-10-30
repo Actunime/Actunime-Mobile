@@ -25,7 +25,7 @@ interface IWorkChoiceProps {
 
 /**
  * « Quelle œuvre est-ce ? » : trois issues, de la plus simple à la plus avancée. Choisir une œuvre déjà dans Actunime ;
- * la suivre quand même si elle n'y est pas (ajout rapide : l'équipe la relie ensuite) ; chercher à la main ou, en
+ * la suivre quand même si elle n'y est pas (ajout rapide : elle sera reliée à une fiche ensuite) ; chercher à la main ou, en
  * dernier recours, montrer le titre sur la page (mode avancé).
  */
 export function WorkChoice({ detection, candidates, alternatives, ...actions }: Readonly<IWorkChoiceProps>) {
@@ -84,7 +84,7 @@ export function WorkChoice({ detection, candidates, alternatives, ...actions }: 
         <ThemedText type="smallBold">{noCandidate ? 'Pas encore dans Actunime ?' : 'Ce n’est aucune de ces œuvres ?'}</ThemedText>
         {!adding && (
           <ThemedText type="small" themeColor="textSecondary">
-            Suis-la quand même : elle est ajoutée à ta liste et proposée à l’équipe, qui la reliera ou la créera.
+            Ajoute-la à ta liste : tu la suis tout de suite, elle apparaît « en attente de référencement ».
           </ThemedText>
         )}
 
@@ -105,7 +105,7 @@ export function WorkChoice({ detection, candidates, alternatives, ...actions }: 
             </View>
             {alternatives.length > 0 && (
               <ThemedText type="small" themeColor="textSecondary">
-                Les autres titres de la page sont transmis à l’équipe pour retrouver l’œuvre.
+                Les autres titres lus sur la page sont gardés avec l’œuvre, pour aider à la relier à une fiche existante.
               </ThemedText>
             )}
             <Button label={saving ? 'Ajout…' : 'Ajouter à ma liste et suivre'} disabled={saving || title.trim().length < 2} onPress={() => void submit()} />

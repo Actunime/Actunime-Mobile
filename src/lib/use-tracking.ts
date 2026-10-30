@@ -6,9 +6,10 @@ import { commandScript, type InPageMessage, type PageDetection } from '@/detecti
 import type { LearnedPattern, StrategyId } from '@/detection/core/types';
 
 import { getBrowserSettings } from './browser-settings';
+import { progressNotice } from './notices';
 import { getPattern, isHostIgnored, removePattern, savePattern, setHostIgnored } from './patterns';
 import type { IMatch } from './storage';
-import { confirm, currentProgress, forget, pushProgress, quickAddWork, resolve, type ICandidate, type PushResult } from './sync';
+import { confirm, currentProgress, forget, pushProgress, quickAddWork, resolve, type ICandidate } from './sync';
 
 export type TrackingState =
   | { kind: 'idle' }
@@ -21,12 +22,6 @@ export interface INotice {
   tone: 'success' | 'error' | 'info';
   text: string;
 }
-
-const RESULT_TEXT: Record<PushResult, string> = {
-  created: 'ajouté à ta liste',
-  updated: 'progression mise à jour',
-  unchanged: 'déjà à jour',
-};
 
 /** Réglage d'un site à partir de la stratégie qui lit bien son titre : sert à la mémorisation automatique et au choix d'un autre titre. */
 function patternFor(detection: Pick<PageDetection, 'host' | 'kind' | 'url'>, strategy: StrategyId): LearnedPattern {
@@ -81,7 +76,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
       if (number === undefined) return setNotice({ tone: 'error', text: `Numéro de ${unitOf(detection)} non détecté` });
       try {
         const result = await pushProgress(detection, match);
-        setNotice({ tone: 'success', text: `${match.title}, ${unitOf(detection)} ${number} : ${RESULT_TEXT[result]}` });
+        setNotice({ tone: 'success', text: progressNotice(detection.kind, number, result) });
         setTracking({ kind: 'matched', detection, match, progress: await progressOf(detection, match) });
       } catch (err) {
         fail(err);
@@ -102,7 +97,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
       await savePattern(learned);
       setPattern(learned);
       send({ type: 'set-pattern', pattern: learned });
-      setNotice({ tone: 'info', text: `${detection.host} reconnu automatiquement` });
+      setNotice({ tone: 'info', text: 'Site reconnu automatiquement' });
     },
     [send],
   );
@@ -244,7 +239,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
     [send],
   );
 
-  /** Œuvre absente d'Actunime : ajout rapide à ma liste, puis suivi normal. L'équipe relie l'œuvre ensuite. */
+  /** Œuvre absente d'Actunime : ajout rapide à ma liste, puis suivi normal. L'œuvre est reliée à une fiche plus tard. */
   const quickAdd = useCallback(
     async (input: { title: string; format: string; aliases: string[] }) => {
       if (tracking.kind !== 'confirm') return;
@@ -253,7 +248,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
         const match = await quickAddWork(detection, input);
         void rememberSite(detection);
         setTracking({ kind: 'matched', detection, match, progress: await progressOf(detection, match) });
-        setNotice({ tone: 'success', text: `« ${input.title} » ajoutée à ta liste, en attente de référencement` });
+        setNotice({ tone: 'success', text: 'Ajoutée à ta liste' });
       } catch (err) {
         fail(err);
       }
