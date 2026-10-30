@@ -1,6 +1,7 @@
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { Pressable } from '@/components/tap';
 import { Chip } from '@/components/chip';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';

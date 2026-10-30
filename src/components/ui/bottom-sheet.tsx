@@ -1,18 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Dimensions,
-  KeyboardAvoidingView,
-  Modal,
-  PanResponder,
-  Pressable,
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { Animated, Dimensions, KeyboardAvoidingView, Modal, PanResponder, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
 import { Tw } from '@/constants/theme';
 

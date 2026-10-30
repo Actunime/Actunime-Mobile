@@ -4,10 +4,11 @@ import * as Haptics from 'expo-haptics';
 import { router, usePathname, type Href } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, BackHandler, Easing, Keyboard, Pressable, StyleSheet, Text, View, useWindowDimensions, type GestureResponderEvent } from 'react-native';
+import { Animated, BackHandler, Easing, Keyboard, StyleSheet, Text, View, useWindowDimensions, type GestureResponderEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
+import { Pressable } from '@/components/tap';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Fonts } from '@/constants/theme';
 import { signOut, useAuth } from '@/lib/auth-store';
@@ -476,7 +477,7 @@ const styles = StyleSheet.create({
   },
   tab: { flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 14, paddingVertical: 6 },
   tabActive: { backgroundColor: 'rgba(0, 153, 255, 0.16)' },
-  tabLabel: { fontFamily: Fonts.medium, fontSize: 10.5, color: Colors.textSecondary },
+  tabLabel: { fontFamily: Fonts.medium, fontSize: 12, color: Colors.textSecondary },
   hub: { width: 96, height: 52 },
   fab: {
     position: 'absolute',

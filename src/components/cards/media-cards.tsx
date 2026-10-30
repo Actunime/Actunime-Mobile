@@ -1,8 +1,9 @@
 import { Image } from 'expo-image';
 import { ArrowRight, BookOpen, Calendar, Clock, Film, Layers, Pencil, Plus, Star, Tv } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { Pressable } from '@/components/tap';
 import { ListEntryBand } from '@/components/cards/list-entry-band';
 import { Txt } from '@/components/tw';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -305,7 +306,7 @@ export function MediaRowCard({
         <CardImage uri={media.posterUrl} kind={kind} style={styles.rowImage} iconSize={18} />
         {corner ? (
           <View style={styles.rowCorner}>
-            <Txt size="10" color={Tw.color.primaryForeground} style={{ fontSize: 9, lineHeight: 12 }}>
+            <Txt size="10" color={Tw.color.primaryForeground}>
               {corner}
             </Txt>
           </View>
@@ -340,7 +341,7 @@ export function CardActionButton({
       hitSlop={4}
       style={[variant === 'secondary' ? styles.actionSecondary : styles.actionDefault]}
     >
-      <Icon size={12} color={variant === 'secondary' ? Tw.color.foreground : Tw.color.primaryForeground} />
+      <Icon size={18} color={variant === 'secondary' ? Tw.color.foreground : Tw.color.primaryForeground} />
     </Pressable>
   );
 }
@@ -557,7 +558,7 @@ const styles = StyleSheet.create({
   rowImage: { width: 48, height: 64, borderRadius: Tw.radius.lg },
   rowCorner: { position: 'absolute', top: 0, right: 0, backgroundColor: alpha(Tw.color.primary, 0.9), paddingHorizontal: 4, borderRadius: Tw.radius.sm },
   actionDefault: { height: 44, minWidth: 44, paddingHorizontal: 10, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.primary, alignItems: 'center', justifyContent: 'center' },
-  actionSecondary: { width: 40, height: 40, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.secondary, alignItems: 'center', justifyContent: 'center' },
+  actionSecondary: { width: 44, height: 44, borderRadius: Tw.radius.lg, borderWidth: 1, borderColor: Tw.color.input, backgroundColor: alpha(Tw.color.input, 0.3), alignItems: 'center', justifyContent: 'center' },
   // Détaillée
   detailedCard: { borderRadius: Tw.radius.lg, backgroundColor: Tw.color.card, overflow: 'hidden' },
   detailed: { flexDirection: 'row', gap: 12, padding: 12 },

@@ -1,8 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { ChevronDown, Play, Star } from 'lucide-react-native';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
 import { Tw, alpha } from '@/constants/theme';
 import type { IListEntry, MediaKind } from '@/lib/api';

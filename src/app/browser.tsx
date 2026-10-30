@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { BackHandler, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
 
+import { Pressable } from '@/components/tap';
 import { ConfigWizard } from '@/components/browser/config-wizard';
 import { fieldStyle } from '@/components/browser/wizard-parts';
 import { SearchSheet } from '@/components/browser/search-sheet';

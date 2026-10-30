@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { Pressable } from '@/components/tap';
 import { openMedia } from '@/components/media-row';
 import { Poster } from '@/components/poster';
 import { ThemedText } from '@/components/themed-text';
@@ -117,5 +118,5 @@ const styles = StyleSheet.create({
   },
   dot: { width: 7, height: 7, borderRadius: 4 },
   plus: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary },
-  plusUnit: { fontSize: 10, lineHeight: 12, fontFamily: 'Outfit_500Medium' },
+  plusUnit: { fontSize: 12, lineHeight: 16, fontFamily: 'Outfit_500Medium' },
 });

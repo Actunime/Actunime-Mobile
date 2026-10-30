@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Pressable } from '@/components/tap';
 import { Button } from '@/components/button';
 import { FieldChip, PageIllustration, Stepper, fieldStyle, type PickField } from '@/components/browser/wizard-parts';
 import { ThemedText } from '@/components/themed-text';

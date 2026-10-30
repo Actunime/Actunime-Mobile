@@ -37,11 +37,13 @@ export function Txt({
   tabular,
   leading,
   style,
+  maxFontSizeMultiplier = 1.3,
   ...rest
 }: Readonly<ITxtProps>) {
   const scale = Tw.text[size];
   return (
     <Text
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
       style={[
         {
           fontFamily: FAMILY[weight],

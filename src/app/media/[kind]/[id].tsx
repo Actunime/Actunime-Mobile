@@ -31,10 +31,11 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { ScrollView, Share, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
+import { Pressable } from '@/components/tap';
 import { ListEntrySheetTrigger } from '@/components/media/list-button';
 import { CardCarousel, InfoRow, PRIMARY_PILL, Pill, STATUS_PILL, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
 import { ManageEntry } from '@/components/list/manage-entry';
@@ -719,7 +720,7 @@ const styles = StyleSheet.create({
   warningText: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   warningButton: { minHeight: 44, justifyContent: 'center', borderRadius: Tw.radius.md, backgroundColor: Tw.color.amber500, paddingHorizontal: 12 },
   actionBar: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: ScreenGutter, borderTopWidth: 1, borderBottomWidth: 1, borderColor: alpha(Tw.color.foreground, 0.05), marginTop: 8 },
-  tabButton: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, paddingHorizontal: 12, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.secondary },
+  tabButton: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, paddingHorizontal: 12, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.card },
   tabChevron: { marginLeft: 'auto' },
   icons: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 'auto' },
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: Tw.radius.lg },

@@ -13,8 +13,9 @@ import {
   X,
 } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Fonts, Tw, alpha } from '@/constants/theme';
@@ -607,7 +608,7 @@ function SeasonPanel({ query, setFields }: Readonly<{ query: IListQuery; setFiel
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  bar: { gap: 8, padding: 8, backgroundColor: Tw.color.secondary, borderRadius: Tw.radius.lg },
+  bar: { gap: 8, padding: 8, backgroundColor: Tw.color.card, borderRadius: Tw.radius.lg },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',

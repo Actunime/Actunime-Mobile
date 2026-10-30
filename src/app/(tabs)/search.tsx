@@ -1,8 +1,9 @@
 import { useLocalSearchParams } from 'expo-router';
 import { Flame } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 
+import { Pressable } from '@/components/tap';
 import { CardActionButton, MediaDetailedCard, MediaGridCard, MediaRowCard } from '@/components/cards/media-cards';
 import { FilterBar } from '@/components/list/filter-bar';
 import { KindSwitch, ListViewSwitcher, type ViewMode } from '@/components/list/list-controls';

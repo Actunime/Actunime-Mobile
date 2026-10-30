@@ -52,11 +52,13 @@ export const MaxContentWidth = 720;
  */
 export const Tw = {
   /** `rounded-*` : `--radius` (7,2 dp) et ses dérivés. */
-  radius: { sm: 3.2, md: 5.2, lg: 7.2, xl: 11.2, '2xl': 15.2, full: 9999 },
+  /** Rayons sur une grille de 4 dp (les 3,2 / 5,2 / 7,2… du site ne tombent pas sur la grille mobile). */
+  radius: { sm: 4, md: 8, lg: 12, xl: 16, '2xl': 20, full: 9999 },
   /** `text-*` : taille et hauteur de ligne par défaut de Tailwind. */
   text: {
-    '10': { fontSize: 10, lineHeight: 14 },
-    '11': { fontSize: 11, lineHeight: 15 },
+    // 12 dp au minimum (convention Android/iOS) : les tailles « 10 » et « 11 » du site sont relevées à 12.
+    '10': { fontSize: 12, lineHeight: 16 },
+    '11': { fontSize: 12, lineHeight: 16 },
     xs: { fontSize: 12, lineHeight: 16 },
     sm: { fontSize: 14, lineHeight: 20 },
     base: { fontSize: 16, lineHeight: 24 },
@@ -64,12 +66,15 @@ export const Tw = {
     xl: { fontSize: 20, lineHeight: 28 },
     '2xl': { fontSize: 24, lineHeight: 32 },
   },
+  /**
+   * Échelle des surfaces, du plus sombre au plus clair ; chaque niveau a un rôle et un seul :
+   * `background` (page) < `muted` (creux : pistes de progression, fonds d'avatar) < `card` (cartes, panneaux, tiroirs)
+   * < `input` (champs et boutons secondaires : ce qui se manipule). `accent` ne sert qu'aux teintes d'appui.
+   */
   color: {
     foreground: '#f9fafb',
     background: '#000616',
-    card: '#14244f', // proche du bleu des champs (`input`), pour que cartes et champs fassent un seul bleu
-    secondary: '#14244f',
-    popover: '#0c1945',
+    card: '#14244f',
     muted: '#102866',
     mutedForeground: '#bed5ff',
     accent: '#174283',

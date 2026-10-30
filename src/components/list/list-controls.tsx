@@ -1,6 +1,7 @@
 import { Grid2x2, Grid3x3, LayoutList, List, type LucideIcon } from 'lucide-react-native';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
 import { Tw } from '@/constants/theme';
 import type { ListStatus } from '@/lib/api';

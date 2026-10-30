@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
 import { type LucideIcon } from 'lucide-react-native';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { Pressable } from '@/components/tap';
 import { CardImage } from '@/components/cards/media-cards';
 import { Txt } from '@/components/tw';
 import { Tw, alpha } from '@/constants/theme';

@@ -10,6 +10,7 @@ import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { ReduceMotion, ReducedMotionConfig } from 'react-native-reanimated';
 
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-store';
@@ -54,6 +55,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={navigationTheme}>
+        <ReducedMotionConfig mode={ReduceMotion.System} />
         <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }}>
           <Stack.Protected guard={!auth}>

@@ -1,5 +1,6 @@
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 
+import { Pressable } from '@/components/tap';
 import { openMedia } from '@/components/media-row';
 import { Poster } from '@/components/poster';
 import { ThemedText } from '@/components/themed-text';

@@ -3,8 +3,9 @@ import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { ArrowRight, ChevronUp, Globe, Heart, Lock, Minus, Plus, Trash2, Users } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Fonts, Tw, alpha } from '@/constants/theme';

@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import { Pressable } from '@/components/tap';
 import { Button } from '@/components/button';
 import { ListEntryRow } from '@/components/list-entry-row';
 import { MediaRow } from '@/components/media-row';
