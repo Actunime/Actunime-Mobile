@@ -34,7 +34,7 @@ export function ListViewSwitcher({ value, onChange }: Readonly<{ value: ViewMode
               styles.switchButton,
               index === 0 && styles.first,
               index === VIEW_MODE_OPTIONS.length - 1 && styles.last,
-              active && { backgroundColor: Tw.color.primary },
+              active && { backgroundColor: Tw.color.primaryFill },
             ]}
           >
             <Icon size={16} color={active ? Tw.color.primaryForeground : Tw.color.mutedForeground} />

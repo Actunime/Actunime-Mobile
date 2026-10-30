@@ -10,7 +10,7 @@ import { openMedia } from '@/components/media-row';
 import { Screen } from '@/components/screen';
 import { ErrorState, Loading } from '@/components/states';
 import { Txt } from '@/components/tw';
-import { Tw, alpha } from '@/constants/theme';
+import { ScreenGutter, Tw, alpha } from '@/constants/theme';
 import { useViewMode } from '@/hooks/use-view-mode';
 import type { IListEntry, IMedia, MediaKind } from '@/lib/api';
 import {
@@ -240,7 +240,7 @@ export default function MyListScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 4, paddingBottom: 24 },
+  content: { paddingHorizontal: ScreenGutter, paddingBottom: 24 },
   header: { gap: 12, paddingTop: 8, paddingBottom: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   sectionTitle: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 12 },

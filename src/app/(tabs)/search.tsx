@@ -11,7 +11,7 @@ import { openMedia } from '@/components/media-row';
 import { Screen } from '@/components/screen';
 import { ErrorState } from '@/components/states';
 import { Txt } from '@/components/tw';
-import { Tw, alpha } from '@/constants/theme';
+import { ScreenGutter, Tw, alpha } from '@/constants/theme';
 import { useViewMode } from '@/hooks/use-view-mode';
 import { mediaId, type IListEntry, type IMedia, type MediaKind } from '@/lib/api';
 import { DEFAULT_SEARCH_SORT, SEARCH_SORT_FIELDS, SEARCH_SORT_LABELS, type IListQuery, type IListSort } from '@/lib/list-filter';
@@ -227,7 +227,7 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 8, paddingBottom: 24 },
+  content: { paddingHorizontal: ScreenGutter, paddingBottom: 24 },
   header: { gap: 12, paddingVertical: 12, marginBottom: 16, borderBottomWidth: 1, borderColor: Tw.color.border },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   title: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 12, flexShrink: 1 },

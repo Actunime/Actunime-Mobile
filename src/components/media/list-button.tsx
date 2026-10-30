@@ -41,7 +41,7 @@ export function ListEntrySheetTrigger({ entry, loading, onPress }: Readonly<{ en
 }
 
 const styles = StyleSheet.create({
-  button: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, height: 48, paddingHorizontal: 12, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.primary },
+  button: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, height: 48, paddingHorizontal: 12, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.primaryFill },
   dot: { width: 8, height: 8, borderRadius: 4 },
   label: { flex: 1 },
 });

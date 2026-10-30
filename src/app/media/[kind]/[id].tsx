@@ -43,7 +43,7 @@ import { Screen } from '@/components/screen';
 import { ErrorState, Loading } from '@/components/states';
 import { Txt } from '@/components/tw';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { Tw, alpha } from '@/constants/theme';
+import { ScreenGutter, Tw, alpha } from '@/constants/theme';
 import type { IMedia, IMediaFollowerEntry, MediaKind } from '@/lib/api';
 import { WEB_URL } from '@/lib/config';
 import { MEDIA_STATUS_LABELS, STATUS_LABELS } from '@/lib/list-form';
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
   back: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 14, borderRadius: Tw.radius.md, backgroundColor: Tw.color.muted },
   hero: { overflow: 'hidden', backgroundColor: Tw.color.muted, borderTopLeftRadius: Tw.radius.lg, borderTopRightRadius: Tw.radius.lg },
   heroBack: { position: 'absolute', top: 44, left: 12, zIndex: 2 },
-  heroBody: { paddingHorizontal: 16, paddingTop: 96, paddingBottom: 12, gap: 16 },
+  heroBody: { paddingHorizontal: ScreenGutter, paddingTop: 96, paddingBottom: 12, gap: 16 },
   poster: {
     alignSelf: 'center',
     width: 144,
@@ -709,7 +709,7 @@ const styles = StyleSheet.create({
   avatar: { backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   warning: {
     marginTop: 16,
-    marginHorizontal: 4,
+    marginHorizontal: ScreenGutter,
     gap: 12,
     borderRadius: Tw.radius.lg,
     borderWidth: 1,
@@ -719,18 +719,18 @@ const styles = StyleSheet.create({
   },
   warningText: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   warningButton: { minHeight: 44, justifyContent: 'center', borderRadius: Tw.radius.md, backgroundColor: Tw.color.amber500, paddingHorizontal: 12 },
-  actionBar: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 4, borderTopWidth: 1, borderBottomWidth: 1, borderColor: alpha(Tw.color.foreground, 0.05), marginTop: 8 },
+  actionBar: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: ScreenGutter, borderTopWidth: 1, borderBottomWidth: 1, borderColor: alpha(Tw.color.foreground, 0.05), marginTop: 8 },
   tabButton: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, paddingHorizontal: 12, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.secondary },
   tabChevron: { marginLeft: 'auto' },
   icons: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 'auto' },
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: Tw.radius.lg },
   favorite: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, paddingHorizontal: 10, borderRadius: Tw.radius.lg },
   iconSeparator: { marginLeft: 8, paddingLeft: 8, borderLeftWidth: 1, borderColor: Tw.color.border },
-  sections: { gap: 16, paddingTop: 20, paddingHorizontal: 4 },
+  sections: { gap: 16, paddingTop: 20, paddingHorizontal: ScreenGutter },
   linkPill: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: Tw.color.border },
   company: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8, borderRadius: Tw.radius.md, backgroundColor: alpha(Tw.color.accent, 0.1) },
   companyLogo: { width: 32, height: 32, borderRadius: Tw.radius.md, backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  companyType: { borderRadius: 999, backgroundColor: Tw.color.primary, paddingHorizontal: 8, paddingVertical: 2 },
+  companyType: { borderRadius: 999, backgroundColor: Tw.color.primaryFill, paddingHorizontal: 8, paddingVertical: 2 },
   trailer: { width: '100%', aspectRatio: 16 / 9, borderRadius: Tw.radius.lg, overflow: 'hidden', backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center' },
   play: { width: 64, height: 44, borderRadius: 12, backgroundColor: 'rgba(255, 0, 0, 0.85)', alignItems: 'center', justifyContent: 'center' },
   friendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },

@@ -276,7 +276,7 @@ export function MediaGridCard({ kind, media, entry, onPress, dense }: Readonly<I
           {status && MEDIA_STATUS_LABELS[status] ? <Badge label={MEDIA_STATUS_LABELS[status]} background={MEDIA_STATUS_BG[status] ?? Tw.color.gray600} /> : null}
         </View>
         <View style={[styles.badgeZone, styles.badgeRight]}>
-          {progressLabel ? <Badge label={progressLabel} background={alpha(Tw.color.primary, 0.9)} color={Tw.color.primaryForeground} /> : null}
+          {progressLabel ? <Badge label={progressLabel} background={alpha(Tw.color.primaryFill, 0.95)} color={Tw.color.primaryForeground} /> : null}
         </View>
       </View>
       <View style={dense ? styles.gridBodyDense : styles.gridBody}>
@@ -416,7 +416,7 @@ export function MediaDetailedCard({
           <>
             <View style={styles.badgeRow}>
               {status && MEDIA_STATUS_LABELS[status] ? <Badge label={MEDIA_STATUS_LABELS[status]} background={MEDIA_STATUS_BG[status] ?? Tw.color.gray600} /> : null}
-              {media.format ? <Badge label={media.format} background={alpha(Tw.color.primary, 0.9)} color={Tw.color.primaryForeground} /> : null}
+              {media.format ? <Badge label={media.format} background={alpha(Tw.color.primaryFill, 0.95)} color={Tw.color.primaryForeground} /> : null}
               {anime && sourceLabel ? <Badge label={sourceLabel} background={Tw.color.muted} color={Tw.color.foreground} /> : null}
               {media.vf ? <Badge label="VF" background={Tw.color.blue600} /> : null}
             </View>
@@ -555,8 +555,8 @@ const styles = StyleSheet.create({
   // Ligne compacte
   rowCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8, borderRadius: Tw.radius.lg, backgroundColor: alpha(Tw.color.accent, 0.1) },
   rowImage: { width: 48, height: 64, borderRadius: Tw.radius.lg },
-  rowCorner: { position: 'absolute', top: 0, right: 0, backgroundColor: alpha(Tw.color.primary, 0.9), paddingHorizontal: 4, borderRadius: Tw.radius.sm },
-  actionDefault: { height: 44, minWidth: 44, paddingHorizontal: 10, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.primary, alignItems: 'center', justifyContent: 'center' },
+  rowCorner: { position: 'absolute', top: 0, right: 0, backgroundColor: alpha(Tw.color.primaryFill, 0.95), paddingHorizontal: 4, borderRadius: Tw.radius.sm },
+  actionDefault: { height: 44, minWidth: 44, paddingHorizontal: 10, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.primaryFill, alignItems: 'center', justifyContent: 'center' },
   actionSecondary: { width: 40, height: 40, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.secondary, alignItems: 'center', justifyContent: 'center' },
   // Détaillée
   detailedCard: { borderRadius: Tw.radius.lg, backgroundColor: alpha(Tw.color.accent, 0.1), overflow: 'hidden' },
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   extra: { width: 24, height: 24, borderRadius: 12, backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Tw.color.background },
   friendsSheet: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, gap: 4 },
   meRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: Tw.radius.md, backgroundColor: alpha(Tw.color.accent, 0.4), paddingHorizontal: 4, paddingVertical: 6 },
-  meBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: Tw.color.primary, alignItems: 'center', justifyContent: 'center' },
+  meBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: Tw.color.primaryFill, alignItems: 'center', justifyContent: 'center' },
   statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   friendScore: { width: 32, textAlign: 'right' },
   friendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, paddingVertical: 6 },
