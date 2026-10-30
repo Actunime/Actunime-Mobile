@@ -341,7 +341,9 @@ export function MobileNav() {
         accessibilityRole="button"
         accessibilityState={{ selected: active }}
         onPress={() => openTarget(tab)}
-        style={[styles.tab, active && styles.tabActive]}
+        // Pas d'ondulation grise : elle ressemble à l'onglet actif. Le toucher se lit par l'opacité.
+        android_ripple={{ color: 'transparent' }}
+        style={({ pressed }) => [styles.tab, active && styles.tabActive, pressed && styles.tabPressed]}
       >
         <LogoIcon name={tab.icon} size={24} />
         <Text style={[styles.tabLabel, active && { color: Colors.primary }]} numberOfLines={1}>
@@ -389,7 +391,7 @@ export function MobileNav() {
       </View>
 
       {open ? (
-        <View pointerEvents="box-none" style={StyleSheet.absoluteFill} onLayout={(event) => setOverlayHeight(event.nativeEvent.layout.height)}>
+        <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, styles.overlay]} onLayout={(event) => setOverlayHeight(event.nativeEvent.layout.height)}>
           <Pressable style={[styles.veil, { bottom: BAR_HEIGHT + insets.bottom }]} onPress={close} accessibilityLabel="Fermer les actions" />
           {overlayHeight > 0 ? (
             <>
@@ -474,6 +476,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundElement,
   },
   tab: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 14, paddingVertical: 6 },
+  tabPressed: { opacity: 0.55 },
   tabActive: { backgroundColor: 'rgba(0, 153, 255, 0.16)' },
   tabLabel: { fontFamily: Fonts.medium, fontSize: 12, color: Colors.textSecondary },
   hub: { width: 96, height: 48 },
@@ -495,7 +498,9 @@ const styles = StyleSheet.create({
   fabLogo: { flex: 1, margin: 11 },
   fabInitial: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.backgroundSelected },
   fabBack: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary },
-  veil: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: 'rgba(2, 6, 18, 0.72)' },
+  /** Les cartes des écrans ont une élévation : sans une élévation supérieure, elles se dessinent par-dessus le voile. */
+  overlay: { elevation: 12, zIndex: 12 },
+  veil: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: 'rgba(2, 6, 18, 0.86)' },
   actWrap: { position: 'absolute', width: ACT_SIZE, height: ACT_SIZE },
   act: {
     width: ACT_SIZE,
