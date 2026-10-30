@@ -17,6 +17,7 @@ import type { StrategyResult } from '@/detection/core/types';
 import { INJECTED_DETECTION } from '@/detection/injected.generated';
 import { commandScript, parseInPageMessage, type PickedElement } from '@/detection/messages';
 import { resolveAddress } from '@/lib/address';
+import { getBrowserSettings, setBrowserSetting, useBrowserSettings } from '@/lib/browser-settings';
 import { lastReadKey, recordLastRead, recordVisit } from '@/lib/browsing';
 import { useTracking } from '@/lib/use-tracking';
 import { Adblock } from '../../../modules/actunime-adblock/src';
@@ -55,6 +56,7 @@ interface IBrowserViewProps {
 /** Page web avec barre d'outils et suivi Actunime. Une nouvelle adresse venue de l'extérieur remonte le composant (`key`). */
 export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewProps>) {
   const focused = useIsFocused();
+  const settings = useBrowserSettings();
   const webview = useRef<WebView>(null);
   const tracking = useTracking(webview);
   // `source` n'est modifié que par une adresse saisie : le mettre à jour à chaque navigation rechargerait la page en boucle.
@@ -64,7 +66,6 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
   const [editing, setEditing] = useState(false);
   const [navigation, setNavigation] = useState({ canGoBack: false, canGoForward: false, loading: true });
   const [progress, setProgress] = useState(0);
-  const [shield, setShield] = useState(true);
   const [blocked, setBlocked] = useState(0);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -89,19 +90,22 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
     return () => subscription.remove();
   }, []);
 
+  // Le réglage fait foi : il s'applique à l'ouverture, et le bouton de la barre le change aussi.
+  const shield = settings.adblock;
+  useEffect(() => {
+    Adblock.setEnabled(settings.adblock);
+  }, [settings.adblock]);
   const toggleShield = useCallback(() => {
-    const next = !shield;
-    Adblock.setEnabled(next);
-    setShield(next);
+    setBrowserSetting('adblock', !getBrowserSettings().adblock);
     webview.current?.reload();
-  }, [shield]);
+  }, []);
 
   const onNavigationStateChange = useCallback(
     (state: WebViewNavigation) => {
       setNavigation({ canGoBack: state.canGoBack, canGoForward: state.canGoForward, loading: state.loading });
       setPageUrl(state.url);
       if (!editing) setAddress(state.url);
-      if (!state.loading) void recordVisit(state.url);
+      if (!state.loading && getBrowserSettings().history) void recordVisit(state.url);
     },
     [editing],
   );
@@ -140,7 +144,7 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
     if (state.kind !== 'matched') return;
     const { detection, match } = state;
     const number = detection.kind === 'manga' ? detection.chapter : detection.episode;
-    if (number === undefined || !detection.url) return;
+    if (number === undefined || !detection.url || !getBrowserSettings().history) return;
     void recordLastRead(lastReadKey(detection.kind, match.id), { url: detection.url, number });
   }, [state]);
 

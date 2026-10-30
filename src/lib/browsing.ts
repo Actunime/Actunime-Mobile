@@ -135,3 +135,8 @@ export function agoLabel(at: number, now = Date.now()): string {
   if (days < 30) return `il y a ${days} j`;
   return `il y a ${Math.floor(days / 30)} mois`;
 }
+
+/** Efface les sites visités et les dernières pages lues (jamais ma liste ni les associations d'œuvres). */
+export async function clearHistory(): Promise<void> {
+  await AsyncStorage.multiRemove([SITES_KEY, LAST_READ_KEY]);
+}

@@ -13,6 +13,7 @@ import { Sheen } from '@/components/ui/sheen';
 import { Colors, Floating, Fonts, ScreenGutter, Spacing, Tw } from '@/constants/theme';
 import { resolveAddress } from '@/lib/address';
 import { mediaId, type IListEntry } from '@/lib/api';
+import { useBrowserSettings } from '@/lib/browser-settings';
 import {
   agoLabel,
   forgetSite,
@@ -114,6 +115,7 @@ function SiteRow({ site, onOpen, onPin, onForget }: Readonly<{ site: IBrowserSit
  */
 export function BrowserHome({ onOpen }: Readonly<{ onOpen: (url: string) => void }>) {
   const client = useQueryClient();
+  const settings = useBrowserSettings();
   const [address, setAddress] = useState('');
   const [sites, setSites] = useState<IBrowserSite[]>([]);
   const [reads, setReads] = useState<Record<string, ILastRead>>({});
@@ -158,11 +160,21 @@ export function BrowserHome({ onOpen }: Readonly<{ onOpen: (url: string) => void
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />}
       >
-        <View>
-          <ThemedText type="title">Navigateur</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Lis un manga ou regarde un anime sur le site de ton choix : ta liste se met à jour.
-          </ThemedText>
+        <View style={styles.titleRow}>
+          <View style={styles.flex}>
+            <ThemedText type="title">Navigateur</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Lis un manga ou regarde un anime sur le site de ton choix : ta liste se met à jour.
+            </ThemedText>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Réglages du navigateur"
+            onPress={() => router.push('/browser-settings')}
+            style={styles.gear}
+          >
+            <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
+          </Pressable>
         </View>
 
         <View style={styles.addressRow}>
@@ -189,7 +201,7 @@ export function BrowserHome({ onOpen }: Readonly<{ onOpen: (url: string) => void
           </Pressable>
         </View>
 
-        {items.length > 0 ? (
+        {settings.showResume && items.length > 0 ? (
           <View style={styles.section}>
             <ThemedText type="subtitle">Reprendre</ThemedText>
             {items.map((item) => (
@@ -198,14 +210,14 @@ export function BrowserHome({ onOpen }: Readonly<{ onOpen: (url: string) => void
           </View>
         ) : null}
 
-        {pinned.length > 0 ? (
+        {settings.showSites && pinned.length > 0 ? (
           <View style={styles.section}>
             <ThemedText type="subtitle">Mes sites</ThemedText>
             <View style={styles.card}>{siteRows(pinned)}</View>
           </View>
         ) : null}
 
-        {recent.length > 0 ? (
+        {settings.showRecent && recent.length > 0 ? (
           <View style={styles.section}>
             <ThemedText type="subtitle">Récents</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
@@ -239,6 +251,8 @@ export function BrowserHome({ onOpen }: Readonly<{ onOpen: (url: string) => void
 const styles = StyleSheet.create({
   content: { padding: ScreenGutter, gap: Spacing.four, paddingBottom: Spacing.five },
   flex: { flex: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
+  gear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   section: { gap: Spacing.three },
   card: { ...Floating, overflow: 'hidden', padding: Spacing.three, gap: Spacing.three },
   addressRow: { flexDirection: 'row', gap: Spacing.two },
