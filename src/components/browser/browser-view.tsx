@@ -236,6 +236,7 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
               pattern={tracking.pattern}
               alternatives={alternatives}
               onPickTitle={(alternative) => void tracking.pickTitle(alternative.strategy)}
+              onQuickAdd={tracking.quickAdd}
               onMarkRead={tracking.markRead}
               onChoose={(media) => void tracking.choose(media)}
               onChange={tracking.change}

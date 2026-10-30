@@ -7,6 +7,7 @@ import { Pressable } from '@/components/tap';
 import { Button } from '@/components/button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ResolvingNotice, WorkChoice } from '@/components/browser/work-choice';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import type { ITitleAlternative } from '@/detection/core/auto-strategy';
 import type { LearnedPattern } from '@/detection/core/types';
@@ -22,6 +23,7 @@ interface ITrackingBarProps {
   /** Autres titres que la page propose (lecture de ses données), pour corriger sans configurer le site. */
   alternatives: ITitleAlternative[];
   onPickTitle: (alternative: ITitleAlternative) => void;
+  onQuickAdd: (input: { title: string; format: string; aliases: string[] }) => Promise<void>;
   onMarkRead: () => void;
   onChoose: (candidate: ICandidate) => void;
   onChange: () => void;
@@ -213,57 +215,19 @@ export function TrackingBar(props: ITrackingBarProps) {
               </>
             )}
 
+            {tracking.kind === 'resolving' && <ResolvingNotice title={tracking.detection.title} />}
+
             {tracking.kind === 'confirm' && (
-              <>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Page détectée : « {tracking.detection.title} ». Choisis l’œuvre correspondante pour que le suivi
-                  s’active.
-                </ThemedText>
-                {tracking.candidates.map((candidate) => (
-                  <Pressable key={candidate.key} onPress={() => props.onChoose(candidate)} style={styles.candidate}>
-                    <Image
-                      source={candidate.posterUrl ? { uri: candidate.posterUrl } : undefined}
-                      style={styles.poster}
-                      contentFit="cover"
-                    />
-                    <View style={styles.candidateText}>
-                      <ThemedText type="smallBold" numberOfLines={2}>
-                        {candidate.title}
-                      </ThemedText>
-                      {candidate.origin !== 'media' && (
-                        <ThemedText type="small" themeColor="warning">
-                          En attente de validation
-                        </ThemedText>
-                      )}
-                    </View>
-                  </Pressable>
-                ))}
-                {props.alternatives.length > 0 && (
-                  <>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      Le titre est faux ? Autres titres lus sur la page :
-                    </ThemedText>
-                    {props.alternatives.map((alternative) => (
-                      <Pressable
-                        key={`${alternative.strategy}|${alternative.title}`}
-                        accessibilityRole="button"
-                        onPress={() => props.onPickTitle(alternative)}
-                        style={styles.candidate}
-                      >
-                        <ThemedText type="smallBold" numberOfLines={2} style={styles.candidateText}>
-                          {alternative.title}
-                        </ThemedText>
-                      </Pressable>
-                    ))}
-                  </>
-                )}
-                <Button label="Aucune de ces œuvres : chercher" variant="outline" onPress={props.onSearch} />
-                <View style={styles.links}>
-                  <Pressable onPress={props.onConfigure}>
-                    <ThemedText type="link">Mode avancé : montrer le titre sur la page</ThemedText>
-                  </Pressable>
-                </View>
-              </>
+              <WorkChoice
+                detection={tracking.detection}
+                candidates={tracking.candidates}
+                alternatives={props.alternatives}
+                onChoose={props.onChoose}
+                onPickTitle={props.onPickTitle}
+                onQuickAdd={props.onQuickAdd}
+                onSearch={props.onSearch}
+                onConfigure={props.onConfigure}
+              />
             )}
 
             {tracking.kind === 'matched' && (
