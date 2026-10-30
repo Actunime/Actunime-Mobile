@@ -353,7 +353,7 @@ export function MobileNav() {
 
   return (
     <>
-      <View style={[styles.bar, { height: BAR_HEIGHT + insets.bottom, paddingBottom: 8 + insets.bottom }]}>
+      <View style={[styles.bar, { height: BAR_HEIGHT + insets.bottom, paddingBottom: 6 + insets.bottom }]}>
         {renderTab(MEMBER_TABS[0]!)}
         {renderTab(MEMBER_TABS[1]!)}
         <View style={styles.hub}>
@@ -468,12 +468,12 @@ export function MobileNav() {
 const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingTop: 4,
+    alignItems: 'center',
+    paddingTop: 6,
     paddingHorizontal: 8,
     backgroundColor: Colors.backgroundElement,
   },
-  tab: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 14, paddingVertical: 6 },
+  tab: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 14, paddingVertical: 6 },
   tabActive: { backgroundColor: 'rgba(0, 153, 255, 0.16)' },
   tabLabel: { fontFamily: Fonts.medium, fontSize: 12, color: Colors.textSecondary },
   hub: { width: 96, height: 48 },
