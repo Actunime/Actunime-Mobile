@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, PanResponder, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Pressable } from '@/components/tap';
 import { Button } from '@/components/button';
@@ -55,6 +56,75 @@ function matchedHelp(tracking: Extract<TrackingState, { kind: 'matched' }>, patt
 const NOTICE_COLOR = { success: Colors.success, error: Colors.destructive, info: Colors.textSecondary } as const;
 
 type BarMode = 'panel' | 'pill' | 'icon';
+
+const BUBBLE_KEY = 'actunime.browser.bubble';
+const BUBBLE_SIZE = 44;
+/** Position de la bulle (décalage depuis son coin bas-droite d'origine), gardée entre les pages et les lancements. */
+let bubbleOffset = { x: 0, y: 0 };
+void AsyncStorage.getItem(BUBBLE_KEY)
+  .then((raw) => {
+    if (!raw) return;
+    const stored = JSON.parse(raw) as { x?: unknown; y?: unknown };
+    if (typeof stored.x === 'number' && typeof stored.y === 'number') bubbleOffset = { x: stored.x, y: stored.y };
+  })
+  .catch(() => undefined);
+
+/**
+ * Bulle Actunime déplaçable : le logo peut gêner un élément de la page (bouton, planche), on le pousse ailleurs.
+ * Un appui court l'ouvre toujours ; seul un glissé la déplace, et elle reste dans l'écran.
+ */
+function DraggableBubble({ onPress }: Readonly<{ onPress: () => void }>) {
+  const position = useRef(new Animated.ValueXY(bubbleOffset)).current;
+  const area = useRef({ width: 0, height: 0 });
+  const origin = useRef({ x: 0, y: 0 });
+  const pad = Spacing.three;
+
+  const clamp = (x: number, y: number) => {
+    const { width, height } = area.current;
+    if (!width || !height) return { x, y };
+    return {
+      x: Math.min(0, Math.max(-(width - BUBBLE_SIZE - pad * 2), x)),
+      y: Math.min(0, Math.max(-(height - BUBBLE_SIZE - pad * 2), y)),
+    };
+  };
+
+  const responder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) + Math.abs(g.dy) > 8,
+      onPanResponderGrant: () => {
+        origin.current = { ...bubbleOffset };
+      },
+      onPanResponderMove: (_e, g) => {
+        const next = clamp(origin.current.x + g.dx, origin.current.y + g.dy);
+        position.setValue(next);
+      },
+      onPanResponderRelease: (_e, g) => {
+        bubbleOffset = clamp(origin.current.x + g.dx, origin.current.y + g.dy);
+        position.setValue(bubbleOffset);
+        void AsyncStorage.setItem(BUBBLE_KEY, JSON.stringify(bubbleOffset)).catch(() => undefined);
+      },
+    }),
+  ).current;
+
+  return (
+    <View
+      pointerEvents="box-none"
+      style={styles.overlay}
+      onLayout={(event) => {
+        area.current = event.nativeEvent.layout;
+        const next = clamp(bubbleOffset.x, bubbleOffset.y);
+        bubbleOffset = next;
+        position.setValue(next);
+      }}
+    >
+      <Animated.View style={{ transform: position.getTranslateTransform() }} {...responder.panHandlers}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Ouvrir le suivi Actunime (déplaçable)" onPress={onPress} style={styles.iconButton}>
+          <Image source={require('../../../assets/images/logo.png')} style={styles.iconLogo} contentFit="contain" />
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
+}
 
 const PILL_DELAY_MS = 5_000;
 const PILL_NOTICE_DELAY_MS = 7_000;
@@ -126,20 +196,7 @@ export function TrackingBar(props: ITrackingBarProps) {
     tracking.progress >=
       ((tracking.detection.kind === 'manga' ? tracking.detection.chapter : tracking.detection.episode) ?? 0);
 
-  if (mode === 'icon') {
-    return (
-      <View pointerEvents="box-none" style={styles.overlay}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Ouvrir le suivi Actunime"
-          onPress={() => setMode('pill')}
-          style={styles.iconButton}
-        >
-          <Image source={require('../../../assets/images/logo.png')} style={styles.iconLogo} contentFit="contain" />
-        </Pressable>
-      </View>
-    );
-  }
+  if (mode === 'icon') return <DraggableBubble onPress={() => setMode('pill')} />;
 
   if (mode === 'pill') {
     return (
