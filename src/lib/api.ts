@@ -253,6 +253,51 @@ export const mediaId = (e: { id?: string; _id?: string }): string => (e.id ?? e.
 
 const kindPath = (kind: MediaKind) => (kind === 'manga' ? '/mangas' : '/animes');
 
+/** Entités reliées aux œuvres : personnage, personne (staff, doubleur, artiste), musique, société. */
+export type EntityKind = 'character' | 'person' | 'track' | 'company';
+
+/** Fiche d'une entité (`GET /characters?id=`, `/persons`, `/tracks`, `/companies`) : champs communs et propres à chacune. */
+export interface IEntity {
+  id?: string;
+  _id?: string;
+  name?: { original?: string; alias?: string[] };
+  description?: string;
+  verified?: boolean;
+  avatarUrl?: string | null;
+  logoUrl?: string | null;
+  coverUrl?: string | null;
+  /** Personnage : rôle, espèce, genre, âge. */
+  role?: string;
+  species?: string;
+  gender?: string;
+  age?: number | null;
+  /** Personne : naissance et décès. */
+  birthDate?: string;
+  deathDate?: string;
+  /** Musique (opening, ending…) ou société (studio, producteur…). */
+  type?: string;
+  releaseDate?: string;
+  createdDate?: string;
+  links?: { url: string; name?: string }[];
+}
+
+/** Relation d'une entité : œuvres où elle apparaît, personnes, personnages, musiques. */
+export type EntityRelation = 'animes' | 'mangas' | 'actors' | 'artists' | 'characters' | 'tracks';
+
+/** Élément d'une relation : une œuvre (titre) ou une entité (nom). */
+export interface IRelated extends IEntity {
+  title?: { original?: string; alias?: string[] };
+  posterUrl?: string | null;
+  format?: string;
+}
+
+const ENTITY_PATH: Record<EntityKind, string> = {
+  character: '/characters',
+  person: '/persons',
+  track: '/tracks',
+  company: '/companies',
+};
+
 /** Actualité publiée reliée à une fiche (annonce de saison, date de sortie, trailer…). */
 export interface INewsArticle {
   id?: string;
@@ -304,10 +349,10 @@ export const api = {
   },
 
   /** Aperçu des personnages, du staff, des musiques ou des sociétés d'une œuvre. */
-  getMediaLinks(kind: MediaKind, id: string, what: 'characters' | 'staffs' | 'tracks' | 'companies', limit = 12) {
+  getMediaLinks(kind: MediaKind, id: string, what: 'characters' | 'staffs' | 'tracks' | 'companies', limit = 12, page = 1) {
     return request<IPage<IMediaLink>>(`${kindPath(kind)}/${id}/${what}`, {
       method: 'POST',
-      body: { page: 1, limit },
+      body: { page, limit },
       auth: false,
     });
   },
@@ -315,6 +360,19 @@ export const api = {
   /** Actualités publiées reliées à une fiche (publiques). */
   getMediaNews(id: string) {
     return request<INewsArticle[]>(`/news/public/media/${id}/articles`, { auth: false });
+  },
+
+  getEntity(kind: EntityKind, id: string) {
+    return request<IEntity>(`${ENTITY_PATH[kind]}?id=${encodeURIComponent(id)}`, { auth: false });
+  },
+
+  /** Une page d'une relation de l'entité (œuvres, personnes, personnages, musiques). */
+  getEntityRelation(kind: EntityKind, id: string, relation: EntityRelation, page = 1, limit = 12) {
+    return request<IPage<IRelated>>(`${ENTITY_PATH[kind]}/${encodeURIComponent(id)}/${relation}`, {
+      method: 'POST',
+      body: { page, limit },
+      auth: false,
+    });
   },
 
   getMediaFollowers(kind: MediaKind, id: string) {

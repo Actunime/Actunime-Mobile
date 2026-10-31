@@ -4,6 +4,8 @@ import {
   api,
   type IListEntry,
   type IListEntryFields,
+  type EntityKind,
+  type EntityRelation,
   type IMediaSearchBody,
   type ListStatus,
   type MediaKind,
@@ -67,6 +69,18 @@ export const useMediaLinks = (kind: MediaKind, id: string, what: 'characters' | 
     queryKey: ['media-links', kind, id, what],
     queryFn: () => api.getMediaLinks(kind, id, what),
     staleTime: FIVE_MINUTES,
+  });
+
+export const useEntity = (kind: EntityKind, id: string) =>
+  useQuery({ queryKey: ['entity', kind, id], queryFn: () => api.getEntity(kind, id), staleTime: FIVE_MINUTES, enabled: !!id });
+
+/** Aperçu d'une relation d'une entité (première page). */
+export const useEntityRelation = (kind: EntityKind, id: string, relation: EntityRelation, enabled = true) =>
+  useQuery({
+    queryKey: ['entity-relation', kind, id, relation],
+    queryFn: () => api.getEntityRelation(kind, id, relation),
+    staleTime: FIVE_MINUTES,
+    enabled: enabled && !!id,
   });
 
 export const useMediaNews = (id: string) =>
