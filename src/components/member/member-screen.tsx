@@ -17,7 +17,7 @@ import { ScreenGutter, Tw, alpha } from '@/constants/theme';
 import { mediaId, type FavoriteType, type IFavorite, type IListEntry, type IListStats, type IMedia, type IMemberProfile, type MediaKind } from '@/lib/api';
 import { useAuth } from '@/lib/auth-store';
 import type { ListStatusFilter } from '@/lib/list-filter';
-import { ANIME_STATUSES, MANGA_STATUSES } from '@/lib/list-form';
+import { ANIME_STATUSES, MANGA_STATUSES, STATUS_LABELS } from '@/lib/list-form';
 import {
   FAVORITE_FILTERS,
   MEMBER_TAB_LABELS,
@@ -141,6 +141,16 @@ function FavoriteRow({ target }: Readonly<{ target: IFavoriteTarget }>) {
         </Txt>
       </View>
     </Pressable>
+  );
+}
+
+/** Ce que le membre en a fait : statut, progression et note. */
+function EntryFooter({ entry }: Readonly<{ entry: IListEntry }>) {
+  const parts = [STATUS_LABELS[entry.status], progressLabel(entry, entry.media), entry.score ? `Note ${entry.score}` : null].filter(Boolean);
+  return (
+    <Txt size="xs" weight="medium" color={Tw.color.mutedForeground}>
+      {parts.join(' · ')}
+    </Txt>
   );
 }
 
@@ -390,6 +400,7 @@ export function MemberScreen({ username }: Readonly<{ username: string }>) {
                 entry={item as IListEntry}
                 onPress={() => openMedia(listKind, mediaId((item as IListEntry).media as IMedia))}
                 genres={[]}
+                footer={<EntryFooter entry={item as IListEntry} />}
               />
             </View>
           ) : (

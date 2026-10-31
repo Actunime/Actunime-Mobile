@@ -18,7 +18,7 @@ export default function SettingsHub() {
         <SettingsLink icon={Ban} label="Blocages" hint="Membres que tu as bloqués" onPress={() => go('/settings/blocages')} />
       </SettingsCard>
       <SettingsCard>
-        <SettingsLink icon={MonitorSmartphone} label="Appareils" hint="Où ton compte est connecté" onPress={() => go('/settings/appareils')} />
+        <SettingsLink icon={MonitorSmartphone} label="Appareils" hint="Sessions ouvertes sur le site" onPress={() => go('/settings/appareils')} />
       </SettingsCard>
     </SettingsPage>
   );

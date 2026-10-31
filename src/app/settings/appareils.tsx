@@ -6,7 +6,8 @@ import { SettingsCard, SettingsPage } from '@/components/settings/settings-ui';
 import { ErrorState, Loading } from '@/components/states';
 import { Txt } from '@/components/tw';
 import { Tw } from '@/constants/theme';
-import { api, type ISession } from '@/lib/api';
+import { api } from '@/lib/api';
+import { sessionName } from '@/lib/sessions';
 
 const lastActive = (value?: string): string => {
   if (!value) return 'Activité inconnue';
@@ -16,9 +17,6 @@ const lastActive = (value?: string): string => {
   if (minutes < 1440) return `Actif il y a ${Math.round(minutes / 60)} h`;
   return `Actif le ${new Date(value).toLocaleDateString('fr-FR')}`;
 };
-
-const deviceName = (session: ISession): string =>
-  [session.browser, session.os].filter(Boolean).join(' · ') || session.deviceType || 'Appareil inconnu';
 
 /** Appareils (`settings/sessions` du site) : où le compte est connecté, avec la possibilité de fermer une session. */
 export default function SessionsSettings() {
@@ -31,7 +29,7 @@ export default function SessionsSettings() {
   const rows = sessions.data ?? [];
 
   return (
-    <SettingsPage title="Appareils" description="Les appareils sur lesquels ton compte est connecté. Ferme une session que tu ne reconnais pas.">
+    <SettingsPage title="Appareils" description="Les sessions ouvertes sur le site avec ton compte. Ferme une session que tu ne reconnais pas.">
       {sessions.isPending ? (
         <Loading />
       ) : sessions.isError ? (
@@ -47,7 +45,7 @@ export default function SessionsSettings() {
               <View key={session.id} style={styles.row}>
                 <View style={styles.flex}>
                   <Txt size="sm" weight="semibold">
-                    {deviceName(session)}
+                    {sessionName(session)}
                     {session.current ? ' · cet appareil' : ''}
                   </Txt>
                   <Txt size="xs" color={Tw.color.mutedForeground}>
