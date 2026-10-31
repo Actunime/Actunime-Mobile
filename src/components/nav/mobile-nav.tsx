@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { router, usePathname, type Href } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, BackHandler, Easing, Keyboard, StyleSheet, Text, View, useWindowDimensions, type GestureResponderEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,7 +12,7 @@ import { ThemedText } from '@/components/themed-text';
 import { setReadingChromeHidden, useReadingChromeHidden } from '@/lib/reading-chrome';
 import { Colors, Fonts } from '@/constants/theme';
 import { signOut, useAuth } from '@/lib/auth-store';
-import { WEB_URL } from '@/lib/config';
+import { SOON_OPACITY, showSoon } from '@/lib/soon';
 import { LogoIcon } from './logo-icon';
 import { MEMBER_FAN, MEMBER_TABS, findActiveTabId, type IMobileNavItem } from './mobile-nav.config';
 import {
@@ -47,11 +46,11 @@ const haptic = {
   choose: () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}),
 };
 
-/** Ouvre la cible d'une entrée : écran natif, page du site dans le navigateur système, ou déconnexion. */
+/** Ouvre la cible d'une entrée : écran natif, ou déconnexion. Une page du site pas encore reprise dans l'app dit « bientôt ». */
 export function openTarget(target: IMobileNavItem): void {
   if (target.action === 'logout') void signOut();
   else if (target.native) router.navigate(target.native as Href);
-  else if (target.path) void WebBrowser.openBrowserAsync(`${WEB_URL}${target.path}`);
+  else if (target.path) showSoon(target.label);
 }
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -94,6 +93,8 @@ interface IFanActProps {
 
 /** Une action de l'éventail : sort du centre du bouton avec un léger décalage entre voisines (`mobile-nav-pop`). */
 function FanAct({ entry, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanActProps>) {
+  // page du site pas encore reprise dans l'app : grisée, un appui dit « bientôt »
+  const soon = !!entry.path && !entry.native && !entry.children && !entry.action;
   const t = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(t, { toValue: 1, delay: index * 22, friction: 6, tension: 140, useNativeDriver: true }).start();
@@ -123,6 +124,7 @@ function FanAct({ entry, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanA
           (entry.children || entry.highlight) && styles.actAccent,
           hot && styles.actHot,
           hot && { transform: [{ scale: 1.22 }] },
+          soon && { opacity: SOON_OPACITY },
         ]}
       >
         <LogoIcon name={entry.icon} size={28} hot={hot} />

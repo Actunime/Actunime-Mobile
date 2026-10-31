@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Sheen } from '@/components/ui/sheen';
 import { Pressable } from '@/components/tap';
@@ -14,7 +14,6 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors, Floating, Radius, Spacing } from '@/constants/theme';
 import { mediaId } from '@/lib/api';
 import { useAuth } from '@/lib/auth-store';
-import { WEB_URL } from '@/lib/config';
 import { useAllMyList, useMyEntries } from '@/lib/queries';
 import { behindAnimes, dayLabel, headline, listBreakdown, listTotals, shortDay, timeLabel, weekSchedule } from '@/lib/suivi';
 
@@ -215,9 +214,9 @@ export default function SuiviScreen() {
 
               <Sheen />
               <ThemedText type="small" themeColor="textSecondary">
-                Amis en ligne, activité, série et objectif de la semaine sont sur le site.
+                Amis en ligne, activité, série et objectif de la semaine arrivent bientôt dans l’application.
               </ThemedText>
-              <Button label="Ouvrir mon suivi sur le site" variant="outline" onPress={() => Linking.openURL(`${WEB_URL}/suivi`)} />
+              <Button label="Bientôt disponible" variant="outline" disabled />
             </View>
           </>
         )}
