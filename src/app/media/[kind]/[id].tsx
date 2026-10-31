@@ -38,6 +38,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { Pressable } from '@/components/tap';
 import { ListEntrySheetTrigger } from '@/components/media/list-button';
+import { openEntity, openMediaRelations } from '@/components/entity/open-entity';
 import { CardCarousel, InfoRow, NewsList, PRIMARY_PILL, Pill, STATUS_PILL, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
 import { MobileNav } from '@/components/nav/mobile-nav';
 import { ManageEntry } from '@/components/list/manage-entry';
@@ -269,7 +270,7 @@ export default function MediaScreen() {
                 ? nameOf(rel.job)
                 : undefined
               : TRACK_LABELS[rel.type ?? rel.data!.type ?? ''] ?? rel.data!.type,
-        onPress: () => openSite(`/${what === 'characters' ? 'personnages' : what === 'staffs' ? 'personnes' : 'musiques'}/${rel.data!.id}`),
+        onPress: () => openEntity(what === 'characters' ? 'character' : what === 'staffs' ? 'person' : 'track', rel.data!.id),
       }));
   };
   const characterItems = carouselOf('characters');
@@ -468,7 +469,7 @@ export default function MediaScreen() {
             <SectionCard title={anime ? 'Studios & Producteurs' : 'Éditeurs & Producteurs'} icon={Building2}>
               <View style={styles.stack}>
                 {companies.data!.results.filter((c) => c.data).map((c) => (
-                  <Pressable key={c.id ?? c.data!.id} onPress={() => openSite(`/societes/${c.data!.id}`)} style={styles.company}>
+                  <Pressable key={c.id ?? c.data!.id} onPress={() => openEntity('company', c.data!.id)} style={styles.company}>
                     <View style={styles.companyLogo}>
                       {c.data!.logoUrl ? (
                         <Image source={{ uri: c.data!.logoUrl }} style={StyleSheet.absoluteFill} contentFit="contain" />
@@ -613,7 +614,7 @@ export default function MediaScreen() {
               title="Personnages"
               icon={Users}
               count={characters.data?.total}
-              action={(characters.data?.total ?? 0) > characterItems.length ? { label: 'Voir tout', onPress: () => openSite(`${sitePath}/personnages`) } : undefined}
+              action={(characters.data?.total ?? 0) > characterItems.length ? { label: 'Voir tout', onPress: () => openMediaRelations(kind, id, 'characters') } : undefined}
               onLayout={at('characters')}
             >
               <CardCarousel items={characterItems} placeholder={User} square />
@@ -624,7 +625,7 @@ export default function MediaScreen() {
               title="Staff"
               icon={Users}
               count={staffs.data?.total}
-              action={(staffs.data?.total ?? 0) > staffItems.length ? { label: 'Voir tout', onPress: () => openSite(`${sitePath}/staffs`) } : undefined}
+              action={(staffs.data?.total ?? 0) > staffItems.length ? { label: 'Voir tout', onPress: () => openMediaRelations(kind, id, 'staffs') } : undefined}
               onLayout={at('staffs')}
             >
               <CardCarousel items={staffItems} placeholder={User} square />
@@ -632,7 +633,13 @@ export default function MediaScreen() {
           ) : null}
           {anime ? (
             trackItems.length > 0 ? (
-              <SectionCard title="Musiques" icon={Music} count={tracks.data?.total} onLayout={at('tracks')}>
+              <SectionCard
+                title="Musiques"
+                icon={Music}
+                count={tracks.data?.total}
+                action={(tracks.data?.total ?? 0) > trackItems.length ? { label: 'Voir tout', onPress: () => openMediaRelations(kind, id, 'tracks') } : undefined}
+                onLayout={at('tracks')}
+              >
                 <CardCarousel items={trackItems} placeholder={Music} square />
               </SectionCard>
             ) : (
