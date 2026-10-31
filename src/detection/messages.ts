@@ -32,6 +32,8 @@ export type InPageMessage =
   | { type: 'ready'; host: string; inferredKind: 'anime' | 'manga' }
   | { type: 'detection'; detection: PageDetection | null }
   | { type: 'progress-reached'; detection: PageDetection }
+  /** Lecture entamée (vidéo en cours depuis quelques secondes, chapitre défilé d'une part) : les précédents sont vus. */
+  | { type: 'progress-started'; detection: PageDetection }
   | { type: 'strategies'; results: StrategyResult[] }
   | { type: 'picked'; element: PickedElement }
   | { type: 'pick-cancelled' }
@@ -52,7 +54,7 @@ export type InPageCommand =
   /** Réglages lus par le script : part de la vidéo (0-1) à atteindre pour signaler la fin d'un épisode. */
   | { type: 'set-options'; episodeThreshold: number };
 
-const MESSAGE_TYPES = ['ready', 'detection', 'progress-reached', 'strategies', 'picked', 'pick-cancelled', 'scroll-direction', 'scroll-state', 'next-link'];
+const MESSAGE_TYPES = ['ready', 'detection', 'progress-reached', 'progress-started', 'strategies', 'picked', 'pick-cancelled', 'scroll-direction', 'scroll-state', 'next-link'];
 
 export function parseInPageMessage(raw: string): InPageMessage | null {
   try {

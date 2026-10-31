@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createVideoObserver, type VideoObserver } from './video';
 
-function addVideo(duration: number) {
+function addVideo(duration: number, paused = false) {
   const video = document.createElement('video');
   Object.defineProperty(video, 'duration', { value: duration, configurable: true });
+  Object.defineProperty(video, 'paused', { value: paused, configurable: true });
   Object.defineProperty(video, 'currentTime', { value: 0, writable: true, configurable: true });
   document.body.appendChild(video);
   return video;
@@ -77,5 +78,30 @@ describe('createVideoObserver', () => {
     video.currentTime = 1350;
     video.dispatchEvent(new Event('timeupdate'));
     expect(onReached).toHaveBeenCalledTimes(1);
+  });
+
+  it('signale le début de lecture après 30 s en lecture, pas à l’ouverture ni en pause', () => {
+    const onStarted = vi.fn();
+    const video = addVideo(1400);
+    observer = createVideoObserver({ threshold: () => 0.9, onReached: vi.fn(), onStarted });
+
+    video.currentTime = 5;
+    video.dispatchEvent(new Event('timeupdate'));
+    expect(onStarted).not.toHaveBeenCalled();
+
+    video.currentTime = 40;
+    video.dispatchEvent(new Event('timeupdate'));
+    video.dispatchEvent(new Event('timeupdate'));
+    expect(onStarted).toHaveBeenCalledTimes(1);
+  });
+
+  it('ne signale pas le début d’une vidéo en pause', () => {
+    const onStarted = vi.fn();
+    const video = addVideo(1400, true);
+    observer = createVideoObserver({ threshold: () => 0.9, onReached: vi.fn(), onStarted });
+
+    video.currentTime = 600;
+    video.dispatchEvent(new Event('timeupdate'));
+    expect(onStarted).not.toHaveBeenCalled();
   });
 });

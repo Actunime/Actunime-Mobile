@@ -135,6 +135,12 @@ export default function BrowserSettingsScreen() {
         <View style={styles.section}>
           <ThemedText type="subtitle">Fin d’un épisode</ThemedText>
           <View style={styles.card}>
+            <SettingRow
+              setting="markPrevious"
+              label="Compter le précédent en commençant la suite"
+              hint="Quand une vidéo tourne depuis 30 s ou qu’un chapitre est lu à 15 %, les épisodes et chapitres d’avant passent en « vus » (œuvre déjà dans ta liste)."
+              value={settings.markPrevious}
+            />
             <ChoiceRow
               label="Quand la vidéo se termine"
               hint="Automatique : ta liste est mise à jour. Je décide : tu touches « Marquer comme lu ». Seules les vidéos de la page sont suivies ; un lecteur intégré d’un autre site demande « Marquer comme lu »."

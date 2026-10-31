@@ -32,6 +32,8 @@ declare global {
 }
 
 const EVALUATE_DEBOUNCE_MS = 800;
+/** Part défilée d'un chapitre à partir de laquelle il est considéré comme commencé. */
+const CHAPTER_STARTED_PERCENT = 15;
 /**
  * Un réglage appris qui ne trouve rien (page de lecteur SPA encore en construction, ou page d'un autre type) a ce
  * délai pour réussir ; ensuite on retombe sur la lecture automatique, comme l'extension Sync.
@@ -121,6 +123,9 @@ if (!window.__actunime) {
   let lastUrl = location.href;
   let observer: IObserver | null = null;
   const options = { episodeThreshold: 0.9 };
+  // Détection courante et lecture entamée : un chapitre défilé d'une part compte comme commencé, une fois par page.
+  let currentDetection: PageDetection | null = null;
+  let startedKey: string | null = null;
   // Pas de détection avant d'avoir reçu le pattern du site : sinon une détection générique erronée précède la bonne.
   let configured = false;
   let navigationStartedAt = Date.now();
@@ -135,6 +140,7 @@ if (!window.__actunime) {
       observer = createVideoObserver({
         threshold: () => options.episodeThreshold,
         onReached: () => post({ type: 'progress-reached', detection }),
+        onStarted: () => post({ type: 'progress-started', detection }),
       });
       return;
     }
@@ -172,6 +178,8 @@ if (!window.__actunime) {
     if (key === lastKey) return;
     lastKey = key;
     post({ type: 'detection', detection });
+    currentDetection = detection;
+    startedKey = null;
     if (detection) attachProgressObserver(detection);
     else {
       observer?.cleanup();
@@ -331,6 +339,13 @@ if (!window.__actunime) {
         lastEdge = state.edge;
         lastPercent = state.percent;
         post({ type: 'scroll-state', edge: state.edge, percent: state.percent });
+      }
+      if (currentDetection?.kind === 'manga' && state.percent >= CHAPTER_STARTED_PERCENT) {
+        const key = keyOf(currentDetection);
+        if (startedKey !== key) {
+          startedKey = key;
+          post({ type: 'progress-started', detection: currentDetection });
+        }
       }
       if (y <= 0) {
         travelled = 0;

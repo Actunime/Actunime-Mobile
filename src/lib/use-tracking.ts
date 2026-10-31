@@ -9,7 +9,7 @@ import { getBrowserSettings } from './browser-settings';
 import { progressNotice } from './notices';
 import { getPattern, isHostIgnored, removePattern, savePattern, setHostIgnored } from './patterns';
 import type { IMatch } from './storage';
-import { confirm, currentProgress, forget, pushProgress, quickAddWork, resolve, StaleMatchError, type ICandidate } from './sync';
+import { confirm, currentProgress, forget, markPreviousSeen, pushProgress, quickAddWork, resolve, StaleMatchError, type ICandidate } from './sync';
 
 export type TrackingState =
   | { kind: 'idle' }
@@ -87,6 +87,19 @@ export function useTracking(webview: RefObject<WebView | null>) {
     [send],
   );
 
+  /** Commencer la suite (vidéo lancée, chapitre entamé) compte les précédents comme vus : la liste suit, et on le dit. */
+  const inferPrevious = useCallback(async (detection: PageDetection, match: IMatch, progress: number | undefined) => {
+    if (!getBrowserSettings().markPrevious) return;
+    const done = await markPreviousSeen(detection, match, progress).catch(() => null);
+    if (!done) return;
+    const unit = unitOf(detection);
+    const label = done.from === done.to ? `${unit} ${done.to} compté comme vu` : `${unit}s ${done.from} à ${done.to} comptés comme vus`;
+    setNotice({ tone: 'success', text: label.charAt(0).toUpperCase() + label.slice(1) });
+    setTracking((current) =>
+      current.kind === 'matched' && current.match.id === match.id ? { ...current, progress: done.to } : current,
+    );
+  }, []);
+
   const identify = useCallback(
     async (detection: PageDetection) => {
       latest.current = detection;
@@ -160,6 +173,15 @@ export function useTracking(webview: RefObject<WebView | null>) {
         return;
       }
 
+      if (message.type === 'progress-started') {
+        // Lecture réellement entamée : seulement pour une œuvre déjà identifiée, sans rien demander à l'utilisateur.
+        if (!getBrowserSettings().markPrevious) return;
+        const resolution = await resolve(message.detection).catch(() => null);
+        if (!resolution?.match) return;
+        await inferPrevious(message.detection, resolution.match, await progressOf(message.detection, resolution.match));
+        return;
+      }
+
       if (message.type === 'progress-reached') {
         // Fin de chapitre : on n'écrit que si l'œuvre est identifiée, sinon l'utilisateur confirme d'abord.
         const settings = getBrowserSettings();
@@ -173,7 +195,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
         else setNotice({ tone: 'info', text: 'Fin de chapitre atteinte : choisis l’œuvre pour l’ajouter à ta liste' });
       }
     },
-    [identify, push, send],
+    [identify, push, send, inferPrevious, progressOf],
   );
 
   const markRead = useCallback(() => {

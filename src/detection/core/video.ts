@@ -7,6 +7,8 @@ interface VideoObserverOptions {
   /** Part de la vidéo à atteindre (0-1), relue à chaque mesure : le réglage peut changer en cours de lecture. */
   threshold: () => number;
   onReached: () => void;
+  /** Lecture entamée : la vidéo tourne depuis `START_SECONDS`. Une fois par observateur. */
+  onStarted?: () => void;
 }
 
 export interface VideoObserver {
@@ -15,9 +17,12 @@ export interface VideoObserver {
 
 /** En dessous, c'est une publicité, un aperçu ou un générique seul : pas un épisode. */
 export const MIN_EPISODE_SECONDS = 150;
+/** Position à partir de laquelle une vidéo en lecture compte comme « commencée » (pas un simple clic sur lecture). */
+export const START_SECONDS = 30;
 
 export function createVideoObserver(opts: VideoObserverOptions): VideoObserver {
   let fired = false;
+  let started = false;
   const watched = new WeakSet<HTMLVideoElement>();
   const disposers: Array<() => void> = [];
 
@@ -30,6 +35,10 @@ export function createVideoObserver(opts: VideoObserverOptions): VideoObserver {
   const check = (video: HTMLVideoElement, ended = false) => {
     const duration = video.duration;
     if (!Number.isFinite(duration) || duration < MIN_EPISODE_SECONDS) return;
+    if (!started && !video.paused && video.currentTime >= START_SECONDS) {
+      started = true;
+      opts.onStarted?.();
+    }
     if (ended || video.currentTime / duration >= opts.threshold()) fire();
   };
 

@@ -18,6 +18,8 @@ export interface IBrowserSettings {
   fullscreen: boolean;
   /** Fin d'un épisode vu dans la page : liste mise à jour toute seule, sur demande (« Marquer comme lu »), ou jamais. */
   episodeEnd: EpisodeEnd;
+  /** Ouvrir un chapitre ou un épisode compte les précédents comme vus (œuvre déjà dans la liste). */
+  markPrevious: boolean;
   /** Part de la vidéo à atteindre pour compter l'épisode comme vu, en pourcentage. */
   episodeThreshold: EpisodeThreshold;
   /** Sections de l'accueil du navigateur. */
@@ -31,6 +33,7 @@ export const DEFAULT_BROWSER_SETTINGS: IBrowserSettings = {
   history: true,
   autoProgress: true,
   fullscreen: true,
+  markPrevious: true,
   episodeEnd: 'auto',
   episodeThreshold: 90,
   showResume: true,

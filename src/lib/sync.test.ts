@@ -39,7 +39,7 @@ vi.mock('./api', () => {
 });
 
 import { api, ApiError, type IListEntry } from './api';
-import { confirm, currentProgress, pushProgress, resolve, searchCandidates, StaleMatchError } from './sync';
+import { confirm, currentProgress, markPreviousSeen, pushProgress, resolve, searchCandidates, StaleMatchError } from './sync';
 
 const mocked = vi.mocked(api);
 
@@ -239,5 +239,46 @@ describe('currentProgress', () => {
     mocked.getPendingListEntries.mockResolvedValue([pendingEntry]);
     expect(await currentProgress({ kind: 'manga' }, { kind: 'pending', id: 'e1', title: 'x' })).toBe(3);
     expect(await currentProgress({ kind: 'manga' }, { kind: 'pending', id: 'autre', title: 'x' })).toBeUndefined();
+  });
+});
+
+describe('markPreviousSeen', () => {
+  const entry = (chaptersRead: number): IListEntry => ({ ...pendingEntry, chaptersRead });
+  const pending = { kind: 'pending' as const, id: 'e1', title: 'x' };
+
+  it('compte le chapitre précédent quand il manque à la liste', async () => {
+    mocked.getPendingListEntries.mockResolvedValue([entry(5)]);
+
+    expect(await markPreviousSeen(detection({ chapter: 7 }), pending, 5)).toEqual({ from: 6, to: 6 });
+    expect(mocked.updateListEntry).toHaveBeenCalledWith('e1', { chaptersRead: 6, status: 'READING' });
+  });
+
+  it('compte tout jusqu’au précédent après un saut', async () => {
+    mocked.getPendingListEntries.mockResolvedValue([entry(3)]);
+
+    expect(await markPreviousSeen(detection({ chapter: 12 }), pending, 3)).toEqual({ from: 4, to: 11 });
+    expect(mocked.updateListEntry).toHaveBeenCalledWith('e1', { chaptersRead: 11, status: 'READING' });
+  });
+
+  it('ne touche à rien quand la liste est déjà à jour, ou plus loin', async () => {
+    expect(await markPreviousSeen(detection({ chapter: 7 }), pending, 6)).toBeNull();
+    expect(await markPreviousSeen(detection({ chapter: 7 }), pending, 9)).toBeNull();
+    expect(mocked.updateListEntry).not.toHaveBeenCalled();
+  });
+
+  it('ne crée jamais d’entrée : œuvre absente de la liste ou premier chapitre', async () => {
+    expect(await markPreviousSeen(detection({ chapter: 7 }), pending, undefined)).toBeNull();
+    expect(await markPreviousSeen(detection({ chapter: 1 }), pending, 0)).toBeNull();
+    expect(mocked.createListEntry).not.toHaveBeenCalled();
+    expect(mocked.updateListEntry).not.toHaveBeenCalled();
+  });
+
+  it('suit le champ des épisodes pour un anime', async () => {
+    mocked.getListByMedia.mockResolvedValue({ id: 'e9', mediaType: 'Anime', status: 'WATCHING', episodesWatched: 2 });
+
+    expect(
+      await markPreviousSeen(detection({ kind: 'anime', chapter: undefined, episode: 6 }), { kind: 'media', id: 'm1', title: 'x' }, 2),
+    ).toEqual({ from: 3, to: 5 });
+    expect(mocked.updateListEntry).toHaveBeenCalledWith('e9', { episodesWatched: 5, status: 'WATCHING' });
   });
 });

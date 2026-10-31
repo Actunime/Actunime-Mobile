@@ -231,6 +231,31 @@ export async function currentProgress(
 }
 
 /**
+ * Ouvrir le chapitre ou l'épisode N, c'est avoir vu les précédents : la liste passe à N-1 quand elle en est plus
+ * loin (jusqu'au précédent, même après un saut). Uniquement pour une œuvre déjà dans la liste — ouvrir une page ne
+ * crée jamais d'entrée — et jamais en arrière. Renvoie les numéros ajoutés, ou `null` si rien n'a changé.
+ */
+export async function markPreviousSeen(
+  detection: PageDetection,
+  match: IMatch,
+  progress: number | undefined,
+): Promise<{ from: number; to: number } | null> {
+  const isManga = detection.kind === 'manga';
+  const number = isManga ? detection.chapter : detection.episode;
+  if (number === undefined || number < 2 || progress === undefined) return null;
+  const target = number - 1;
+  if (target <= progress) return null;
+
+  const entry = await findEntry(match);
+  if (!entry) return null;
+  await api.updateListEntry(entryId(entry), {
+    [progressField(detection.kind)]: target,
+    status: isManga ? 'READING' : 'WATCHING',
+  });
+  return { from: progress + 1, to: target };
+}
+
+/**
  * L'œuvre en attente mémorisée n'est plus dans ma liste (validée, fusionnée ou supprimée) : l'association est périmée
  * et doit être refaite, pas affichée comme une panne.
  */
