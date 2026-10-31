@@ -10,8 +10,10 @@ import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { ReduceMotion, ReducedMotionConfig } from 'react-native-reanimated';
 
+import { MobileNav } from '@/components/nav/mobile-nav';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-store';
 import { queryClient } from '@/lib/query-client';
@@ -63,6 +65,8 @@ export default function RootLayout() {
       <ThemeProvider value={navigationTheme}>
         <ReducedMotionConfig mode={ReduceMotion.System} />
         <StatusBar style="light" />
+        {/* La navigation du bas est posée ici, une seule fois : elle est sur toutes les pages (rien sans connexion). */}
+        <View style={{ flex: 1, backgroundColor: Colors.background }}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }}>
           <Stack.Protected guard={!auth}>
             <Stack.Screen name="login" />
@@ -70,7 +74,7 @@ export default function RootLayout() {
           <Stack.Protected guard={!!auth}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="media/[kind]/[id]" />
-            <Stack.Screen name="edit/[kind]/[id]" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="edit/[kind]/[id]" />
             <Stack.Screen name="browser-settings" />
             <Stack.Screen name="character/[id]" />
             <Stack.Screen name="person/[id]" />
@@ -78,9 +82,18 @@ export default function RootLayout() {
             <Stack.Screen name="company/[id]" />
             <Stack.Screen name="relations" />
             <Stack.Screen name="member/[username]" />
+            <Stack.Screen name="agenda" />
+            <Stack.Screen name="settings/index" />
+            <Stack.Screen name="settings/profile" />
+            <Stack.Screen name="settings/confidentialite" />
+            <Stack.Screen name="settings/blocages" />
+            <Stack.Screen name="settings/amis" />
+            <Stack.Screen name="settings/appareils" />
           </Stack.Protected>
           <Stack.Screen name="auth/callback" />
         </Stack>
+        <MobileNav />
+        </View>
       </ThemeProvider>
     </QueryClientProvider>
   );

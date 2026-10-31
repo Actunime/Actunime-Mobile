@@ -1,7 +1,6 @@
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 
-import { MobileNav } from '@/components/nav/mobile-nav';
 import { Colors } from '@/constants/theme';
 
 /** Les écrans sont des onglets Expo Router sans barre propre : la navigation du bas (`MobileNav`, E114) les pilote. */
@@ -12,7 +11,6 @@ export default function TabsLayout() {
         tabBar={() => null}
         screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: Colors.background } }}
       />
-      <MobileNav />
     </View>
   );
 }
