@@ -20,6 +20,7 @@ import { INJECTED_DETECTION } from '@/detection/injected.generated';
 import { commandScript, parseInPageMessage, type PickedElement } from '@/detection/messages';
 import { resolveAddress } from '@/lib/address';
 import { nextNumberUrl } from '@/lib/next-chapter';
+import { setReadingChromeHidden, useReadingChromeHidden } from '@/lib/reading-chrome';
 import { getBrowserSettings, setBrowserSetting, useBrowserSettings } from '@/lib/browser-settings';
 import { lastReadKey, recordLastRead, recordVisit } from '@/lib/browsing';
 import { useTracking } from '@/lib/use-tracking';
@@ -87,7 +88,8 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
   const [menuOpen, setMenuOpen] = useState(false);
   // Plein écran de lecture : barre d'outils masquée vers le bas. Après chaque changement on ignore le défilement
   // un instant, car le redimensionnement de la page en provoque un lui-même.
-  const [barsHidden, setBarsHidden] = useState(false);
+  const barsHidden = useReadingChromeHidden();
+  const setBarsHidden = setReadingChromeHidden;
   const lastBarsChange = useRef(0);
   const nextLinkResolver = useRef<((href: string | null) => void) | null>(null);
 
@@ -102,6 +104,12 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
     });
     return () => subscription.remove();
   }, [focused, navigation.canGoBack, onHome]);
+
+  // Les barres reviennent quand on quitte le navigateur (autre onglet) ou la page.
+  useEffect(() => {
+    if (!focused) setReadingChromeHidden(false);
+    return () => setReadingChromeHidden(false);
+  }, [focused]);
 
   useEffect(() => {
     const subscription = Adblock.onBlocked((event) => setBlocked(event.count));

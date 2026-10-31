@@ -10,6 +10,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Pressable } from '@/components/tap';
 import { ThemedText } from '@/components/themed-text';
+import { setReadingChromeHidden, useReadingChromeHidden } from '@/lib/reading-chrome';
 import { Colors, Fonts } from '@/constants/theme';
 import { signOut, useAuth } from '@/lib/auth-store';
 import { WEB_URL } from '@/lib/config';
@@ -34,6 +35,8 @@ const SLIDE_PX = 14;
 const FAB_SIZE = 68;
 /** Hauteur de la barre hors zone sûre (`--mobile-nav-height` du site). */
 const BAR_HEIGHT = 68;
+/** Partie du bouton central qui reste visible au-dessus de la zone du geste Android quand la navigation est masquée (plein écran de lecture). */
+const PEEK_HEIGHT = 34;
 /** Distance du centre du bouton central au bas de la barre, hors zone sûre : 8 de marge + 2 + demi-bouton. */
 const HUB_FROM_BOTTOM = 8 + 2 + FAB_SIZE / 2;
 
@@ -155,6 +158,7 @@ export function MobileNav() {
   const [overlayHeight, setOverlayHeight] = useState(0);
   const [labelSizes, setLabelSizes] = useState<ILabelSize[]>([]);
   const [keyboardShown, setKeyboardShown] = useState(false);
+  const readingFullscreen = useReadingChromeHidden();
 
   const items = trail.length > 0 ? (trail[trail.length - 1]!.children ?? MEMBER_FAN) : MEMBER_FAN;
   const slots = useMemo(() => computeFanSlots(items.length), [items.length]);
@@ -325,6 +329,30 @@ export function MobileNav() {
 
   if (!auth || keyboardShown) return null;
 
+  // Plein écran de lecture : seul le haut du bouton central dépasse du bas de la page, un appui rend la barre.
+  if (readingFullscreen) {
+    const initial = (auth.user.displayName ?? auth.user.username).slice(0, 1).toUpperCase();
+    return (
+      <View pointerEvents="box-none" style={[styles.peek, { height: PEEK_HEIGHT + insets.bottom }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Afficher la navigation"
+          android_ripple={{ color: 'transparent' }}
+          onPress={() => setReadingChromeHidden(false)}
+          style={styles.peekFab}
+        >
+          {auth.user.avatarUrl ? (
+            <Image source={{ uri: auth.user.avatarUrl }} style={styles.fabFill} contentFit="cover" />
+          ) : (
+            <View style={styles.fabInitial}>
+              <ThemedText type="subtitle">{initial}</ThemedText>
+            </View>
+          )}
+        </Pressable>
+      </View>
+    );
+  }
+
   const hubX = width / 2;
   const hubY = overlayHeight - insets.bottom - HUB_FROM_BOTTOM;
   const inSubmenu = trail.length > 0;
@@ -484,6 +512,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 2,
     left: (96 - FAB_SIZE) / 2,
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.backgroundElement,
+    overflow: 'hidden',
+    elevation: 8,
+  },
+  peek: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center', overflow: 'hidden' },
+  peekFab: {
     width: FAB_SIZE,
     height: FAB_SIZE,
     borderRadius: FAB_SIZE / 2,
