@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { agoLabel, hostOf, MAX_LAST_READS, MAX_RECENT_SITES, mergeLastRead, removeSite, siteHome, togglePinned, upsertSite, type IBrowserSite } from './browsing';
+import { agoLabel, hostOf, lastVisitedUrl, MAX_LAST_READS, MAX_RECENT_SITES, mergeLastRead, removeSite, siteHome, togglePinned, upsertSite, type IBrowserSite } from './browsing';
 
 describe('hostOf', () => {
   it('retire www. et ne garde que http(s)', () => {
@@ -71,5 +71,17 @@ describe('agoLabel', () => {
     expect(agoLabel(now - 86_400_000, now)).toBe('hier');
     expect(agoLabel(now - 5 * 86_400_000, now)).toBe('il y a 5 j');
     expect(agoLabel(now - 65 * 86_400_000, now)).toBe('il y a 2 mois');
+  });
+});
+
+describe('lastVisitedUrl', () => {
+  it('rend la page du site visité le plus récemment, ou null sans historique', () => {
+    expect(lastVisitedUrl([])).toBeNull();
+    const sites: IBrowserSite[] = [
+      { host: 'a.example', url: 'https://a.example/lire/3', at: 100 },
+      { host: 'b.example', url: 'https://b.example/chap/9', at: 300 },
+      { host: 'c.example', url: 'https://c.example/', at: 200, pinned: true },
+    ];
+    expect(lastVisitedUrl(sites)).toBe('https://b.example/chap/9');
   });
 });

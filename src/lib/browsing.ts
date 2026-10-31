@@ -51,6 +51,13 @@ export function upsertSite(sites: IBrowserSite[], url: string, now = Date.now())
   return capSites(next);
 }
 
+/** Dernière page visitée, tous sites confondus (réglage « page ouverte au lancement : dernière page »). */
+export function lastVisitedUrl(sites: IBrowserSite[]): string | null {
+  let latest: IBrowserSite | null = null;
+  for (const site of sites) if (!latest || site.at > latest.at) latest = site;
+  return latest?.url ?? null;
+}
+
 export function togglePinned(sites: IBrowserSite[], host: string): IBrowserSite[] {
   return capSites(sites.map((site) => (site.host === host ? { ...site, pinned: !site.pinned } : site)));
 }

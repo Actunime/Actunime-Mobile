@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 
 const SETTINGS_KEY = 'actunime.browser.settings';
 
+export type StartPage = 'home' | 'last';
 export type EpisodeEnd = 'auto' | 'ask' | 'off';
 export const EPISODE_THRESHOLDS = [80, 90, 95] as const;
 export type EpisodeThreshold = (typeof EPISODE_THRESHOLDS)[number];
@@ -22,6 +23,8 @@ export interface IBrowserSettings {
   markPrevious: boolean;
   /** Part de la vidéo à atteindre pour compter l'épisode comme vu, en pourcentage. */
   episodeThreshold: EpisodeThreshold;
+  /** Page ouverte à la première ouverture du navigateur : son accueil, ou la dernière page visitée. */
+  startPage: StartPage;
   /** Sections de l'accueil du navigateur. */
   showResume: boolean;
   showSites: boolean;
@@ -34,6 +37,7 @@ export const DEFAULT_BROWSER_SETTINGS: IBrowserSettings = {
   autoProgress: true,
   fullscreen: true,
   markPrevious: true,
+  startPage: 'home',
   episodeEnd: 'auto',
   episodeThreshold: 90,
   showResume: true,
@@ -50,6 +54,7 @@ export function parseSettings(raw: string | null): IBrowserSettings {
     for (const key of Object.keys(next) as (keyof IBrowserSettings)[]) {
       if (typeof stored[key] === 'boolean' && typeof next[key] === 'boolean') (next as Record<string, unknown>)[key] = stored[key];
     }
+    if (stored.startPage === 'home' || stored.startPage === 'last') next.startPage = stored.startPage;
     if (stored.episodeEnd === 'auto' || stored.episodeEnd === 'ask' || stored.episodeEnd === 'off') next.episodeEnd = stored.episodeEnd;
     if (EPISODE_THRESHOLDS.includes(stored.episodeThreshold as EpisodeThreshold)) next.episodeThreshold = stored.episodeThreshold as EpisodeThreshold;
     return next;
@@ -62,12 +67,15 @@ let current = DEFAULT_BROWSER_SETTINGS;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((listener) => listener());
 
-void AsyncStorage.getItem(SETTINGS_KEY)
+const loaded = AsyncStorage.getItem(SETTINGS_KEY)
   .then((raw) => {
     current = parseSettings(raw);
     emit();
   })
   .catch(() => undefined);
+
+/** Se résout une fois les réglages relus du stockage (au lancement, avant d'en dépendre). */
+export const whenSettingsLoaded = (): Promise<void> => loaded;
 
 export const getBrowserSettings = (): IBrowserSettings => current;
 

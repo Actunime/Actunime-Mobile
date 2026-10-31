@@ -7,7 +7,7 @@ import { Screen } from '@/components/screen';
 import { Pressable } from '@/components/tap';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Floating, ScreenGutter, Spacing } from '@/constants/theme';
-import { EPISODE_THRESHOLDS, setBrowserSetting, useBrowserSettings, type EpisodeEnd, type IBrowserSettings } from '@/lib/browser-settings';
+import { EPISODE_THRESHOLDS, setBrowserSetting, useBrowserSettings, type EpisodeEnd, type IBrowserSettings, type StartPage } from '@/lib/browser-settings';
 import { clearHistory } from '@/lib/browsing';
 
 interface IRowProps {
@@ -87,6 +87,11 @@ const EPISODE_END_OPTIONS: ReadonlyArray<{ value: EpisodeEnd; label: string }> =
   { value: 'off', label: 'Jamais' },
 ];
 
+const START_PAGE_OPTIONS: ReadonlyArray<{ value: StartPage; label: string }> = [
+  { value: 'home', label: 'Accueil' },
+  { value: 'last', label: 'Dernière page' },
+];
+
 const confirmClear = () =>
   Alert.alert('Effacer l’historique ?', 'Les sites récents, tes sites épinglés et les dernières pages lues disparaissent. Ta liste n’est pas touchée.', [
     { text: 'Annuler', style: 'cancel' },
@@ -162,6 +167,13 @@ export default function BrowserSettingsScreen() {
         <View style={styles.section}>
           <ThemedText type="subtitle">Accueil du navigateur</ThemedText>
           <View style={styles.card}>
+            <ChoiceRow
+              label="Page ouverte au lancement"
+              hint="Ce que tu vois en ouvrant le navigateur."
+              value={settings.startPage}
+              options={START_PAGE_OPTIONS}
+              onChange={(value) => setBrowserSetting('startPage', value)}
+            />
             <SettingRow setting="showResume" label="Reprendre" hint="Tes œuvres en cours, à la dernière page lue." value={settings.showResume} />
             <SettingRow setting="showSites" label="Mes sites" value={settings.showSites} />
             <SettingRow setting="showRecent" label="Récents" value={settings.showRecent} />
