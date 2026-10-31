@@ -34,11 +34,12 @@ Ce qui n'est pas encore dans l'application est grisé avec la mention « Bientô
 
 <div align="center">
 
-<img src="docs/screenshots/02-ma-liste.png" alt="Ma liste" width="19%" />
-<img src="docs/screenshots/05-fiche-personnages-staff.png" alt="Personnages, staff et musiques" width="19%" />
-<img src="docs/screenshots/09-personnage.png" alt="Fiche d'un personnage" width="19%" />
-<img src="docs/screenshots/11-eventail.png" alt="Éventail de navigation" width="19%" />
-<img src="docs/screenshots/10-parametres.png" alt="Paramètres" width="19%" />
+<img src="docs/screenshots/02-ma-liste.png" alt="Ma liste" width="16%" />
+<img src="docs/screenshots/06-tiroir-entree.png" alt="Modification rapide d'une entrée" width="16%" />
+<img src="docs/screenshots/05-fiche-personnages-staff.png" alt="Personnages, staff et musiques" width="16%" />
+<img src="docs/screenshots/09-personnage.png" alt="Fiche d'un personnage" width="16%" />
+<img src="docs/screenshots/11-eventail.png" alt="Éventail de navigation" width="16%" />
+<img src="docs/screenshots/10-parametres.png" alt="Paramètres" width="16%" />
 
 </div>
 
