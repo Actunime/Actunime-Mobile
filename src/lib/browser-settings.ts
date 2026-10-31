@@ -3,6 +3,10 @@ import { useSyncExternalStore } from 'react';
 
 const SETTINGS_KEY = 'actunime.browser.settings';
 
+export type EpisodeEnd = 'auto' | 'ask' | 'off';
+export const EPISODE_THRESHOLDS = [80, 90, 95] as const;
+export type EpisodeThreshold = (typeof EPISODE_THRESHOLDS)[number];
+
 export interface IBrowserSettings {
   /** Bloqueur de publicités et de traqueurs. */
   adblock: boolean;
@@ -12,6 +16,10 @@ export interface IBrowserSettings {
   autoProgress: boolean;
   /** Masquer la barre d'outils quand on lit vers le bas, la rendre en remontant. */
   fullscreen: boolean;
+  /** Fin d'un épisode vu dans la page : liste mise à jour toute seule, sur demande (« Marquer comme lu »), ou jamais. */
+  episodeEnd: EpisodeEnd;
+  /** Part de la vidéo à atteindre pour compter l'épisode comme vu, en pourcentage. */
+  episodeThreshold: EpisodeThreshold;
   /** Sections de l'accueil du navigateur. */
   showResume: boolean;
   showSites: boolean;
@@ -23,6 +31,8 @@ export const DEFAULT_BROWSER_SETTINGS: IBrowserSettings = {
   history: true,
   autoProgress: true,
   fullscreen: true,
+  episodeEnd: 'auto',
+  episodeThreshold: 90,
   showResume: true,
   showSites: true,
   showRecent: true,
@@ -35,8 +45,10 @@ export function parseSettings(raw: string | null): IBrowserSettings {
     const stored = JSON.parse(raw) as Record<string, unknown>;
     const next = { ...DEFAULT_BROWSER_SETTINGS };
     for (const key of Object.keys(next) as (keyof IBrowserSettings)[]) {
-      if (typeof stored[key] === 'boolean') next[key] = stored[key] as boolean;
+      if (typeof stored[key] === 'boolean' && typeof next[key] === 'boolean') (next as Record<string, unknown>)[key] = stored[key];
     }
+    if (stored.episodeEnd === 'auto' || stored.episodeEnd === 'ask' || stored.episodeEnd === 'off') next.episodeEnd = stored.episodeEnd;
+    if (EPISODE_THRESHOLDS.includes(stored.episodeThreshold as EpisodeThreshold)) next.episodeThreshold = stored.episodeThreshold as EpisodeThreshold;
     return next;
   } catch {
     return DEFAULT_BROWSER_SETTINGS;

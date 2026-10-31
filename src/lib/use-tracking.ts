@@ -144,6 +144,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
         setPattern(stored);
         if (ignored) return setTracking({ kind: 'ignored' });
         send({ type: 'set-pattern', pattern: stored });
+        send({ type: 'set-options', episodeThreshold: getBrowserSettings().episodeThreshold / 100 });
         return;
       }
 
@@ -161,7 +162,10 @@ export function useTracking(webview: RefObject<WebView | null>) {
 
       if (message.type === 'progress-reached') {
         // Fin de chapitre : on n'écrit que si l'œuvre est identifiée, sinon l'utilisateur confirme d'abord.
-        if (!getBrowserSettings().autoProgress) {
+        const settings = getBrowserSettings();
+        // Un épisode suit son propre réglage (fin d'épisode) ; un chapitre, « mise à jour à la fin ».
+        if (message.detection.kind === 'anime' && settings.episodeEnd === 'off') return;
+        if (message.detection.kind === 'anime' ? settings.episodeEnd === 'ask' : !settings.autoProgress) {
           return setNotice({ tone: 'info', text: `Fin de ${unitOf(message.detection)} atteinte : touche « Marquer comme lu »` });
         }
         const resolution = await resolve(message.detection).catch(() => null);

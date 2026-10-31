@@ -108,6 +108,11 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
     return () => subscription.remove();
   }, [focused, navigation.canGoBack, onHome]);
 
+  // Seuil de fin d'épisode : le script le lit à chaque mesure, un changement de réglage vaut aussitôt.
+  useEffect(() => {
+    tracking.send({ type: 'set-options', episodeThreshold: settings.episodeThreshold / 100 });
+  }, [settings.episodeThreshold]); // eslint-disable-line react-hooks/exhaustive-deps -- `send` est stable par WebView
+
   // Les barres reviennent quand on quitte le navigateur (autre onglet) ou la page.
   useEffect(() => {
     if (!focused) setReadingChromeHidden(false);

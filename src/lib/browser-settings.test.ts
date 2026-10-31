@@ -12,4 +12,13 @@ describe('parseSettings', () => {
     const settings = parseSettings(JSON.stringify({ adblock: false, history: 'oui', inconnu: false }));
     expect(settings).toEqual({ ...DEFAULT_BROWSER_SETTINGS, adblock: false });
   });
+
+  it('reprend la fin d’épisode et son seuil, et refuse les valeurs inconnues', () => {
+    expect(parseSettings(JSON.stringify({ episodeEnd: 'ask', episodeThreshold: 80 }))).toEqual({
+      ...DEFAULT_BROWSER_SETTINGS,
+      episodeEnd: 'ask',
+      episodeThreshold: 80,
+    });
+    expect(parseSettings(JSON.stringify({ episodeEnd: 'toujours', episodeThreshold: 42 }))).toEqual(DEFAULT_BROWSER_SETTINGS);
+  });
 });
