@@ -114,36 +114,30 @@ export default function BrowserSettingsScreen() {
             <SettingRow
               setting="adblock"
               label="Bloquer les publicités"
-              hint="Bloque aussi les traqueurs ; la page se recharge quand tu changes ce réglage."
+              hint="Bloque aussi les traqueurs. La page se recharge quand tu changes ce réglage."
               value={settings.adblock}
             />
             <SettingRow
-              setting="autoProgress"
-              label="Mettre ma liste à jour à la fin"
-              hint="À la fin d’un chapitre ou d’un épisode. Désactivé : tu touches « Marquer comme lu »."
-              value={settings.autoProgress}
-            />
-            <SettingRow
               setting="fullscreen"
-              label="Plein écran en lisant"
-              hint="La barre d’outils se masque quand tu descends dans la page et revient quand tu remontes."
+              label="Lire en plein écran"
+              hint="Les barres se masquent quand tu descends dans la page et reviennent en haut et en bas de page."
               value={settings.fullscreen}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <ThemedText type="subtitle">Fin d’un épisode</ThemedText>
+          <ThemedText type="subtitle">Suivi de ma liste</ThemedText>
           <View style={styles.card}>
             <SettingRow
-              setting="markPrevious"
-              label="Compter le précédent en commençant la suite"
-              hint="Quand une vidéo tourne depuis 30 s ou qu’un chapitre est lu à 15 %, les épisodes et chapitres d’avant passent en « vus » (œuvre déjà dans ta liste)."
-              value={settings.markPrevious}
+              setting="autoProgress"
+              label="Mettre à jour à la fin d’un chapitre"
+              hint="Désactivé : tu touches « Marquer comme lu »."
+              value={settings.autoProgress}
             />
             <ChoiceRow
-              label="Quand la vidéo se termine"
-              hint="Automatique : ta liste est mise à jour. Je décide : tu touches « Marquer comme lu ». Seules les vidéos de la page sont suivies ; un lecteur intégré d’un autre site demande « Marquer comme lu »."
+              label="Mettre à jour à la fin d’un épisode"
+              hint="« Je décide » : tu touches « Marquer comme lu ». Seules les vidéos de la page sont suivies ; pour un lecteur intégré d’un autre site, touche « Marquer comme lu »."
               value={settings.episodeEnd}
               options={EPISODE_END_OPTIONS}
               onChange={(value) => setBrowserSetting('episodeEnd', value)}
@@ -156,6 +150,12 @@ export default function BrowserSettingsScreen() {
                 onChange={(value) => setBrowserSetting('episodeThreshold', value)}
               />
             ) : null}
+            <SettingRow
+              setting="markPrevious"
+              label="Compter ce qui précède"
+              hint="Quand tu commences un épisode (vidéo lancée depuis 30 s) ou un chapitre (lu à 15 %), ceux d’avant passent en « vus ». Œuvres déjà dans ta liste seulement."
+              value={settings.markPrevious}
+            />
           </View>
         </View>
 
