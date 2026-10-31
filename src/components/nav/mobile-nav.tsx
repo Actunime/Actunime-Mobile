@@ -33,7 +33,7 @@ const DWELL_MS = 1000;
 const SLIDE_PX = 14;
 const FAB_SIZE = 68;
 /** Hauteur de la barre hors zone sûre (`--mobile-nav-height` du site). */
-const BAR_HEIGHT = 60;
+const BAR_HEIGHT = 68;
 /** Distance du centre du bouton central au bas de la barre, hors zone sûre : 8 de marge + 2 + demi-bouton. */
 const HUB_FROM_BOTTOM = 8 + 2 + FAB_SIZE / 2;
 
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 6,
+    paddingTop: 12,
     paddingHorizontal: 8,
     backgroundColor: Colors.backgroundElement,
   },
