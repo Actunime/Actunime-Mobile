@@ -40,8 +40,8 @@ import { Pressable } from '@/components/tap';
 import { ListEntrySheetTrigger } from '@/components/media/list-button';
 import { openEntity, openMediaRelations } from '@/components/entity/open-entity';
 import { openMember } from '@/components/member/open-member';
+import { SOON_OPACITY, showSoon } from '@/lib/soon';
 import { CardCarousel, InfoRow, NewsList, PRIMARY_PILL, Pill, STATUS_PILL, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
-import { MobileNav } from '@/components/nav/mobile-nav';
 import { ManageEntry } from '@/components/list/manage-entry';
 import { openMedia } from '@/components/media-row';
 import { Screen } from '@/components/screen';
@@ -75,8 +75,6 @@ const COMPANY_LABELS: Record<string, string> = { STUDIO: 'Studio', PRODUCER: 'Pr
 const WEEKDAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const STATUS_ORDER = ['WATCHING', 'READING', 'COMPLETED', 'ON_HOLD', 'PLAN_TO_WATCH', 'PLAN_TO_READ'] as const;
 
-/** Page du site ouverte dans le navigateur du téléphone (onglets et actions hors V1). */
-const openSite = (path: string) => WebBrowser.openBrowserAsync(`${WEB_URL}${path}`).catch(() => undefined);
 /** Lien externe ouvert dans le navigateur de lecture de l'app. */
 const openInReader = (url: string) => router.navigate({ pathname: '/reading', params: { url, t: String(Date.now()) } });
 
@@ -226,7 +224,7 @@ export default function MediaScreen() {
   ];
   const goTab = (tab: (typeof tabs)[number]) => {
     setTabsOpen(false);
-    if (tab.path) openSite(tab.path);
+    if (tab.path) showSoon(`L’onglet « ${tab.label} »`);
     else scroll.current?.scrollTo({ y: tab.section === 'top' ? 0 : Math.max(0, (offsets.current[tab.section ?? ''] ?? 0) - 8), animated: true });
   };
   const at = (key: string) => (y: number) => {
@@ -394,7 +392,7 @@ export default function MediaScreen() {
                 Les informations de cette page sont incompletes.
               </Txt>
             </View>
-            <Pressable onPress={() => openSite(`/contribute/${kind}/new?editId=${id}`)} style={styles.warningButton}>
+            <Pressable onPress={() => showSoon('La modification d’une fiche')} style={[styles.warningButton, { opacity: SOON_OPACITY }]}>
               <Txt size="xs" weight="medium" color="#000">
                 Completer
               </Txt>
@@ -411,7 +409,7 @@ export default function MediaScreen() {
             <ChevronDown size={14} color={alpha(Tw.color.foreground, 0.6)} style={styles.tabChevron} />
           </Pressable>
           <View style={styles.icons}>
-            <IconButton icon={Pencil} label="Modifier" onPress={() => openSite(`/contribute/${kind}/new?editId=${id}`)} />
+            <IconButton icon={Pencil} label="Modifier" soon onPress={() => showSoon('La modification d’une fiche')} />
             <IconButton icon={Share2} label="Partager" onPress={() => Share.share({ message: `${mediaTitle(data)} — ${WEB_URL}${sitePath}` }).catch(() => undefined)} />
             <Pressable
               accessibilityRole="button"
@@ -425,7 +423,7 @@ export default function MediaScreen() {
               </Txt>
             </Pressable>
             <View style={styles.iconSeparator}>
-              <IconButton icon={TriangleAlert} label="Signaler" onPress={() => openSite(sitePath)} />
+              <IconButton icon={TriangleAlert} label="Signaler" soon onPress={() => showSoon('Le signalement')} />
             </View>
           </View>
         </View>
@@ -593,14 +591,14 @@ export default function MediaScreen() {
             </SectionCard>
           </View>
 
-          <SectionCard title="Activités récentes" icon={Activity} action={{ label: 'Tout voir', onPress: () => openSite(`${sitePath}/activites`) }}>
+          <SectionCard title="Activités récentes" icon={Activity}>
             <Txt size="sm" color={Tw.color.mutedForeground}>
-              Le fil d'activité de l'œuvre s'ouvre sur le site.
+              Le fil d’activité de l’œuvre arrive bientôt dans l’application.
             </Txt>
           </SectionCard>
-          <SectionCard title="Discussion" icon={MessagesSquare} action={{ label: 'Ouvrir', onPress: () => openSite(`${sitePath}/discussion`) }}>
+          <SectionCard title="Discussion" icon={MessagesSquare}>
             <Txt size="sm" color={Tw.color.mutedForeground}>
-              La discussion de l'œuvre s'ouvre sur le site.
+              La discussion de l’œuvre arrive bientôt dans l’application.
             </Txt>
           </SectionCard>
 
@@ -648,7 +646,7 @@ export default function MediaScreen() {
                 <Txt size="sm" color={Tw.color.mutedForeground} style={styles.flex}>
                   Cette fiche n'a pas encore de musiques.
                 </Txt>
-                <Pressable onPress={() => openSite(`/contribute/${kind}/new?editId=${id}`)} style={styles.inline}>
+                <Pressable onPress={() => showSoon('La modification d’une fiche')} style={[styles.inline, { opacity: SOON_OPACITY }]}>
                   <Pencil size={16} color={Tw.color.primary} />
                   <Txt size="sm" weight="medium" color={Tw.color.primary}>
                     Compléter
@@ -662,7 +660,6 @@ export default function MediaScreen() {
       {scrolled ? (
         <View pointerEvents="none" style={[styles.statusVeil, { height: insets.top }]} />
       ) : null}
-      <MobileNav />
 
       <ManageEntry kind={kind} media={data} entry={entry} open={manageOpen} onClose={() => setManageOpen(false)} genres={genres.map((g) => g.name)} hideViewEntity />
 
@@ -672,12 +669,12 @@ export default function MediaScreen() {
             const Icon = tab.icon;
             const active = tab.id === 'general';
             return (
-              <Pressable key={tab.id} onPress={() => goTab(tab)} style={[styles.tabItem, active && { backgroundColor: Tw.color.muted }]}>
+              <Pressable key={tab.id} onPress={() => goTab(tab)} style={[styles.tabItem, active && { backgroundColor: Tw.color.muted }, tab.path ? { opacity: SOON_OPACITY } : null]}>
                 <Icon size={20} color={active ? Tw.color.foreground : Tw.color.mutedForeground} />
                 <Txt size="sm" weight="medium" color={active ? Tw.color.foreground : Tw.color.mutedForeground} style={styles.flex}>
                   {tab.label}
                 </Txt>
-                {tab.path ? <ExternalLink size={14} color={Tw.color.mutedForeground} /> : null}
+                {tab.path ? <Txt size="xs" color={Tw.color.mutedForeground}>Bientôt</Txt> : null}
               </Pressable>
             );
           })}
@@ -687,9 +684,9 @@ export default function MediaScreen() {
   );
 }
 
-function IconButton({ icon: Icon, label, onPress }: Readonly<{ icon: LucideIcon; label: string; onPress: () => void }>) {
+function IconButton({ icon: Icon, label, onPress, soon }: Readonly<{ icon: LucideIcon; label: string; onPress: () => void; soon?: boolean }>) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.iconButton}>
+    <Pressable accessibilityRole="button" accessibilityLabel={soon ? `${label} (bientôt disponible)` : label} onPress={onPress} style={[styles.iconButton, soon && { opacity: SOON_OPACITY }]}>
       <Icon size={16} color={Tw.color.foreground} />
     </Pressable>
   );
