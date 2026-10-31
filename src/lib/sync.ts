@@ -230,6 +230,17 @@ export async function currentProgress(
   }
 }
 
+/**
+ * L'œuvre en attente mémorisée n'est plus dans ma liste (validée, fusionnée ou supprimée) : l'association est périmée
+ * et doit être refaite, pas affichée comme une panne.
+ */
+export class StaleMatchError extends Error {
+  constructor() {
+    super('Cette œuvre a changé depuis la dernière fois : choisis-la à nouveau');
+    this.name = 'StaleMatchError';
+  }
+}
+
 /** Écrit la progression dans la liste, sans jamais la faire reculer (crée l'entrée si elle n'existe pas). */
 export async function pushProgress(detection: PageDetection, match: IMatch): Promise<PushResult> {
   const isManga = detection.kind === 'manga';
@@ -241,7 +252,7 @@ export async function pushProgress(detection: PageDetection, match: IMatch): Pro
   const activeStatus = isManga ? 'READING' : 'WATCHING';
 
   if (!entry) {
-    if (match.kind === 'pending') throw new Error('Cette œuvre en attente n’est plus dans ta liste');
+    if (match.kind === 'pending') throw new StaleMatchError();
     await api.createListEntry({
       mediaId: match.id,
       mediaType: mediaTypeOf(detection.kind),

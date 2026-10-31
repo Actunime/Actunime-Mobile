@@ -39,7 +39,7 @@ vi.mock('./api', () => {
 });
 
 import { api, ApiError, type IListEntry } from './api';
-import { confirm, currentProgress, pushProgress, resolve, searchCandidates } from './sync';
+import { confirm, currentProgress, pushProgress, resolve, searchCandidates, StaleMatchError } from './sync';
 
 const mocked = vi.mocked(api);
 
@@ -193,8 +193,8 @@ describe('pushProgress', () => {
   });
 
   it('refuse d’écrire si l’entrée en attente n’est plus dans ma liste', async () => {
-    await expect(pushProgress(detection(), { kind: 'pending', id: 'e1', title: 'x' })).rejects.toThrow(
-      'plus dans ta liste',
+    await expect(pushProgress(detection(), { kind: 'pending', id: 'e1', title: 'x' })).rejects.toBeInstanceOf(
+      StaleMatchError,
     );
   });
 

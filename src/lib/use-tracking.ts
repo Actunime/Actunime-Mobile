@@ -9,7 +9,7 @@ import { getBrowserSettings } from './browser-settings';
 import { progressNotice } from './notices';
 import { getPattern, isHostIgnored, removePattern, savePattern, setHostIgnored } from './patterns';
 import type { IMatch } from './storage';
-import { confirm, currentProgress, forget, pushProgress, quickAddWork, resolve, type ICandidate } from './sync';
+import { confirm, currentProgress, forget, pushProgress, quickAddWork, resolve, StaleMatchError, type ICandidate } from './sync';
 
 export type TrackingState =
   | { kind: 'idle' }
@@ -70,21 +70,6 @@ export function useTracking(webview: RefObject<WebView | null>) {
 
   const progressOf = useCallback((detection: PageDetection, match: IMatch) => currentProgress(detection, match), []);
 
-  const push = useCallback(
-    async (detection: PageDetection, match: IMatch) => {
-      const number = numberOf(detection);
-      if (number === undefined) return setNotice({ tone: 'error', text: `Numéro de ${unitOf(detection)} non détecté` });
-      try {
-        const result = await pushProgress(detection, match);
-        setNotice({ tone: 'success', text: progressNotice(detection.kind, number, result) });
-        setTracking({ kind: 'matched', detection, match, progress: await progressOf(detection, match) });
-      } catch (err) {
-        fail(err);
-      }
-    },
-    [fail, progressOf],
-  );
-
   /**
    * Page reconnue par la phase automatique et œuvre identifiée : le réglage du site est mémorisé tout seul, sans
    * passer par l'assistant. Corriger reste possible (« Ce n'est pas la bonne œuvre », « Configurer ce site »).
@@ -125,6 +110,27 @@ export function useTracking(webview: RefObject<WebView | null>) {
       }
     },
     [fail, progressOf, rememberSite],
+  );
+
+  const push = useCallback(
+    async (detection: PageDetection, match: IMatch) => {
+      const number = numberOf(detection);
+      if (number === undefined) return setNotice({ tone: 'error', text: `Numéro de ${unitOf(detection)} non détecté` });
+      try {
+        const result = await pushProgress(detection, match);
+        setNotice({ tone: 'success', text: progressNotice(detection.kind, number, result) });
+        setTracking({ kind: 'matched', detection, match, progress: await progressOf(detection, match) });
+      } catch (err) {
+        if (err instanceof StaleMatchError) {
+          // association périmée : on l'oublie et on retrouve l'œuvre (liste, catalogue, ou choix de l'utilisateur)
+          await forget(detection);
+          setNotice({ tone: 'info', text: err.message });
+          return identify(detection);
+        }
+        fail(err);
+      }
+    },
+    [fail, progressOf, identify],
   );
 
   const onMessage = useCallback(
