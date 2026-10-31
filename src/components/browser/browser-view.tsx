@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useIsFocused } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, StyleSheet, TextInput, View } from 'react-native';
+import { router, useIsFocused } from 'expo-router';
+import { Alert, BackHandler, Linking, Share, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
 
 import { Pressable } from '@/components/tap';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { ConfigWizard } from './config-wizard';
 import { fieldStyle } from './wizard-parts';
 import { SearchSheet } from './search-sheet';
@@ -18,6 +19,7 @@ import type { StrategyResult } from '@/detection/core/types';
 import { INJECTED_DETECTION } from '@/detection/injected.generated';
 import { commandScript, parseInPageMessage, type PickedElement } from '@/detection/messages';
 import { resolveAddress } from '@/lib/address';
+import { nextNumberUrl } from '@/lib/next-chapter';
 import { getBrowserSettings, setBrowserSetting, useBrowserSettings } from '@/lib/browser-settings';
 import { lastReadKey, recordLastRead, recordVisit } from '@/lib/browsing';
 import { useTracking } from '@/lib/use-tracking';
@@ -48,6 +50,15 @@ function IconButton({ name, label, onPress, disabled }: IconButtonProps) {
   );
 }
 
+function MenuRow({ icon, label, onPress }: Readonly<{ icon: React.ComponentProps<typeof Ionicons>['name']; label: string; onPress: () => void }>) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.menuRow}>
+      <Ionicons name={icon} size={22} color={Colors.text} />
+      <ThemedText>{label}</ThemedText>
+    </Pressable>
+  );
+}
+
 interface IBrowserViewProps {
   url: string;
   /** Retour à la page d'accueil du navigateur (bouton Accueil, ou retour Android depuis la première page). */
@@ -73,6 +84,12 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
   const [strategies, setStrategies] = useState<StrategyResult[] | null>(null);
   const [picked, setPicked] = useState<{ seq: number; element: PickedElement } | null>(null);
   const pickSeq = useRef(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Plein écran de lecture : barre d'outils masquée vers le bas. Après chaque changement on ignore le défilement
+  // un instant, car le redimensionnement de la page en provoque un lui-même.
+  const [barsHidden, setBarsHidden] = useState(false);
+  const lastBarsChange = useRef(0);
+  const nextLinkResolver = useRef<((href: string | null) => void) | null>(null);
 
   // Bouton retour d'Android : page précédente du site, puis accueil du navigateur. L'onglet reste monté
   // quand on change d'onglet : le retour ne lui appartient que tant qu'il est à l'écran.
@@ -127,6 +144,15 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
         return setPicked({ seq: pickSeq.current, element: message.element });
       }
       if (message.type === 'pick-cancelled') return;
+      if (message.type === 'scroll-direction') {
+        const hide = message.direction === 'down' && getBrowserSettings().fullscreen;
+        if (Date.now() - lastBarsChange.current > 600) {
+          lastBarsChange.current = Date.now();
+          setBarsHidden(hide);
+        }
+        return;
+      }
+      if (message.type === 'next-link') return nextLinkResolver.current?.(message.href);
       void tracking.onMessage(message);
     },
     [tracking],
@@ -156,9 +182,29 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
     void recordLastRead(lastReadKey(detection.kind, match.id), { url: detection.url, number });
   }, [state]);
 
+  const unit = current?.kind === 'manga' ? 'Chapitre' : 'Épisode';
+  const currentNumber = current ? (current.kind === 'manga' ? current.chapter : current.episode) : undefined;
+
+  /** Chapitre ou épisode suivant : le lien de la page quand elle en donne un, sinon le numéro suivant dans l'adresse. */
+  const goNext = useCallback(async () => {
+    setMenuOpen(false);
+    const href = await new Promise<string | null>((resolve) => {
+      nextLinkResolver.current = resolve;
+      tracking.send({ type: 'find-next-link' });
+      setTimeout(() => resolve(null), 1500);
+    });
+    nextLinkResolver.current = null;
+    const target = href ?? (currentNumber !== undefined ? nextNumberUrl(pageUrl, currentNumber) : null);
+    if (target) setSource(target);
+    else Alert.alert('Suite introuvable', `Cette page ne donne pas de lien vers le ${unit.toLowerCase()} suivant.`);
+  }, [tracking, currentNumber, pageUrl, unit]);
+
+  const showBars = !barsHidden || editing || navigation.loading;
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.container} edges={['top']}>
+        {showBars && (
         <ThemedView type="backgroundElement" style={styles.toolbar}>
           <IconButton name="home-outline" label="Accueil du navigateur" onPress={onHome} />
           <IconButton
@@ -166,12 +212,6 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
             label="Page précédente"
             onPress={() => webview.current?.goBack()}
             disabled={!navigation.canGoBack}
-          />
-          <IconButton
-            name="chevron-forward"
-            label="Page suivante"
-            onPress={() => webview.current?.goForward()}
-            disabled={!navigation.canGoForward}
           />
           <TextInput
             value={address}
@@ -208,10 +248,14 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
             label={navigation.loading ? 'Arrêter' : 'Recharger'}
             onPress={() => (navigation.loading ? webview.current?.stopLoading() : webview.current?.reload())}
           />
+          <IconButton name="ellipsis-vertical" label="Menu du navigateur" onPress={() => setMenuOpen(true)} />
         </ThemedView>
+        )}
+        {showBars && (
         <View style={styles.progressTrack}>
           {navigation.loading && <View style={[styles.progressBar, { width: `${Math.round(progress * 100)}%` }]} />}
         </View>
+        )}
 
         <View style={styles.container}>
           <WebView
@@ -247,6 +291,48 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
             />
           )}
         </View>
+
+        <BottomSheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Navigateur">
+          <View style={styles.menu}>
+            {current && currentNumber !== undefined ? (
+              <MenuRow icon="play-skip-forward-outline" label={`${unit} suivant`} onPress={() => void goNext()} />
+            ) : null}
+            {navigation.canGoForward ? (
+              <MenuRow
+                icon="chevron-forward"
+                label="Page suivante de l’historique"
+                onPress={() => {
+                  setMenuOpen(false);
+                  webview.current?.goForward();
+                }}
+              />
+            ) : null}
+            <MenuRow
+              icon="share-outline"
+              label="Partager ou copier l’adresse"
+              onPress={() => {
+                setMenuOpen(false);
+                void Share.share({ message: pageUrl });
+              }}
+            />
+            <MenuRow
+              icon="open-outline"
+              label="Ouvrir dans le navigateur du téléphone"
+              onPress={() => {
+                setMenuOpen(false);
+                void Linking.openURL(pageUrl);
+              }}
+            />
+            <MenuRow
+              icon="settings-outline"
+              label="Réglages du navigateur"
+              onPress={() => {
+                setMenuOpen(false);
+                router.push('/browser-settings');
+              }}
+            />
+          </View>
+        </BottomSheet>
 
         <ConfigWizard
           visible={wizardOpen}
@@ -313,6 +399,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     fontSize: 14,
   },
+  menu: { gap: Spacing.one, paddingBottom: Spacing.three },
+  menuRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 48, paddingHorizontal: Spacing.two, borderRadius: Radius.medium },
   progressTrack: { height: 2, backgroundColor: Colors.backgroundElement },
   progressBar: { height: 2, backgroundColor: Colors.primary },
 });

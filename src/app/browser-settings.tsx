@@ -75,6 +75,12 @@ export default function BrowserSettingsScreen() {
               hint="À la fin d’un chapitre ou d’un épisode. Désactivé : tu touches « Marquer comme lu »."
               value={settings.autoProgress}
             />
+            <SettingRow
+              setting="fullscreen"
+              label="Plein écran en lisant"
+              hint="La barre d’outils se masque quand tu descends dans la page et revient quand tu remontes."
+              value={settings.fullscreen}
+            />
           </View>
         </View>
 

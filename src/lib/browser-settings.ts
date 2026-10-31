@@ -10,6 +10,8 @@ export interface IBrowserSettings {
   history: boolean;
   /** Mettre ma liste à jour dès la fin du chapitre ou de l'épisode ; sinon, « Marquer comme lu » à la main. */
   autoProgress: boolean;
+  /** Masquer la barre d'outils quand on lit vers le bas, la rendre en remontant. */
+  fullscreen: boolean;
   /** Sections de l'accueil du navigateur. */
   showResume: boolean;
   showSites: boolean;
@@ -20,6 +22,7 @@ export const DEFAULT_BROWSER_SETTINGS: IBrowserSettings = {
   adblock: true,
   history: true,
   autoProgress: true,
+  fullscreen: true,
   showResume: true,
   showSites: true,
   showRecent: true,
