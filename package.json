@@ -49,8 +49,6 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web",
     "lint": "expo lint",
     "build:injected": "node scripts/build-injected.mjs",
     "type-check": "tsc --noEmit",
