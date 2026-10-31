@@ -6,6 +6,7 @@ import {
   type IListEntryFields,
   type EntityKind,
   type EntityRelation,
+  type FavoriteType,
   type IMediaSearchBody,
   type ListStatus,
   type MediaKind,
@@ -69,6 +70,31 @@ export const useMediaLinks = (kind: MediaKind, id: string, what: 'characters' | 
     queryKey: ['media-links', kind, id, what],
     queryFn: () => api.getMediaLinks(kind, id, what),
     staleTime: FIVE_MINUTES,
+  });
+
+export const useMemberProfile = (username: string) =>
+  useQuery({ queryKey: ['member', username, 'profile'], queryFn: () => api.getMemberProfile(username), enabled: !!username, retry: false });
+
+export const useMemberStats = (username: string, enabled = true) =>
+  useQuery({ queryKey: ['member', username, 'stats'], queryFn: () => api.getMemberStats(username), enabled: enabled && !!username });
+
+/** Liste d'un membre, par pages, filtrable par statut. */
+export const useMemberList = (memberId: string | undefined, mediaType: 'Anime' | 'Manga', status: ListStatus | undefined, enabled = true) =>
+  useInfiniteQuery({
+    queryKey: ['member-list', memberId, mediaType, status ?? 'ALL'],
+    queryFn: ({ pageParam }) => api.getMemberList(memberId as string, mediaType, status, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
+    enabled: enabled && !!memberId,
+  });
+
+export const useMemberFavorites = (memberId: string | undefined, type: FavoriteType | undefined, enabled = true) =>
+  useInfiniteQuery({
+    queryKey: ['member-favorites', memberId, type ?? 'ALL'],
+    queryFn: ({ pageParam }) => api.getMemberFavorites(memberId as string, type, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
+    enabled: enabled && !!memberId,
   });
 
 export const useEntity = (kind: EntityKind, id: string) =>

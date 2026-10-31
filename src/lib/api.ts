@@ -253,6 +253,75 @@ export const mediaId = (e: { id?: string; _id?: string }): string => (e.id ?? e.
 
 const kindPath = (kind: MediaKind) => (kind === 'manga' ? '/mangas' : '/animes');
 
+/** Profil public d'un membre (`GET /members/profile/:username`). */
+export interface IMemberBadge {
+  id?: string;
+  badge?: { id?: string; label?: string; name?: string; description?: string; color?: string };
+}
+
+export interface IMemberProfile {
+  id: string;
+  username: string;
+  displayName?: string;
+  description?: string;
+  avatarUrl?: string | null;
+  bannerUrl?: string | null;
+  followersCount?: number;
+  followingCount?: number;
+  friendsCount?: number;
+  createdAt?: string;
+  badges?: IMemberBadge[];
+}
+
+export interface IMemberPublicProfile {
+  member: IMemberProfile;
+  /** Ce que le membre laisse voir : profil, listes, activité (toujours tout pour le propriétaire). */
+  visibility: { profileVisible: boolean; listsVisible: boolean; activityVisible: boolean };
+  isOwnProfile?: boolean;
+}
+
+export interface IListStats {
+  total: number;
+  watching: number;
+  completed: number;
+  onHold: number;
+  dropped: number;
+  planToWatch: number;
+  averageScore: number;
+}
+
+/** Statistiques d'un membre (`GET /members/:username/detail-stats`). */
+export interface IMemberDetailStats {
+  memberSince?: string;
+  animeListStats: IListStats;
+  mangaListStats: IListStats;
+  favoriteCount: number;
+  favoritesByType: Record<string, number>;
+  proposalCount: number;
+  proposalsByStatus: { pending: number; approved: number; rejected: number; correctionRequested: number };
+  activityCount: number;
+}
+
+export type FavoriteType = 'Anime' | 'Manga' | 'Character' | 'Person' | 'Company' | 'Track';
+
+/** Favori d'un membre : sa cible (œuvre ou entité) est jointe par l'API. */
+export interface IFavorite {
+  id?: string;
+  _id?: string;
+  targetId: string;
+  targetType: FavoriteType;
+  target?: {
+    id?: string;
+    _id?: string;
+    title?: { original?: string };
+    name?: { original?: string };
+    posterUrl?: string | null;
+    avatarUrl?: string | null;
+    logoUrl?: string | null;
+    coverUrl?: string | null;
+  } | null;
+}
+
 /** Entités reliées aux œuvres : personnage, personne (staff, doubleur, artiste), musique, société. */
 export type EntityKind = 'character' | 'person' | 'track' | 'company';
 
@@ -360,6 +429,29 @@ export const api = {
   /** Actualités publiées reliées à une fiche (publiques). */
   getMediaNews(id: string) {
     return request<INewsArticle[]>(`/news/public/media/${id}/articles`, { auth: false });
+  },
+
+  getMemberProfile(username: string) {
+    return request<IMemberPublicProfile>(`/members/profile/${encodeURIComponent(username)}`);
+  },
+
+  getMemberStats(username: string) {
+    return request<IMemberDetailStats>(`/members/${encodeURIComponent(username)}/detail-stats`);
+  },
+
+  /** Une page de la liste d'un membre (celle d'un autre membre ne montre que ce qu'il laisse voir). */
+  getMemberList(memberId: string, mediaType: 'Anime' | 'Manga', status: ListStatus | undefined, page = 1, limit = 30) {
+    return request<IPage<IListEntry>>(`/lists/member/${encodeURIComponent(memberId)}`, {
+      method: 'POST',
+      body: { page, limit, query: { mediaType, ...(status ? { status } : {}) }, sort: { updatedAt: 'desc' } },
+    });
+  },
+
+  getMemberFavorites(memberId: string, type: FavoriteType | undefined, page = 1, limit = 30) {
+    return request<IPage<IFavorite>>(`/favoris/member/${encodeURIComponent(memberId)}`, {
+      method: 'POST',
+      body: { page, limit, query: type ? { targetType: type } : {}, sort: { createdAt: 'desc' } },
+    });
   },
 
   getEntity(kind: EntityKind, id: string) {
