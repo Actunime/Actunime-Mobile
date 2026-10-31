@@ -128,6 +128,8 @@ export default function MediaScreen() {
   const [tabsOpen, setTabsOpen] = useState(false);
   const insets = useSafeAreaInsets();
   const scroll = useRef<ScrollView>(null);
+  // voile sous la barre d'état dès que le contenu défile dessous (sinon l'heure et les icônes se mêlent au texte)
+  const [scrolled, setScrolled] = useState(false);
   const offsets = useRef<Record<string, number>>({});
 
   const loaded = media.data;
@@ -273,7 +275,15 @@ export default function MediaScreen() {
 
   return (
     <Screen edges={[]}>
-      <ScrollView ref={scroll} contentContainerStyle={styles.content}>
+      <ScrollView
+        ref={scroll}
+        contentContainerStyle={styles.content}
+        scrollEventThrottle={32}
+        onScroll={(e) => {
+          const past = e.nativeEvent.contentOffset.y > 8;
+          setScrolled((was) => (was === past ? was : past));
+        }}
+      >
         {/* En-tête immersif : bannière en fond, dégradé vers le fond de page, affiche centrée. */}
         <View style={styles.hero}>
           {data.bannerUrl ? <Image source={{ uri: data.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
@@ -632,6 +642,9 @@ export default function MediaScreen() {
           ) : null}
         </View>
       </ScrollView>
+      {scrolled ? (
+        <View pointerEvents="none" style={[styles.statusVeil, { height: insets.top }]} />
+      ) : null}
       <MobileNav />
 
       <ManageEntry kind={kind} media={data} entry={entry} open={manageOpen} onClose={() => setManageOpen(false)} genres={genres.map((g) => g.name)} hideViewEntity />
@@ -674,6 +687,7 @@ const styles = StyleSheet.create({
   stackSmall: { gap: 8 },
   content: { paddingBottom: 24 },
   topBack: { padding: 12, paddingTop: 48 },
+  statusVeil: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: alpha(Tw.color.background, 0.9) },
   back: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 14, borderRadius: Tw.radius.md, backgroundColor: Tw.color.muted },
   hero: { overflow: 'hidden', backgroundColor: Tw.color.muted, borderTopLeftRadius: Tw.radius.lg, borderTopRightRadius: Tw.radius.lg },
   heroBack: { position: 'absolute', top: 44, left: 12, zIndex: 2 },
