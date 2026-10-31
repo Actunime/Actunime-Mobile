@@ -53,6 +53,15 @@ export function openTarget(target: IMobileNavItem): void {
   else if (target.path) showSoon(target.label);
 }
 
+/** Logo Actunime au centre du bouton central : centré dans un cadre de taille fixe (et non étiré à la hauteur du cercle). */
+function HubLogo() {
+  return (
+    <View style={styles.fabLogoWrap}>
+      <Image source={require('../../../assets/images/logo.png')} style={styles.fabLogo} contentFit="contain" />
+    </View>
+  );
+}
+
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 function DwellRing() {
@@ -389,7 +398,7 @@ export function MobileNav() {
 
   return (
     <>
-      <View style={[styles.bar, { height: BAR_HEIGHT + insets.bottom, paddingBottom: 6 + insets.bottom }, open && styles.barOpen]}>
+      <View style={[styles.bar, { height: BAR_HEIGHT + insets.bottom, paddingBottom: 6 + insets.bottom }]}>
         {renderTab(MEMBER_TABS[0]!)}
         {renderTab(MEMBER_TABS[1]!)}
         <View style={styles.hub}>
@@ -403,14 +412,14 @@ export function MobileNav() {
             onResponderMove={onMove}
             onResponderRelease={onRelease}
             onResponderTerminate={onTerminate}
-            style={[styles.fab, open && styles.fabOpen]}
+            style={[styles.fab, open && styles.fabOpen, open && styles.fabHidden]}
           >
             {inSubmenu ? (
               <View style={styles.fabBack}>
                 <Ionicons name="chevron-back" size={30} color={Colors.primaryForeground} />
               </View>
             ) : open ? (
-              <Image source={require('../../../assets/images/logo.png')} style={styles.fabLogo} contentFit="contain" />
+              <HubLogo />
             ) : auth.user.avatarUrl ? (
               <Image source={{ uri: auth.user.avatarUrl }} style={styles.fabFill} contentFit="cover" />
             ) : (
@@ -429,6 +438,16 @@ export function MobileNav() {
           <Pressable style={[styles.veil, { bottom: BAR_HEIGHT + insets.bottom }]} onPress={close} accessibilityLabel="Fermer les actions" />
           {overlayHeight > 0 ? (
             <>
+              {/* Le bouton central dépasse de la barre : le voile le coupait. Sa copie est posée au-dessus du voile, sous les actions. */}
+              <View pointerEvents="none" style={[styles.hubGhost, { left: hubX - FAB_SIZE / 2, top: hubY - FAB_SIZE / 2 }]}>
+                {inSubmenu ? (
+                  <View style={styles.fabBack}>
+                    <Ionicons name="chevron-back" size={30} color={Colors.primaryForeground} />
+                  </View>
+                ) : (
+                  <HubLogo />
+                )}
+              </View>
               {hot ? (
                 <View
                   pointerEvents="none"
@@ -509,8 +528,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     backgroundColor: Colors.backgroundElement,
   },
-  // éventail ouvert : la barre (et le bouton central qui dépasse) passe au-dessus du voile, il ne la coupe plus
-  barOpen: { zIndex: 13, elevation: 13 },
   tab: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 14, paddingVertical: 6 },
   tabPressed: { opacity: 0.55 },
   tabActive: { backgroundColor: 'rgba(0, 153, 255, 0.16)' },
@@ -534,7 +551,23 @@ const styles = StyleSheet.create({
   handle: { width: 64, height: 4, borderRadius: 2, backgroundColor: 'rgba(0, 153, 255, 0.7)' },
   fabOpen: { transform: [{ scale: 1.12 }], borderColor: Colors.primary },
   fabFill: { width: '100%', height: '100%' },
-  fabLogo: { flex: 1, margin: 13, transform: [{ translateX: 1 }, { translateY: -2 }] },
+  fabLogoWrap: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  fabLogo: { width: 40, height: 42, transform: [{ translateY: -1 }] },
+  fabHidden: { opacity: 0 },
+  hubGhost: {
+    position: 'absolute',
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.backgroundElement,
+    overflow: 'hidden',
+    transform: [{ scale: 1.12 }],
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+  },
   fabInitial: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.backgroundSelected },
   fabBack: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary },
   /** Les cartes des écrans ont une élévation : sans une élévation supérieure, elles se dessinent par-dessus le voile. */

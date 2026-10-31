@@ -188,7 +188,7 @@ export function ListEntrySheet({
   return (
     <BottomSheet open={open} onClose={onClose} header={header} collapsedHeight={472} onExpandedChange={setExpanded}>
       {entry ? (
-        <ScrollView scrollEnabled={expanded} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={styles.section}>
             <SectionTitle>Statut</SectionTitle>
             <View style={styles.statusGrid}>
