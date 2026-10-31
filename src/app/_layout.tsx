@@ -77,6 +77,7 @@ export default function RootLayout() {
             <Stack.Screen name="track/[id]" />
             <Stack.Screen name="company/[id]" />
             <Stack.Screen name="relations" />
+            <Stack.Screen name="member/[username]" />
           </Stack.Protected>
           <Stack.Screen name="auth/callback" />
         </Stack>

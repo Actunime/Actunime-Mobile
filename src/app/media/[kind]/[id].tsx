@@ -39,6 +39,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Pressable } from '@/components/tap';
 import { ListEntrySheetTrigger } from '@/components/media/list-button';
 import { openEntity, openMediaRelations } from '@/components/entity/open-entity';
+import { openMember } from '@/components/member/open-member';
 import { CardCarousel, InfoRow, NewsList, PRIMARY_PILL, Pill, STATUS_PILL, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
 import { MobileNav } from '@/components/nav/mobile-nav';
 import { ManageEntry } from '@/components/list/manage-entry';
@@ -580,7 +581,7 @@ export default function MediaScreen() {
                       </Txt>
                       <View style={styles.wrap}>
                         {community.recentFollowers.map((e) => (
-                          <Pressable key={e.member.id} onPress={() => openSite(`/membres/${e.member.username}`)}>
+                          <Pressable key={e.member.id} onPress={() => openMember(e.member.username)}>
                             <MemberAvatar member={e.member} size={36} />
                           </Pressable>
                         ))}

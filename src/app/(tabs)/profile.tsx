@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { Linking, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
+import { openMember } from '@/components/member/open-member';
 import { Sheen } from '@/components/ui/sheen';
 import { Button } from '@/components/button';
 import { Screen } from '@/components/screen';
@@ -159,13 +160,9 @@ export default function ProfileScreen() {
 
           <Sheen />
           <ThemedText type="small" themeColor="textSecondary">
-            Statistiques détaillées, amis, activité et réglages du compte sont sur le site.
+            Ton profil public, tes favoris et tes statistiques détaillées.
           </ThemedText>
-          <Button
-            label="Ouvrir mon profil sur le site"
-            variant="outline"
-            onPress={() => Linking.openURL(`${WEB_URL}/membres/${encodeURIComponent(auth.user.username)}`)}
-          />
+          <Button label="Voir mon profil public" variant="outline" onPress={() => openMember(auth.user.username)} />
         </ThemedView>
 
         <AppUpdate />
