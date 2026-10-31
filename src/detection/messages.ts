@@ -37,6 +37,8 @@ export type InPageMessage =
   | { type: 'pick-cancelled' }
   /** Sens du défilement de la page (barres masquées en plein écran de lecture). */
   | { type: 'scroll-direction'; direction: 'down' | 'up' }
+  /** Position de lecture : bord atteint (haut, bas) et part de la page défilée. */
+  | { type: 'scroll-state'; edge: 'top' | 'middle' | 'bottom'; percent: number }
   /** Réponse à `find-next-link` : lien du chapitre ou de l'épisode suivant, `null` si la page n'en donne pas. */
   | { type: 'next-link'; href: string | null };
 
@@ -48,7 +50,7 @@ export type InPageCommand =
   | { type: 'stop-pick' }
   | { type: 'find-next-link' };
 
-const MESSAGE_TYPES = ['ready', 'detection', 'progress-reached', 'strategies', 'picked', 'pick-cancelled', 'scroll-direction', 'next-link'];
+const MESSAGE_TYPES = ['ready', 'detection', 'progress-reached', 'strategies', 'picked', 'pick-cancelled', 'scroll-direction', 'scroll-state', 'next-link'];
 
 export function parseInPageMessage(raw: string): InPageMessage | null {
   try {

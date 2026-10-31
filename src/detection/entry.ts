@@ -11,6 +11,7 @@ import { applyLearnedPattern } from './core/learned-engine';
 import { detectGenericFromDom, inferKind } from './core/heuristics';
 import { createNextButtonObserver } from './core/next-button';
 import { findNextLink } from './core/next-link';
+import { scrollState } from './core/scroll-state';
 import { createPageCounterObserver } from './core/page-counter';
 import { createScrollObserver } from './core/scroll';
 import { generateSelector } from './core/selector';
@@ -304,12 +305,21 @@ if (!window.__actunime) {
   let lastScrollY = window.scrollY;
   let scrollDirection: 'down' | 'up' | null = null;
   let travelled = 0;
+  let lastEdge: string | null = null;
+  let lastPercent = -10;
   window.addEventListener(
     'scroll',
     () => {
       const y = window.scrollY;
       const delta = y - lastScrollY;
       lastScrollY = y;
+      // Bord atteint et part lue : la bande du haut affiche le pourcentage, la navigation revient en bas de page.
+      const state = scrollState(y, Math.max(0, document.documentElement.scrollHeight - window.innerHeight));
+      if (state.edge !== lastEdge || Math.abs(state.percent - lastPercent) >= 2) {
+        lastEdge = state.edge;
+        lastPercent = state.percent;
+        post({ type: 'scroll-state', edge: state.edge, percent: state.percent });
+      }
       if (y <= 0) {
         travelled = 0;
         if (scrollDirection !== 'up') post({ type: 'scroll-direction', direction: (scrollDirection = 'up') });
