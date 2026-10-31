@@ -72,6 +72,11 @@ export default function RootLayout() {
             <Stack.Screen name="media/[kind]/[id]" />
             <Stack.Screen name="edit/[kind]/[id]" options={{ presentation: 'modal' }} />
             <Stack.Screen name="browser-settings" />
+            <Stack.Screen name="character/[id]" />
+            <Stack.Screen name="person/[id]" />
+            <Stack.Screen name="track/[id]" />
+            <Stack.Screen name="company/[id]" />
+            <Stack.Screen name="relations" />
           </Stack.Protected>
           <Stack.Screen name="auth/callback" />
         </Stack>
