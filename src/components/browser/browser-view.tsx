@@ -90,6 +90,9 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
   // un instant, car le redimensionnement de la page en provoque un lui-même.
   const barsHidden = useReadingChromeHidden();
   const setBarsHidden = setReadingChromeHidden;
+  // Barre complète rappelée d'un appui sur la bande du haut, sans rendre la navigation du bas.
+  const [toolbarOpen, setToolbarOpen] = useState(false);
+  const [readPercent, setReadPercent] = useState(0);
   const lastBarsChange = useRef(0);
   const nextLinkResolver = useRef<((href: string | null) => void) | null>(null);
 
@@ -152,11 +155,21 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
         return setPicked({ seq: pickSeq.current, element: message.element });
       }
       if (message.type === 'pick-cancelled') return;
+      // Plein écran : on y entre en lisant vers le bas ; remonter dans la page n'en sort pas (relire une planche
+      // ratée ne doit pas faire revenir les barres). On en sort en haut de page, en bas de page, ou d'un appui.
       if (message.type === 'scroll-direction') {
-        const hide = message.direction === 'down' && getBrowserSettings().fullscreen;
-        if (Date.now() - lastBarsChange.current > 600) {
+        if (message.direction === 'down' && getBrowserSettings().fullscreen && Date.now() - lastBarsChange.current > 600) {
           lastBarsChange.current = Date.now();
-          setBarsHidden(hide);
+          setToolbarOpen(false);
+          setBarsHidden(true);
+        }
+        return;
+      }
+      if (message.type === 'scroll-state') {
+        setReadPercent(message.percent);
+        if (message.edge !== 'middle' && Date.now() - lastBarsChange.current > 600) {
+          lastBarsChange.current = Date.now();
+          setBarsHidden(false);
         }
         return;
       }
@@ -207,12 +220,14 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
     else Alert.alert('Suite introuvable', `Cette page ne donne pas de lien vers le ${unit.toLowerCase()} suivant.`);
   }, [tracking, currentNumber, pageUrl, unit]);
 
-  const showBars = !barsHidden || editing || navigation.loading;
+  const showFullBar = !barsHidden || toolbarOpen || editing;
+  const stripTitle = state.kind === 'matched' ? state.match.title : (current?.title ?? tracking.host ?? '');
+  const stripNumber = currentNumber !== undefined ? ` · ${current?.kind === 'manga' ? 'Ch.' : 'Ép.'} ${currentNumber}` : '';
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.container} edges={['top']}>
-        {showBars && (
+        {showFullBar ? (
         <ThemedView type="backgroundElement" style={styles.toolbar}>
           <IconButton name="home-outline" label="Accueil du navigateur" onPress={onHome} />
           <IconButton
@@ -258,12 +273,25 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
           />
           <IconButton name="ellipsis-vertical" label="Menu du navigateur" onPress={() => setMenuOpen(true)} />
         </ThemedView>
+        ) : (
+          <View style={styles.strip}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Afficher la barre du navigateur" onPress={() => setToolbarOpen(true)} style={styles.stripMain}>
+              <ThemedText type="smallBold" numberOfLines={1} style={styles.stripTitle}>
+                {stripTitle}
+                {stripNumber}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {readPercent} %
+              </ThemedText>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Menu du navigateur" onPress={() => setMenuOpen(true)} hitSlop={8} style={styles.stripMenu}>
+              <Ionicons name="ellipsis-vertical" size={18} color={Colors.text} />
+            </Pressable>
+          </View>
         )}
-        {showBars && (
         <View style={styles.progressTrack}>
           {navigation.loading && <View style={[styles.progressBar, { width: `${Math.round(progress * 100)}%` }]} />}
         </View>
-        )}
 
         <View style={styles.container}>
           <WebView
@@ -409,6 +437,16 @@ const styles = StyleSheet.create({
   },
   menu: { gap: Spacing.one, paddingBottom: Spacing.three },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 48, paddingHorizontal: Spacing.two, borderRadius: Radius.medium },
+  strip: {
+    height: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: Spacing.three,
+    backgroundColor: 'rgba(11, 22, 51, 0.82)',
+  },
+  stripMain: { flex: 1, height: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
+  stripTitle: { flexShrink: 1, fontSize: 12, lineHeight: 16 },
+  stripMenu: { width: 40, height: 28, alignItems: 'center', justifyContent: 'center' },
   progressTrack: { height: 2, backgroundColor: Colors.backgroundElement },
   progressBar: { height: 2, backgroundColor: Colors.primary },
 });
