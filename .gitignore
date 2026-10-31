@@ -48,3 +48,4 @@ src/detection/injected.generated.ts
 # sorties de compilation Gradle des modules locaux
 modules/*/android/build/
 modules/*/android/.cxx/
+.claude/
