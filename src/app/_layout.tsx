@@ -15,6 +15,7 @@ import { ReduceMotion, ReducedMotionConfig } from 'react-native-reanimated';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-store';
 import { queryClient } from '@/lib/query-client';
+import { runLaunchCheck } from '@/lib/update-store';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -49,6 +50,11 @@ export default function RootLayout() {
     // Une police qui ne charge pas ne doit pas bloquer l'app sur l'écran de démarrage.
     if (fontsLoaded || fontError) void SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
+
+  // Mise à jour automatique : une recherche au lancement, en arrière-plan, pour un membre connecté.
+  useEffect(() => {
+    if (loaded && auth) void runLaunchCheck().catch(() => undefined);
+  }, [loaded, auth]);
 
   if ((!fontsLoaded && !fontError) || !loaded) return null;
 

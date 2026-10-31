@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { Sheen } from '@/components/ui/sheen';
 import { Button } from '@/components/button';
@@ -11,6 +11,16 @@ import { signOut, useAuth } from '@/lib/auth-store';
 import { WEB_URL } from '@/lib/config';
 import { useMyEntries } from '@/lib/queries';
 import { listTotals } from '@/lib/suivi';
+import {
+  checkForUpdate,
+  downloadUpdate,
+  installedVersion,
+  installUpdate,
+  setAutoUpdate,
+  useAutoUpdate,
+  useUpdateState,
+  type UpdateState,
+} from '@/lib/update-store';
 
 function Counter({ value, label }: Readonly<{ value: string | number; label: string }>) {
   return (
@@ -20,6 +30,82 @@ function Counter({ value, label }: Readonly<{ value: string | number; label: str
         {label}
       </ThemedText>
     </View>
+  );
+}
+
+const megabytes = (bytes: number) => `${(bytes / 1_048_576).toFixed(1).replace('.', ',')} Mo`;
+
+/** Phrase d'état de la mise à jour, et l'action qui suit (rien, télécharger, installer). */
+function updateLine(update: UpdateState): string {
+  switch (update.status) {
+    case 'checking':
+      return 'Recherche en cours…';
+    case 'up-to-date':
+      return 'Tu as la dernière version.';
+    case 'available':
+      return `Version ${update.info.version} disponible.`;
+    case 'downloading':
+      return update.total > 0
+        ? `Téléchargement de la version ${update.info.version} : ${megabytes(update.downloaded)} sur ${megabytes(update.total)}.`
+        : `Téléchargement de la version ${update.info.version}…`;
+    case 'ready':
+      return `Version ${update.info.version} téléchargée, prête à installer.`;
+    case 'installing':
+      return 'Installation en cours…';
+    case 'error':
+      return update.message;
+    default:
+      return '';
+  }
+}
+
+function AppUpdate() {
+  const update = useUpdateState();
+  const auto = useAutoUpdate();
+  const busy = update.status === 'checking' || update.status === 'downloading' || update.status === 'installing';
+  let version = '';
+  try {
+    version = installedVersion().versionName;
+  } catch {
+    // module natif absent (essais hors Android)
+  }
+  const line = updateLine(update);
+
+  return (
+    <ThemedView type="backgroundElement" style={styles.card}>
+      <Sheen />
+      <View style={styles.updateHead}>
+        <View style={styles.names}>
+          <ThemedText type="smallBold">Mises à jour automatiques</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Actunime cherche une nouvelle version au lancement, au plus une fois par jour, et te propose de l’installer.
+          </ThemedText>
+        </View>
+        <Switch
+          accessibilityLabel="Mises à jour automatiques"
+          value={auto}
+          onValueChange={setAutoUpdate}
+          trackColor={{ false: Colors.backgroundSelected, true: Colors.primary }}
+          thumbColor={Colors.text}
+        />
+      </View>
+      <ThemedText type="small" themeColor="textSecondary">
+        {version ? `Version installée : ${version}. ` : ''}
+        {line}
+      </ThemedText>
+      {update.status === 'available' ? (
+        <Button label="Télécharger la mise à jour" onPress={() => void downloadUpdate(update.info)} />
+      ) : update.status === 'ready' ? (
+        <Button label="Installer la mise à jour" onPress={() => void installUpdate(update.info, update.path)} />
+      ) : (
+        <Button
+          label="Rechercher une mise à jour"
+          variant="outline"
+          disabled={busy}
+          onPress={() => void checkForUpdate()}
+        />
+      )}
+    </ThemedView>
   );
 }
 
@@ -82,6 +168,8 @@ export default function ProfileScreen() {
           />
         </ThemedView>
 
+        <AppUpdate />
+
         <Button label="Déconnexion" variant="outline" onPress={() => signOut()} />
       </ScrollView>
     </Screen>
@@ -103,6 +191,7 @@ const styles = StyleSheet.create({
   },
   avatarImage: { width: 64, height: 64 },
   names: { flex: 1 },
+  updateHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   counters: { flexDirection: 'row', flexWrap: 'wrap', rowGap: Spacing.three },
   counter: { flexGrow: 1, flexBasis: 120, alignItems: 'center' },
   centered: { textAlign: 'center' },
