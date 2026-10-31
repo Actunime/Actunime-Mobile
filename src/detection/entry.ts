@@ -14,6 +14,7 @@ import { findNextLink } from './core/next-link';
 import { scrollState } from './core/scroll-state';
 import { createPageCounterObserver } from './core/page-counter';
 import { createScrollObserver } from './core/scroll';
+import { createVideoObserver } from './core/video';
 import { generateSelector } from './core/selector';
 import { runAllStrategies } from './core/strategies';
 import type { LearnedPattern } from './core/types';
@@ -119,6 +120,7 @@ if (!window.__actunime) {
   let lastKey = NONE;
   let lastUrl = location.href;
   let observer: IObserver | null = null;
+  const options = { episodeThreshold: 0.9 };
   // Pas de détection avant d'avoir reçu le pattern du site : sinon une détection générique erronée précède la bonne.
   let configured = false;
   let navigationStartedAt = Date.now();
@@ -128,7 +130,14 @@ if (!window.__actunime) {
   const attachProgressObserver = (detection: PageDetection) => {
     observer?.cleanup();
     observer = null;
-    if (detection.kind !== 'manga') return;
+    if (detection.kind === 'anime') {
+      // Fin d'épisode : la vidéo de la page atteint la part réglée (lecteurs d'un autre site exclus, cf. core/video).
+      observer = createVideoObserver({
+        threshold: () => options.episodeThreshold,
+        onReached: () => post({ type: 'progress-reached', detection }),
+      });
+      return;
+    }
     const config = pattern?.mangaTracking ?? { mode: 'scroll' as const };
     const reached = () => post({ type: 'progress-reached', detection });
     if (config.mode === 'scroll') {
@@ -280,6 +289,9 @@ if (!window.__actunime) {
         case 'stop-pick':
           stopPick();
           post({ type: 'pick-cancelled' });
+          break;
+        case 'set-options':
+          if (command.episodeThreshold > 0 && command.episodeThreshold <= 1) options.episodeThreshold = command.episodeThreshold;
           break;
         case 'find-next-link':
           post({ type: 'next-link', href: findNextLink(document, location.href) });

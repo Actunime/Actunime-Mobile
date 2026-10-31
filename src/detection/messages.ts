@@ -48,7 +48,9 @@ export type InPageCommand =
   | { type: 'run-strategies' }
   | { type: 'start-pick'; label: string; color: string }
   | { type: 'stop-pick' }
-  | { type: 'find-next-link' };
+  | { type: 'find-next-link' }
+  /** Réglages lus par le script : part de la vidéo (0-1) à atteindre pour signaler la fin d'un épisode. */
+  | { type: 'set-options'; episodeThreshold: number };
 
 const MESSAGE_TYPES = ['ready', 'detection', 'progress-reached', 'strategies', 'picked', 'pick-cancelled', 'scroll-direction', 'scroll-state', 'next-link'];
 
