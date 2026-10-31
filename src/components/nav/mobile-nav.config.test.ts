@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { LOGO_ICONS } from './logo-icons.data';
-import { MEMBER_FAN, MEMBER_TABS, findActiveTabId, flattenItems } from './mobile-nav.config';
+import { MEMBER_FAN, MEMBER_TABS, findActiveTabId, flattenItems, isSoonEntry, type IMobileNavItem } from './mobile-nav.config';
 import { FAN_MAX_ITEMS } from './radial-layout';
 
 const all = flattenItems([...MEMBER_TABS, ...MEMBER_FAN]);
@@ -37,5 +37,29 @@ describe('configuration de la navigation', () => {
     expect(findActiveTabId(MEMBER_TABS, '/list')).toBe('list');
     expect(findActiveTabId(MEMBER_TABS, '/')).toBe('suivi');
     expect(findActiveTabId(MEMBER_TABS, '/profile')).toBeNull();
+  });
+});
+
+describe('isSoonEntry', () => {
+  const leaf = (over: Partial<IMobileNavItem>): IMobileNavItem => ({ id: 'x', label: 'X', icon: 'anime', ...over }) as IMobileNavItem;
+
+  it('une page du site sans écran natif est « bientôt », un écran natif ou une action non', () => {
+    expect(isSoonEntry(leaf({ path: '/notifications' }))).toBe(true);
+    expect(isSoonEntry(leaf({ native: '/agenda' }))).toBe(false);
+    expect(isSoonEntry(leaf({ action: 'logout' }))).toBe(false);
+  });
+
+  it('un groupe l’est quand tout son contenu l’est, pas dès qu’une entrée est disponible', () => {
+    const soon = leaf({ path: '/a' });
+    expect(isSoonEntry(leaf({ children: [soon, leaf({ path: '/b' })] }))).toBe(true);
+    expect(isSoonEntry(leaf({ children: [soon, leaf({ native: '/list' })] }))).toBe(false);
+  });
+
+  it('dans l’éventail : Agenda et Paramètres sont disponibles, Notifications et À propos ne le sont pas', () => {
+    const byId = (id: string) => all.find((entry) => entry.item.id === id)!.item;
+    expect(isSoonEntry(byId('agenda'))).toBe(false);
+    expect(isSoonEntry(byId('settings'))).toBe(false);
+    expect(isSoonEntry(byId('notifications'))).toBe(true);
+    expect(isSoonEntry(byId('about'))).toBe(true);
   });
 });

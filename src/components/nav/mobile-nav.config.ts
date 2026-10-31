@@ -137,3 +137,13 @@ export function flattenItems(items: readonly IMobileNavItem[], trail: string[] =
     ...(entry.children ? flattenItems(entry.children, [...trail, entry.label]) : []),
   ]);
 }
+
+/**
+ * Entrée du site pas encore reprise dans l'app : une page du site sans écran natif, ou un groupe dont tout le contenu
+ * l'est. Elle est grisée dans l'éventail et un appui dit « bientôt disponible » (jamais de renvoi vers le site).
+ */
+export function isSoonEntry(entry: IMobileNavItem): boolean {
+  if (entry.native || entry.action) return false;
+  if (entry.children) return entry.children.every(isSoonEntry);
+  return !!entry.path;
+}

@@ -14,7 +14,7 @@ import { Colors, Fonts } from '@/constants/theme';
 import { signOut, useAuth } from '@/lib/auth-store';
 import { SOON_OPACITY, showSoon } from '@/lib/soon';
 import { LogoIcon } from './logo-icon';
-import { MEMBER_FAN, MEMBER_TABS, findActiveTabId, type IMobileNavItem } from './mobile-nav.config';
+import { MEMBER_FAN, MEMBER_TABS, findActiveTabId, isSoonEntry, type IMobileNavItem } from './mobile-nav.config';
 import {
   ACT_SIZE,
   computeFanSlots,
@@ -94,7 +94,7 @@ interface IFanActProps {
 /** Une action de l'éventail : sort du centre du bouton avec un léger décalage entre voisines (`mobile-nav-pop`). */
 function FanAct({ entry, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanActProps>) {
   // page du site pas encore reprise dans l'app : grisée, un appui dit « bientôt »
-  const soon = !!entry.path && !entry.native && !entry.children && !entry.action;
+  const soon = isSoonEntry(entry);
   const t = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(t, { toValue: 1, delay: index * 22, friction: 6, tension: 140, useNativeDriver: true }).start();
@@ -121,14 +121,14 @@ function FanAct({ entry, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanA
         onPress={onPress}
         style={[
           styles.act,
-          (entry.children || entry.highlight) && styles.actAccent,
+          !soon && styles.actAccent,
           hot && styles.actHot,
           hot && { transform: [{ scale: 1.22 }] },
           soon && { opacity: SOON_OPACITY },
         ]}
       >
         <LogoIcon name={entry.icon} size={28} hot={hot} />
-        {entry.children ? (
+        {entry.children && !soon ? (
           <View style={styles.more}>
             <Ionicons name="chevron-forward" size={11} color="#fff" />
           </View>
@@ -212,6 +212,11 @@ export function MobileNav() {
 
   const choose = useCallback(
     (target: IMobileNavItem) => {
+      if (isSoonEntry(target)) {
+        close();
+        showSoon(target.label);
+        return;
+      }
       if (target.children) return push(target);
       close();
       haptic.choose();
@@ -384,7 +389,7 @@ export function MobileNav() {
 
   return (
     <>
-      <View style={[styles.bar, { height: BAR_HEIGHT + insets.bottom, paddingBottom: 6 + insets.bottom }]}>
+      <View style={[styles.bar, { height: BAR_HEIGHT + insets.bottom, paddingBottom: 6 + insets.bottom }, open && styles.barOpen]}>
         {renderTab(MEMBER_TABS[0]!)}
         {renderTab(MEMBER_TABS[1]!)}
         <View style={styles.hub}>
@@ -504,6 +509,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     backgroundColor: Colors.backgroundElement,
   },
+  // éventail ouvert : la barre (et le bouton central qui dépasse) passe au-dessus du voile, il ne la coupe plus
+  barOpen: { zIndex: 13, elevation: 13 },
   tab: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 14, paddingVertical: 6 },
   tabPressed: { opacity: 0.55 },
   tabActive: { backgroundColor: 'rgba(0, 153, 255, 0.16)' },
@@ -527,7 +534,7 @@ const styles = StyleSheet.create({
   handle: { width: 64, height: 4, borderRadius: 2, backgroundColor: 'rgba(0, 153, 255, 0.7)' },
   fabOpen: { transform: [{ scale: 1.12 }], borderColor: Colors.primary },
   fabFill: { width: '100%', height: '100%' },
-  fabLogo: { flex: 1, margin: 11 },
+  fabLogo: { flex: 1, margin: 13, transform: [{ translateX: 1 }, { translateY: -2 }] },
   fabInitial: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.backgroundSelected },
   fabBack: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary },
   /** Les cartes des écrans ont une élévation : sans une élévation supérieure, elles se dessinent par-dessus le voile. */
