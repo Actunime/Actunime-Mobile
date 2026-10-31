@@ -46,7 +46,7 @@ function matchedHelp(tracking: Extract<TrackingState, { kind: 'matched' }>, patt
   const unit = manga ? 'chapitre' : 'épisode';
   const number = manga ? detection.chapter : detection.episode;
   if (progress !== undefined && number !== undefined && progress >= number) {
-    return `Ton ${unit} ${number} est dans ta liste (tu es au ${unit} ${progress}).`;
+    return `Ton ${unit} ${number} est dans ta liste (tu es ${manga ? 'au chapitre' : 'à l’épisode'} ${progress}).`;
   }
   const where = progress !== undefined ? `Dans ta liste : ${unit} ${progress}.` : 'Pas encore dans ta liste.';
   const auto = manga && pattern?.mangaTracking?.mode !== 'manual';
