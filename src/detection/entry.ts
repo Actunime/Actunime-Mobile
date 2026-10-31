@@ -10,6 +10,7 @@ import { pickAutoStrategy } from './core/auto-strategy';
 import { applyLearnedPattern } from './core/learned-engine';
 import { detectGenericFromDom, inferKind } from './core/heuristics';
 import { createNextButtonObserver } from './core/next-button';
+import { findNextLink } from './core/next-link';
 import { createPageCounterObserver } from './core/page-counter';
 import { createScrollObserver } from './core/scroll';
 import { generateSelector } from './core/selector';
@@ -279,6 +280,9 @@ if (!window.__actunime) {
           stopPick();
           post({ type: 'pick-cancelled' });
           break;
+        case 'find-next-link':
+          post({ type: 'next-link', href: findNextLink(document, location.href) });
+          break;
       }
     },
   };
@@ -294,6 +298,32 @@ if (!window.__actunime) {
   }).observe(document.documentElement, { childList: true, subtree: true });
 
   window.addEventListener('load', () => schedule());
+
+  // Sens du défilement : l'app masque ses barres en lisant vers le bas et les rend en remontant. Un seuil évite
+  // de réagir aux secousses, et seul un changement de sens est signalé.
+  let lastScrollY = window.scrollY;
+  let scrollDirection: 'down' | 'up' | null = null;
+  let travelled = 0;
+  window.addEventListener(
+    'scroll',
+    () => {
+      const y = window.scrollY;
+      const delta = y - lastScrollY;
+      lastScrollY = y;
+      if (y <= 0) {
+        travelled = 0;
+        if (scrollDirection !== 'up') post({ type: 'scroll-direction', direction: (scrollDirection = 'up') });
+        return;
+      }
+      if (Math.sign(delta) !== Math.sign(travelled)) travelled = 0;
+      travelled += delta;
+      if (Math.abs(travelled) < 36) return;
+      const direction = travelled > 0 ? 'down' : 'up';
+      travelled = 0;
+      if (direction !== scrollDirection) post({ type: 'scroll-direction', direction: (scrollDirection = direction) });
+    },
+    { passive: true },
+  );
   // L'app répond à `ready` par le pattern du site (ou `null`) : c'est lui qui déclenche la première détection.
   post({ type: 'ready', host: location.hostname, inferredKind: inferKind() });
   // Filet : si l'app ne répond pas (WebView rechargée à froid), on détecte quand même au bout de 3 s.

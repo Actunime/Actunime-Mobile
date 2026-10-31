@@ -34,16 +34,21 @@ export type InPageMessage =
   | { type: 'progress-reached'; detection: PageDetection }
   | { type: 'strategies'; results: StrategyResult[] }
   | { type: 'picked'; element: PickedElement }
-  | { type: 'pick-cancelled' };
+  | { type: 'pick-cancelled' }
+  /** Sens du défilement de la page (barres masquées en plein écran de lecture). */
+  | { type: 'scroll-direction'; direction: 'down' | 'up' }
+  /** Réponse à `find-next-link` : lien du chapitre ou de l'épisode suivant, `null` si la page n'en donne pas. */
+  | { type: 'next-link'; href: string | null };
 
 /** Commandes de l'app vers le script injecté (`injectJavaScript`). */
 export type InPageCommand =
   | { type: 'set-pattern'; pattern: LearnedPattern | null }
   | { type: 'run-strategies' }
   | { type: 'start-pick'; label: string; color: string }
-  | { type: 'stop-pick' };
+  | { type: 'stop-pick' }
+  | { type: 'find-next-link' };
 
-const MESSAGE_TYPES = ['ready', 'detection', 'progress-reached', 'strategies', 'picked', 'pick-cancelled'];
+const MESSAGE_TYPES = ['ready', 'detection', 'progress-reached', 'strategies', 'picked', 'pick-cancelled', 'scroll-direction', 'next-link'];
 
 export function parseInPageMessage(raw: string): InPageMessage | null {
   try {
