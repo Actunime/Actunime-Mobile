@@ -597,7 +597,7 @@ export default function MediaScreen() {
               action={(characters.data?.total ?? 0) > characterItems.length ? { label: 'Voir tout', onPress: () => openSite(`${sitePath}/personnages`) } : undefined}
               onLayout={at('characters')}
             >
-              <CardCarousel items={characterItems} placeholder={User} />
+              <CardCarousel items={characterItems} placeholder={User} square />
             </SectionCard>
           ) : null}
           {staffItems.length > 0 ? (
@@ -608,13 +608,13 @@ export default function MediaScreen() {
               action={(staffs.data?.total ?? 0) > staffItems.length ? { label: 'Voir tout', onPress: () => openSite(`${sitePath}/staffs`) } : undefined}
               onLayout={at('staffs')}
             >
-              <CardCarousel items={staffItems} placeholder={User} />
+              <CardCarousel items={staffItems} placeholder={User} square />
             </SectionCard>
           ) : null}
           {anime ? (
             trackItems.length > 0 ? (
               <SectionCard title="Musiques" icon={Music} count={tracks.data?.total} onLayout={at('tracks')}>
-                <CardCarousel items={trackItems} placeholder={Music} />
+                <CardCarousel items={trackItems} placeholder={Music} square />
               </SectionCard>
             ) : (
               <View style={styles.emptyTracks} onLayout={(e) => at('tracks')(e.nativeEvent.layout.y)}>

@@ -139,16 +139,18 @@ export function CardCarousel({
   kind = 'anime',
   width = 144,
   placeholder,
-}: Readonly<{ items: ICarouselItem[]; kind?: MediaKind; width?: number; placeholder?: LucideIcon }>) {
+  square = false,
+}: Readonly<{ items: ICarouselItem[]; kind?: MediaKind; width?: number; placeholder?: LucideIcon; square?: boolean }>) {
+  const imageStyle = [styles.carouselImage, square && styles.carouselSquare, { width }];
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
       {items.map((item) => (
         <Pressable key={item.id} disabled={!item.onPress} onPress={item.onPress} style={({ pressed }) => [{ width }, pressed && { opacity: 0.85 }]}>
           <View>
             {item.imageUrl ? (
-              <Image source={{ uri: item.imageUrl }} style={[styles.carouselImage, { width }]} contentFit="cover" transition={150} />
+              <Image source={{ uri: item.imageUrl }} style={imageStyle} contentFit="cover" transition={150} />
             ) : (
-              <CardImage kind={kind} icon={placeholder} style={[styles.carouselImage, { width }]} />
+              <CardImage kind={kind} icon={placeholder} style={imageStyle} />
             )}
             {item.overlay ? (
               <View style={styles.overlay}>
@@ -186,6 +188,7 @@ const styles = StyleSheet.create({
   infoValueBox: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 4 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999, borderWidth: 1 },
   carousel: { gap: 12 },
+  carouselSquare: { aspectRatio: 1 },
   carouselImage: { aspectRatio: 3 / 4, borderTopLeftRadius: Tw.radius.lg, borderTopRightRadius: Tw.radius.lg },
   overlay: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: alpha(Tw.color.background, 0.7), paddingHorizontal: 8, paddingVertical: 4 },
   carouselBody: { padding: 8, gap: 4 },
