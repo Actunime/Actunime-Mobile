@@ -107,6 +107,7 @@ export function ListEntrySheet({
   onRemove,
 }: Readonly<IListEntrySheetProps>) {
   const [expanded, setExpanded] = useState(false);
+  const [expandSignal, setExpandSignal] = useState(0);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [notes, setNotes] = useState(entry?.notes ?? '');
   useEffect(() => {
@@ -186,9 +187,17 @@ export function ListEntrySheet({
   );
 
   return (
-    <BottomSheet open={open} onClose={onClose} header={header} collapsedHeight={472} onExpandedChange={setExpanded}>
+    <BottomSheet open={open} onClose={onClose} header={header} collapsedHeight={472} onExpandedChange={setExpanded} expandSignal={expandSignal}>
       {entry ? (
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          // replié, faire défiler le contenu déploie le tiroir en plein écran (comme le tirer par la poignée)
+          onScrollBeginDrag={() => {
+            if (!expanded) setExpandSignal((value) => value + 1);
+          }}
+        >
           <View style={styles.section}>
             <SectionTitle>Statut</SectionTitle>
             <View style={styles.statusGrid}>

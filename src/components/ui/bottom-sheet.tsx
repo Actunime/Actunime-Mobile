@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, KeyboardAvoidingView, Modal, PanResponder, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Animated, Dimensions, KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform, StyleSheet, UIManager, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pressable } from '@/components/tap';
@@ -22,10 +22,14 @@ interface IBottomSheetProps {
   maxHeight?: number;
   /** Signale le passage replié / déployé (le contenu replié ne défile pas). */
   onExpandedChange?: (expanded: boolean) => void;
+  /** Chaque incrément déploie un tiroir à deux hauteurs (le contenu demande de la place : défilement commencé dans le tiroir replié). */
+  expandSignal?: number;
   contentStyle?: StyleProp<ViewStyle>;
 }
 
 const SCREEN = Dimensions.get('window').height;
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) UIManager.setLayoutAnimationEnabledExperimental(true);
 
 /**
  * Tiroir du bas, transposé du `Drawer` du site (vaul) : fond `bg-background`, coins `rounded-t-xl`, poignée
@@ -43,6 +47,7 @@ export function BottomSheet({
   minHeight,
   maxHeight = 0.8,
   onExpandedChange,
+  expandSignal,
   contentStyle,
 }: Readonly<IBottomSheetProps>) {
   const insets = useSafeAreaInsets();
@@ -59,10 +64,20 @@ export function BottomSheet({
   }, [open, translate]);
 
   const setExpand = (value: boolean) => {
+    // le tiroir s'agrandit en glissant, il ne saute pas
+    LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
     expandedRef.current = value;
     setExpanded(value);
     onExpandedChange?.(value);
   };
+
+  // Défilement commencé dans le tiroir replié : il se déploie d'abord en (presque) plein écran.
+  const lastSignal = useRef(0);
+  useEffect(() => {
+    if (expandSignal === undefined || expandSignal === lastSignal.current) return;
+    lastSignal.current = expandSignal;
+    if (collapsedHeight && !expandedRef.current) setExpand(true);
+  }, [expandSignal]); // eslint-disable-line react-hooks/exhaustive-deps -- seul un nouveau signal déploie
 
   const pan = useRef(
     PanResponder.create({
