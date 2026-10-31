@@ -78,6 +78,18 @@ jobs:
           cargo test --locked
           cargo ndk -t arm64-v8a -o ../android/src/main/jniLibs build --release --locked
 
+      - name: Version de l'application
+        # Android refuse d'installer par-dessus une version dont le versionCode n'est pas plus grand : il suit le
+        # numéro d'exécution du workflow, qui ne fait que croître. Les mises à jour automatiques de l'app en dépendent.
+        run: |
+          node -e "
+            const fs = require('fs');
+            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            app.expo.version = '0.1.0-beta.${{ github.run_number }}';
+            app.expo.android = { ...app.expo.android, versionCode: ${{ github.run_number }} };
+            fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
+          "
+
       - name: Génération du projet Android
         run: npx expo prebuild --platform android --no-install
 
@@ -111,12 +123,29 @@ jobs:
             "$RUNNER_TEMP/aligned.apk"
           rm -f "$RUNNER_TEMP/release.p12"
 
+      - name: Fiche de version (lue par l'app pour se mettre à jour)
+        run: |
+          APK="actunime-mobile-beta-${{ github.run_number }}.apk"
+          SHA=$(sha256sum "$APK" | cut -d' ' -f1)
+          node -e "
+            const fs = require('fs');
+            fs.writeFileSync('latest.json', JSON.stringify({
+              version: '0.1.0-beta.${{ github.run_number }}',
+              versionCode: ${{ github.run_number }},
+              sha256: process.argv[1],
+              apk: process.argv[2],
+              notes: process.argv[3],
+            }, null, 2) + '\n');
+          " "$SHA" "$APK" "$(git log -1 --pretty=%s)"
+          cat latest.json
+
       - name: Publication de la release GitHub
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "v0.1.0-beta.${{ github.run_number }}" \
             "actunime-mobile-beta-${{ github.run_number }}.apk" \
+            latest.json \
             --prerelease \
             --title "Actunime Mobile beta ${{ github.run_number }}" \
             --notes "APK Android signé, à installer à la main (autoriser les sources inconnues)."
