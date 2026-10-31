@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform, StyleSheet, UIManager, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Animated, Dimensions, Easing, KeyboardAvoidingView, Modal, PanResponder, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pressable } from '@/components/tap';
@@ -29,8 +29,6 @@ interface IBottomSheetProps {
 
 const SCREEN = Dimensions.get('window').height;
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) UIManager.setLayoutAnimationEnabledExperimental(true);
-
 /**
  * Tiroir du bas, transposé du `Drawer` du site (vaul) : fond `bg-background`, coins `rounded-t-xl`, poignée
  * `h-1 w-[100px] bg-muted`, voile sombre. Le geste natif remplace le glisser de vaul : tirer la poignée vers le
@@ -51,8 +49,13 @@ export function BottomSheet({
   contentStyle,
 }: Readonly<IBottomSheetProps>) {
   const insets = useSafeAreaInsets();
-  const [expanded, setExpanded] = useState(false);
+  const [, setExpanded] = useState(false);
   const translate = useRef(new Animated.Value(0)).current;
+  // Déployé, le tiroir garde une marge en haut : il ne touche pas la barre d'état (où l'on tire les notifications
+  // d'Android) et le fond assombri reste visible, on voit qu'on est dans un tiroir qu'on peut fermer.
+  const expandedHeight = Math.min(SCREEN * 0.9, SCREEN - insets.top - 56);
+  const collapsedPx = collapsedHeight ? Math.min(collapsedHeight, expandedHeight) : 0;
+  const heightAnim = useRef(new Animated.Value(collapsedPx)).current;
   const expandedRef = useRef(false);
 
   useEffect(() => {
@@ -60,13 +63,21 @@ export function BottomSheet({
       expandedRef.current = false;
       setExpanded(false);
       translate.setValue(0);
+      heightAnim.setValue(collapsedPx);
     }
-  }, [open, translate]);
+  }, [open, translate]); // eslint-disable-line react-hooks/exhaustive-deps -- `heightAnim` et la hauteur repliée ne changent pas à l'ouverture
 
   const setExpand = (value: boolean) => {
-    // le tiroir s'agrandit en glissant, il ne saute pas
-    LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
     expandedRef.current = value;
+    // le tiroir s'agrandit (ou se replie) en glissant, il ne saute pas
+    if (collapsedHeight) {
+      Animated.timing(heightAnim, {
+        toValue: value ? expandedHeight : collapsedPx,
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    }
     setExpanded(value);
     onExpandedChange?.(value);
   };
@@ -94,7 +105,6 @@ export function BottomSheet({
     }),
   ).current;
 
-  const height = collapsedHeight ? (expanded ? SCREEN * 0.97 : Math.min(collapsedHeight, SCREEN * 0.97)) : undefined;
 
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
@@ -103,8 +113,8 @@ export function BottomSheet({
         <Animated.View
           style={[
             styles.sheet,
-            { paddingBottom: insets.bottom, maxHeight: SCREEN * (collapsedHeight ? 0.97 : maxHeight), transform: [{ translateY: translate }] },
-            height !== undefined && { height },
+            { paddingBottom: insets.bottom, maxHeight: collapsedHeight ? expandedHeight : SCREEN * maxHeight, transform: [{ translateY: translate }] },
+            collapsedHeight ? { height: heightAnim } : null,
             minHeight !== undefined && { minHeight: SCREEN * minHeight },
           ]}
         >
