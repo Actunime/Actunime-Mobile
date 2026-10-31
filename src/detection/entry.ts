@@ -11,6 +11,7 @@ import { applyLearnedPattern } from './core/learned-engine';
 import { detectGenericFromDom, inferKind } from './core/heuristics';
 import { createNextButtonObserver } from './core/next-button';
 import { findNextLink } from './core/next-link';
+import { isViewerUrl, numberFromSelectorText, readTitleHint } from './core/title-hint';
 import { scrollState } from './core/scroll-state';
 import { createPageCounterObserver } from './core/page-counter';
 import { createScrollObserver } from './core/scroll';
@@ -109,6 +110,47 @@ function detectLearned(pattern: LearnedPattern): PageDetection | null {
   };
 }
 
+const HINT_KEY = '__actunime_title_hint';
+
+/** Titre de la série vu juste avant sur ce site (page de la série), pour les lecteurs qui n'affichent pas le titre. */
+let titleHint: { title: string; host: string; url: string } | null = null;
+try {
+  const stored = sessionStorage.getItem(HINT_KEY);
+  if (stored) titleHint = JSON.parse(stored);
+} catch {
+  // stockage de la page indisponible : la mémoire du titre reste en variable
+}
+
+/** Page de série : on retient son titre pour la page de lecture qui suivra. */
+function learnTitleHint(): void {
+  if (isViewerUrl(location.href)) return;
+  const title = readTitleHint(document);
+  if (!title) return;
+  titleHint = { title, host: location.hostname, url: location.href };
+  try {
+    sessionStorage.setItem(HINT_KEY, JSON.stringify(titleHint));
+  } catch {
+    // voir plus haut
+  }
+}
+
+/** Page de lecture sans titre : le titre retenu sur la série, le numéro du sélecteur de chapitre. */
+function detectFromHint(): PageDetection | null {
+  if (!titleHint || titleHint.host !== location.hostname || location.href === titleHint.url || !isViewerUrl(location.href)) return null;
+  const number = numberFromSelectorText(document.body?.innerText ?? '');
+  if (number === undefined) return null;
+  const kind = inferKind();
+  return {
+    kind,
+    title: titleHint.title,
+    chapter: kind === 'manga' ? number : undefined,
+    episode: kind === 'anime' ? number : undefined,
+    url: location.href,
+    host: location.hostname,
+    source: 'generic',
+  };
+}
+
 /** Clé d'une détection ; `NONE` = rien détecté, état de départ connu de l'app (barre « aucune œuvre détectée »). */
 const NONE = 'none';
 const UNKNOWN = 'unknown';
@@ -174,6 +216,8 @@ if (!window.__actunime) {
     } else {
       detection = detectGeneric() ?? detectAuto();
     }
+    if (!detection) detection = detectFromHint();
+    if (!detection) learnTitleHint();
     const key = keyOf(detection);
     if (key === lastKey) return;
     lastKey = key;
