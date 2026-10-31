@@ -253,6 +253,21 @@ export const mediaId = (e: { id?: string; _id?: string }): string => (e.id ?? e.
 
 const kindPath = (kind: MediaKind) => (kind === 'manga' ? '/mangas' : '/animes');
 
+/** Actualité publiée reliée à une fiche (annonce de saison, date de sortie, trailer…). */
+export interface INewsArticle {
+  id?: string;
+  _id?: string;
+  type: string;
+  title: string;
+  summary?: string;
+  posterUrl?: string | null;
+  bannerUrl?: string | null;
+  visuals?: string[];
+  trailerUrl?: string | null;
+  sources?: { label: string; url: string }[];
+  publishedAt?: string | null;
+}
+
 export const api = {
   exchangeCode(code: string, codeVerifier: string) {
     return request<
@@ -295,6 +310,11 @@ export const api = {
       body: { page: 1, limit },
       auth: false,
     });
+  },
+
+  /** Actualités publiées reliées à une fiche (publiques). */
+  getMediaNews(id: string) {
+    return request<INewsArticle[]>(`/news/public/media/${id}/articles`, { auth: false });
   },
 
   getMediaFollowers(kind: MediaKind, id: string) {

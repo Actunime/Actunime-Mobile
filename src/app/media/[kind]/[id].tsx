@@ -17,6 +17,7 @@ import {
   LayoutList,
   MessagesSquare,
   Music,
+  Newspaper,
   Pencil,
   Play,
   PlayCircle,
@@ -37,7 +38,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { Pressable } from '@/components/tap';
 import { ListEntrySheetTrigger } from '@/components/media/list-button';
-import { CardCarousel, InfoRow, PRIMARY_PILL, Pill, STATUS_PILL, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
+import { CardCarousel, InfoRow, NewsList, PRIMARY_PILL, Pill, STATUS_PILL, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
 import { MobileNav } from '@/components/nav/mobile-nav';
 import { ManageEntry } from '@/components/list/manage-entry';
 import { openMedia } from '@/components/media-row';
@@ -56,6 +57,7 @@ import {
   useMedia,
   useMediaFollowers,
   useMediaLinks,
+  useMediaNews,
   useMetadataNames,
   useMyEntries,
   useRelations,
@@ -120,6 +122,7 @@ export default function MediaScreen() {
   const followers = useMediaFollowers(kind, id);
   const characters = useMediaLinks(kind, id, 'characters');
   const staffs = useMediaLinks(kind, id, 'staffs');
+  const news = useMediaNews(id);
   const tracks = useMediaLinks(kind, id, kind === 'anime' ? 'tracks' : 'characters');
   const companies = useMediaLinks(kind, id, 'companies');
   const favorite = useIsFavorite(id, mediaType);
@@ -462,7 +465,7 @@ export default function MediaScreen() {
           ) : null}
 
           {(companies.data?.results ?? []).some((c) => c.data) ? (
-            <SectionCard title="Studios & Producteurs" icon={Building2}>
+            <SectionCard title={anime ? 'Studios & Producteurs' : 'Éditeurs & Producteurs'} icon={Building2}>
               <View style={styles.stack}>
                 {companies.data!.results.filter((c) => c.data).map((c) => (
                   <Pressable key={c.id ?? c.data!.id} onPress={() => openSite(`/societes/${c.data!.id}`)} style={styles.company}>
@@ -598,6 +601,12 @@ export default function MediaScreen() {
               La discussion de l'œuvre s'ouvre sur le site.
             </Txt>
           </SectionCard>
+
+          {(news.data ?? []).length > 0 ? (
+            <SectionCard title="Actualités" icon={Newspaper}>
+              <NewsList articles={news.data!} onOpen={(url) => void WebBrowser.openBrowserAsync(url).catch(() => undefined)} />
+            </SectionCard>
+          ) : null}
 
           {characterItems.length > 0 ? (
             <SectionCard

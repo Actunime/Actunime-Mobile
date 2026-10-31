@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatLabel, formatLongDate, formatYear, linkLabel, statusTone, mediaTitle, progressLabel, totalOf } from './media';
+import { formatLabel, formatLongDate, formatYear, linkLabel, newsCover, statusTone, mediaTitle, progressLabel, totalOf } from './media';
 
 describe('media', () => {
   it('affiche le titre original puis le titre normal', () => {
@@ -50,5 +50,14 @@ describe('media', () => {
     expect(formatLongDate('2026-01-16T00:00:00.000Z')).toBe('16 janvier 2026');
     expect(formatLongDate(undefined)).toBeNull();
     expect(formatLongDate('nope')).toBeNull();
+  });
+});
+
+describe('newsCover', () => {
+  it('prend la bannière, puis la galerie, puis l’affiche', () => {
+    expect(newsCover({ bannerUrl: 'b', visuals: ['v'], posterUrl: 'p' })).toBe('b');
+    expect(newsCover({ bannerUrl: null, visuals: ['v'], posterUrl: 'p' })).toBe('v');
+    expect(newsCover({ bannerUrl: null, visuals: [], posterUrl: 'p' })).toBe('p');
+    expect(newsCover({ posterUrl: null })).toBeNull();
   });
 });

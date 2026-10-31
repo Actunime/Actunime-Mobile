@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { type LucideIcon } from 'lucide-react-native';
+import { ExternalLink, Play, type LucideIcon } from 'lucide-react-native';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Sheen } from '@/components/ui/sheen';
@@ -7,7 +7,8 @@ import { Pressable } from '@/components/tap';
 import { CardImage } from '@/components/cards/media-cards';
 import { Txt } from '@/components/tw';
 import { Tw, alpha, Floating } from '@/constants/theme';
-import type { MediaKind } from '@/lib/api';
+import type { INewsArticle, MediaKind } from '@/lib/api';
+import { NEWS_TYPE_LABELS, newsCover } from '@/lib/media';
 
 /** Bloc de section de la fiche (`SectionCard` : `Card` `bg-card py-4`, en-tête `px-4` avec icône et compteur). */
 export function SectionCard({
@@ -176,7 +177,66 @@ export function CardCarousel({
   );
 }
 
+/** Actualités d'une fiche (`NewsSection` du site) : visuel, type et date, titre, note, trailer et sources citées. */
+export function NewsList({ articles, onOpen }: Readonly<{ articles: INewsArticle[]; onOpen: (url: string) => void }>) {
+  return (
+    <View style={styles.newsList}>
+      {articles.map((article) => {
+        const cover = newsCover(article);
+        return (
+          <View key={article.id ?? article._id ?? article.title} style={styles.newsRow}>
+            {cover ? <Image source={{ uri: cover }} style={styles.newsCover} contentFit="cover" transition={150} /> : null}
+            <View style={styles.newsBody}>
+              <View style={styles.newsMeta}>
+                <Pill label={NEWS_TYPE_LABELS[article.type] ?? article.type} {...PRIMARY_PILL} />
+                {article.publishedAt ? (
+                  <Txt size="xs" color={Tw.color.mutedForeground}>
+                    {new Date(article.publishedAt).toLocaleDateString('fr-FR')}
+                  </Txt>
+                ) : null}
+              </View>
+              <Txt size="sm" weight="medium">
+                {article.title}
+              </Txt>
+              {article.summary ? (
+                <Txt size="sm" color={Tw.color.mutedForeground}>
+                  {article.summary}
+                </Txt>
+              ) : null}
+              <View style={styles.newsLinks}>
+                {article.trailerUrl ? (
+                  <Pressable accessibilityRole="link" onPress={() => onOpen(article.trailerUrl!)} style={styles.newsLink}>
+                    <Play size={12} color={Tw.color.primary} />
+                    <Txt size="xs" color={Tw.color.primary}>
+                      Trailer
+                    </Txt>
+                  </Pressable>
+                ) : null}
+                {(article.sources ?? []).map((source) => (
+                  <Pressable key={source.url} accessibilityRole="link" onPress={() => onOpen(source.url)} style={styles.newsLink}>
+                    <Txt size="xs" color={Tw.color.mutedForeground}>
+                      {source.label}
+                    </Txt>
+                    <ExternalLink size={12} color={Tw.color.mutedForeground} />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  newsList: { gap: 16 },
+  newsRow: { flexDirection: 'row', gap: 12 },
+  newsCover: { width: 96, height: 96, borderRadius: Tw.radius.md },
+  newsBody: { flex: 1, gap: 4 },
+  newsMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  newsLinks: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 },
+  newsLink: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, justifyContent: 'center' },
   center: { textAlign: 'center' },
   card: { ...Floating, overflow: 'hidden', paddingVertical: 16, gap: 16 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 16 },

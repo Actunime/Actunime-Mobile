@@ -69,6 +69,9 @@ export const useMediaLinks = (kind: MediaKind, id: string, what: 'characters' | 
     staleTime: FIVE_MINUTES,
   });
 
+export const useMediaNews = (id: string) =>
+  useQuery({ queryKey: ['media-news', id], queryFn: () => api.getMediaNews(id), staleTime: FIVE_MINUTES, enabled: !!id });
+
 export const useMediaFollowers = (kind: MediaKind, id: string) =>
   useQuery({ queryKey: ['media-followers', kind, id], queryFn: () => api.getMediaFollowers(kind, id), staleTime: FIVE_MINUTES });
 

@@ -166,3 +166,23 @@ export function seasonLabel(season?: { number: number; part?: number } | null): 
   if (!season) return undefined;
   return season.part ? `Saison ${season.number} Partie ${season.part}` : `Saison ${season.number}`;
 }
+
+/** Libellés des types d'actualité (`NewsArticleTypeObj` des types partagés). */
+export const NEWS_TYPE_LABELS: Record<string, string> = {
+  SEASON_ANNOUNCEMENT: 'Annonce de saison',
+  ADAPTATION_ANNOUNCEMENT: 'Annonce d’adaptation',
+  RELEASE_DATE: 'Date de sortie',
+  TRAILER: 'Trailer / PV',
+  VISUAL: 'Visuel',
+  CASTING: 'Casting / Staff',
+  NEWS: 'Information',
+};
+
+/** Visuel d'une actualité : bannière, puis galerie, puis affiche (`getNewsArticleCover` du site). */
+export function newsCover(article: {
+  bannerUrl?: string | null;
+  visuals?: string[];
+  posterUrl?: string | null;
+}): string | null {
+  return article.bannerUrl ?? article.visuals?.[0] ?? article.posterUrl ?? null;
+}
