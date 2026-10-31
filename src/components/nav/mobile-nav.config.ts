@@ -48,7 +48,7 @@ const DISCOVER = item('discover', 'Découvrir', 'compass', {
   ],
 });
 
-const AGENDA = item('agenda', 'Agenda', 'calendar', { path: '/planning' });
+const AGENDA = item('agenda', 'Agenda', 'calendar', { native: '/agenda' });
 
 const COMMUNITY = item('community', 'Communauté', 'community', {
   children: [
@@ -83,20 +83,20 @@ const CONTRIBUTE = item('contribute', 'Contribuer', 'pencil', {
 
 const SETTINGS = item('settings', 'Paramètres', 'settings', {
   children: [
-    item('settings-profile', 'Profil', 'user', { path: '/settings/profile' }),
+    item('settings-profile', 'Profil', 'user', { native: '/settings/profile' }),
     item('settings-notifications', 'Notifications', 'bell', { path: '/settings/notifications' }),
     item('settings-lists', 'Import / export', 'transfer', { path: '/settings/list' }),
     item('settings-social', 'Social', 'community', {
       children: [
-        item('settings-friends', 'Amis', 'community', { path: '/settings/amis' }),
-        item('settings-blocks', 'Blocages', 'block', { path: '/settings/blocages' }),
-        item('settings-privacy', 'Confidentialité', 'lock', { path: '/settings/confidentialite' }),
+        item('settings-friends', 'Amis', 'community', { native: '/settings/amis' }),
+        item('settings-blocks', 'Blocages', 'block', { native: '/settings/blocages' }),
+        item('settings-privacy', 'Confidentialité', 'lock', { native: '/settings/confidentialite' }),
       ],
     }),
     item('settings-security-group', 'Sécurité', 'shield', {
       children: [
         item('settings-security', 'Sécurité', 'shield', { path: '/settings/security' }),
-        item('settings-sessions', 'Appareils', 'device', { path: '/settings/sessions' }),
+        item('settings-sessions', 'Appareils', 'device', { native: '/settings/appareils' }),
         item('settings-delete', 'Supprimer', 'trash', { path: '/settings/delete-account' }),
       ],
     }),

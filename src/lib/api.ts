@@ -89,7 +89,7 @@ export interface IMedia extends ISearchMedia {
   demographics?: string[];
   tags?: { id: number; data?: { name?: string } | null }[];
   trailers?: { url: string }[];
-  episodesInfo?: { total?: number; airing?: number; durationMinutes?: number; broadcastPaused?: boolean; nextAiringDate?: string };
+  episodesInfo?: { total?: number; airing?: number; durationMinutes?: number; broadcastPaused?: boolean; nextAiringDate?: string; continuous?: boolean };
   chaptersInfo?: { total?: number; airing?: number };
   /** Liens officiels et de lecture/streaming. */
   links?: { url: string; name?: string }[];
@@ -322,6 +322,50 @@ export interface IFavorite {
   } | null;
 }
 
+/** Paramètres du compte. */
+export type ProfileVisibility = 'PUBLIC' | 'FOLLOWERS_ONLY' | 'FRIENDS_ONLY' | 'PRIVATE';
+
+export interface IMyProfile {
+  id?: string;
+  username: string;
+  displayName?: string;
+  description?: string;
+  avatarUrl?: string | null;
+}
+
+export interface IUserBlock {
+  id: string;
+  blockedId: string;
+  blocked?: { username?: string; displayName?: string } | null;
+  reason?: string | null;
+}
+
+export interface IFriendRequest {
+  id: string;
+  userA?: string;
+  userB?: string;
+  requestedBy?: string;
+  message?: string | null;
+  requestedAt?: string;
+  status?: string;
+  /** Membres joints par l'API quand elle les expose. */
+  requester?: { id?: string; username?: string; displayName?: string; avatarUrl?: string | null } | null;
+  addressee?: { id?: string; username?: string; displayName?: string; avatarUrl?: string | null } | null;
+  member?: { id?: string; username?: string; displayName?: string; avatarUrl?: string | null } | null;
+}
+
+export interface ISession {
+  id: string;
+  userAgent?: string;
+  ipAddress?: string;
+  deviceType?: string;
+  os?: string;
+  browser?: string;
+  location?: string;
+  lastActiveAt?: string;
+  current?: boolean;
+}
+
 /** Entités reliées aux œuvres : personnage, personne (staff, doubleur, artiste), musique, société. */
 export type EntityKind = 'character' | 'person' | 'track' | 'company';
 
@@ -429,6 +473,74 @@ export const api = {
   /** Actualités publiées reliées à une fiche (publiques). */
   getMediaNews(id: string) {
     return request<INewsArticle[]>(`/news/public/media/${id}/articles`, { auth: false });
+  },
+
+  getMyProfile() {
+    return request<IMyProfile>('/members/profile');
+  },
+
+  updateMyProfile(data: { displayName?: string; description?: string }) {
+    return request<IMyProfile>('/members/profile', { method: 'PUT', body: data });
+  },
+
+  getMyPrivacy() {
+    return request<{ profileVisibility: ProfileVisibility }>('/members/me/privacy');
+  },
+
+  setMyPrivacy(profileVisibility: ProfileVisibility) {
+    return request<{ profileVisibility: ProfileVisibility }>('/members/me/privacy', { method: 'PUT', body: { profileVisibility } });
+  },
+
+  listMyBlocks() {
+    return request<IPage<IUserBlock>>('/user-blocks/me', { method: 'POST', body: {} });
+  },
+
+  unblockMember(memberId: string) {
+    return request<{ removed: boolean }>(`/user-blocks/users/${encodeURIComponent(memberId)}`, { method: 'DELETE' });
+  },
+
+  listFriendRequests(direction: 'incoming' | 'outgoing') {
+    return request<IPage<IFriendRequest>>(`/friendships/me/${direction}`, { method: 'POST', body: {} });
+  },
+
+  answerFriendRequest(id: string, action: 'accept' | 'reject' | 'cancel') {
+    return request<IFriendRequest>(`/friendships/${encodeURIComponent(id)}/${action}`, { method: 'POST' });
+  },
+
+  listMySessions() {
+    return request<ISession[]>('/auth/sessions');
+  },
+
+  deleteSession(id: string) {
+    return request<unknown>(`/auth/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+
+  /** Animes en cours ou à venir (pour l'agenda), toutes pages : l'agenda ne doit perdre aucune sortie. */
+  async getAgendaAnimes(): Promise<IMedia[]> {
+    const all: IMedia[] = [];
+    for (const status of ['AIRING', 'SOON'] as const) {
+      let page = 1;
+      while (page <= 20) {
+        const res = await request<IPage<IMedia>>('/animes', {
+          method: 'POST',
+          body: { page, limit: 100, query: { verified: true, status }, sort: { 'date.start': 'asc' } },
+          auth: false,
+        });
+        all.push(...res.results);
+        if (!res.hasNextPage) break;
+        page += 1;
+      }
+    }
+    return all;
+  },
+
+  /** Animes de la saison en cours (`current`) ou suivante (`next`), par date de début. */
+  getSeasonAnimes(period: 'current' | 'next') {
+    return request<IPage<IMedia>>('/animes', {
+      method: 'POST',
+      body: { page: 1, limit: 20, query: { verified: true, seasonPeriod: period }, sort: { 'date.start': 'asc' } },
+      auth: false,
+    }).then((res) => res.results);
   },
 
   getMemberProfile(username: string) {

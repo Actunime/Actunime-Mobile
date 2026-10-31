@@ -72,6 +72,12 @@ export const useMediaLinks = (kind: MediaKind, id: string, what: 'characters' | 
     staleTime: FIVE_MINUTES,
   });
 
+export const useAgendaAnimes = () =>
+  useQuery({ queryKey: ['agenda-animes'], queryFn: () => api.getAgendaAnimes(), staleTime: FIVE_MINUTES });
+
+export const useSeasonAnimes = (period: 'current' | 'next') =>
+  useQuery({ queryKey: ['season-animes', period], queryFn: () => api.getSeasonAnimes(period), staleTime: FIVE_MINUTES });
+
 export const useMemberProfile = (username: string) =>
   useQuery({ queryKey: ['member', username, 'profile'], queryFn: () => api.getMemberProfile(username), enabled: !!username, retry: false });
 
