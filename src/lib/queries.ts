@@ -258,19 +258,32 @@ export function usePatchEntry() {
     mutationFn: ({ entry, patch }: { entry: IListEntry; patch: IEntryPatch }) =>
       api.updateListEntry((entry.id ?? entry._id) as string, patchToFields(entry, patch)),
     onMutate: async ({ entry, patch }) => {
-      const key = ['my-list', 'entries', entry.mediaType ?? 'Anime'];
-      await client.cancelQueries({ queryKey: key });
-      const previous = client.getQueryData<IListEntry[]>(key);
+      // Ma liste complète ET les listes par statut de « Mon suivi » sont mises à jour sur place.
+      const keys = [['my-list', 'entries', entry.mediaType ?? 'Anime'], ['my-list', 'all']];
+      await Promise.all(keys.map((queryKey) => client.cancelQueries({ queryKey })));
+      const previous = keys.flatMap((queryKey) => client.getQueriesData<IListEntry[]>({ queryKey }));
       const fields = patchToFields(entry, patch);
-      client.setQueryData<IListEntry[]>(key, (old) =>
-        old?.map((e) => ((e.id ?? e._id) === (entry.id ?? entry._id) ? { ...e, ...fields, updatedAt: e.updatedAt } : e)),
-      );
-      return { key, previous };
+      const id = entry.id ?? entry._id;
+      for (const queryKey of keys) {
+        client.setQueriesData<IListEntry[]>({ queryKey }, (old) =>
+          Array.isArray(old) ? old.map((e) => ((e.id ?? e._id) === id ? { ...e, ...fields, updatedAt: e.updatedAt } : e)) : old,
+        );
+      }
+      return { previous };
     },
     onError: (_error, _input, context) => {
-      if (context?.previous) client.setQueryData(context.key, context.previous);
+      for (const [queryKey, data] of context?.previous ?? []) client.setQueryData(queryKey, data);
     },
-    onSettled: (_data, _error, { entry }) => invalidate(entry.mediaId ?? ''),
+    // Un changement de statut déplace l'entrée d'une liste à l'autre : on recharge. Sans cela (+1, note, dates),
+    // la mise à jour sur place suffit : recharger toute la liste (centaines d'entrées) à chaque tape est coûteux.
+    onSettled: (_data, _error, { entry, patch }) => {
+      if (patch.status !== undefined && patch.status !== entry.status) return invalidate(entry.mediaId ?? '');
+      return Promise.all([
+        client.invalidateQueries({ queryKey: ['entry', entry.mediaId ?? ''] }),
+        client.invalidateQueries({ queryKey: ['list-statistics'] }),
+        client.invalidateQueries({ queryKey: ['my-list'], refetchType: 'none' }),
+      ]);
+    },
   });
 }
 
