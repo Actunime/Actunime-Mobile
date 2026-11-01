@@ -2,7 +2,7 @@
 
 ## Signaler une vulnérabilité
 
-Merci de **ne pas ouvrir de ticket public** pour une faille de sécurité. Écris-nous en privé via les
+Merci de **ne pas la publier**. Écris-nous en privé à [actunime@actunime.fr](mailto:actunime@actunime.fr) ou via les
 [avis de sécurité GitHub](https://github.com/Actunime/Actunime-Mobile/security/advisories/new) du dépôt, avec :
 
 - ce que tu as observé et comment le reproduire ;

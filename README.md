@@ -7,7 +7,7 @@
 **Ta liste anime & manga, partout.** L'application Android d'[Actunime](https://actunime.fr) : ta liste, tes fiches,
 un agenda des sorties et un navigateur qui reconnaît ce que tu lis ou regardes pour mettre ta liste à jour.
 
-[Télécharger l'APK](https://github.com/Actunime/Actunime-Mobile/releases) · [Signaler un problème](https://github.com/Actunime/Actunime-Mobile/issues) · [Sécurité](SECURITY.md)
+[Télécharger l'APK](https://github.com/Actunime/Actunime-Mobile/releases) · [Une question ? Contact](https://actunime.fr/contact) · [Discord](https://discord.gg/TJuKYa694n) · [Sécurité](SECURITY.md)
 
 <br />
 
@@ -134,9 +134,15 @@ L'application est autonome : elle ne dépend d'aucune bibliothèque `@actunime/*
 
 Un push sur la branche `beta` lance `.github/workflows/release.yml` : tests, vérification des types, compilation du moteur de filtres, build de l'APK, signature, puis publication d'une release avec une fiche de version (`latest.json` : version, `versionCode`, empreinte SHA-256) que l'application lit pour se mettre à jour.
 
-## Contribuer
+## Code ouvert, sans contributions
 
-Les [issues](https://github.com/Actunime/Actunime-Mobile/issues) sont ouvertes : un retour d'usage, un site où la détection se trompe (donne l'adresse de la page et ce que l'application affiche), une idée. Pour une faille de sécurité, suis [SECURITY.md](SECURITY.md) plutôt qu'une issue publique.
+Le code est public **pour la transparence** : tu peux lire ce que fait l'application, la compiler toi-même et vérifier
+ce qu'elle garde ou n'envoie pas. Ce n'est pas un projet ouvert aux contributions : les issues et les pull requests ne
+sont pas acceptées.
+
+Un problème, un site où la détection se trompe, une idée : écris-nous via la page [Contact](https://actunime.fr/contact)
+ou sur le [Discord](https://discord.gg/TJuKYa694n) (donne l'adresse de la page et ce que l'application affiche). Pour une
+faille de sécurité, suis [SECURITY.md](SECURITY.md).
 
 ## Licence
 
