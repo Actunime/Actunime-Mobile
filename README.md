@@ -28,7 +28,7 @@ un agenda des sorties et un navigateur qui reconnaît ce que tu lis ou regardes 
 - **Profil des membres** : badges, listes, favoris et statistiques, selon ce que chacun laisse voir.
 - **Navigateur de lecture** : lis un manga ou regarde un anime sur le site de ton choix ; l'application repère l'œuvre et le chapitre ou l'épisode et met ta liste à jour. Voir [Le navigateur](#le-navigateur).
 - **Paramètres** : profil, confidentialité, amis, blocages et appareils connectés.
-- **Mises à jour automatiques** : l'application cherche une nouvelle version au lancement et te prévient ; elle t'envoie sur la page de téléchargement GitHub, sans rien installer elle-même.
+- **Mises à jour automatiques** : l'application cherche une nouvelle version au lancement et te propose de l'installer.
 
 Ce qui n'est pas encore dans l'application est grisé avec la mention « Bientôt disponible » : discussions, fil d'activité et statistiques d'une œuvre, modification d'une fiche, signalement, notifications, import et export de listes.
 
@@ -49,7 +49,7 @@ Ce qui n'est pas encore dans l'application est grisé avec la mention « Bientô
 2. Ouvre le fichier. Android te demande d'autoriser l'installation depuis ce navigateur : accepte pour cette fois.
 3. Lance Actunime et connecte-toi avec ton compte ([actunime.fr](https://actunime.fr)).
 
-Pour les versions suivantes, l'application lit la dernière release au lancement (une fois par jour au plus) et te prévient quand une version plus récente existe ; elle ouvre alors la page de téléchargement GitHub, et c'est ton navigateur qui télécharge et installe l'APK. L'application ne demande donc aucune autorisation d'installer des applications. Le réglage se trouve dans **Profil → Mises à jour automatiques**.
+Les versions suivantes se téléchargent toutes seules : au lancement (une fois par jour au plus), l'application lit la dernière release, vérifie l'empreinte SHA-256 de l'APK, puis te propose de l'installer. L'installation dans l'application est facultative : tu peux refuser l'autorisation « installer des applications » et télécharger l'APK à la main sur la page de la release GitHub, qu'un bouton ouvre pour toi. Le réglage se trouve dans **Profil → Mises à jour automatiques**.
 
 ## Le navigateur
 

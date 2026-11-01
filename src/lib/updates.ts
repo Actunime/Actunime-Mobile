@@ -8,7 +8,7 @@ export interface IReleaseInfo {
   versionCode: number;
   sha256: string;
   apkUrl: string;
-  /** Page GitHub de la release : c'est là que le membre télécharge l'APK (l'app n'installe rien elle-même). */
+  /** Page GitHub de la release : téléchargement à la main, sans autoriser l'app à installer. */
   pageUrl: string;
   notes: string;
 }
