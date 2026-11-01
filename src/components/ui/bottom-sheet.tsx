@@ -95,7 +95,9 @@ export function BottomSheet({
       onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 6,
       onPanResponderMove: (_e, g) => translate.setValue(Math.max(0, g.dy)),
       onPanResponderRelease: (_e, g) => {
-        Animated.spring(translate, { toValue: 0, useNativeDriver: true, bounciness: 0 }).start();
+        // Pas de pilote natif : la même vue anime aussi `height` (JS) ; mélanger les deux lève une exception
+        // fatale qui ferme l'app (« Attempting to run JS driven animation on animated node … moved to native »).
+        Animated.spring(translate, { toValue: 0, useNativeDriver: false, bounciness: 0 }).start();
         if (g.dy < -40 && collapsedHeight && !expandedRef.current) setExpand(true);
         else if (g.dy > 80 || g.vy > 1.2) {
           if (collapsedHeight && expandedRef.current) setExpand(false);
