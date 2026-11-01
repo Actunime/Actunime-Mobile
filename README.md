@@ -78,7 +78,7 @@ C'est l'équivalent mobile de l'extension [Actunime Sync](https://github.com/Act
 
 ## Confidentialité
 
-- Ton jeton de connexion est gardé dans le coffre sécurisé d'Android (`expo-secure-store`).
+- Ton jeton de connexion est gardé dans le coffre sécurisé d'Android (`expo-secure-store`). Il se renouvelle tout seul : tu n'as pas à te reconnecter toutes les semaines (révocable depuis Paramètres → appareils connectés).
 - L'historique du navigateur, les sites épinglés et la dernière page lue de chaque œuvre restent **uniquement sur ton téléphone** et s'effacent d'un geste.
 - Aucun SDK d'analyse d'usage, aucun traqueur publicitaire dans l'application.
 - Les listes de filtres du bloqueur de publicités sont téléchargées depuis leurs éditeurs ; elles ne sont pas livrées avec l'application.
