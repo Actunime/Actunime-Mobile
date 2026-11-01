@@ -8,6 +8,8 @@ export interface IReleaseInfo {
   versionCode: number;
   sha256: string;
   apkUrl: string;
+  /** Page GitHub de la release : c'est là que le membre télécharge l'APK (l'app n'installe rien elle-même). */
+  pageUrl: string;
   notes: string;
 }
 
@@ -17,11 +19,17 @@ interface IGithubAsset {
 }
 
 interface IGithubRelease {
+  html_url?: unknown;
   draft?: unknown;
   assets?: unknown;
 }
 
 const MANIFEST_NAME = 'latest.json';
+const RELEASES_PAGE = 'https://github.com/Actunime/Actunime-Mobile/releases';
+
+/** Page de la release ; seule une adresse du dépôt de l'app est acceptée, sinon la liste des releases. */
+const pageOf = (release: IGithubRelease): string =>
+  typeof release.html_url === 'string' && release.html_url.startsWith(`${RELEASES_PAGE}/`) ? release.html_url : RELEASES_PAGE;
 const SHA256 = /^[0-9a-f]{64}$/i;
 
 /** Au plus une recherche par jour au lancement (le bouton « Rechercher une mise à jour » passe outre). */
@@ -66,6 +74,7 @@ export function parseManifest(manifest: unknown, release: IGithubRelease): IRele
     versionCode: m.versionCode,
     sha256: m.sha256.toLowerCase(),
     apkUrl,
+    pageUrl: pageOf(release),
     notes: typeof m.notes === 'string' ? m.notes : '',
   };
 }

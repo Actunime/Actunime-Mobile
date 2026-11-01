@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 
 import { Updater } from '../../modules/actunime-updater/src';
 import { UPDATES_URL } from './config';
@@ -14,9 +14,6 @@ export type UpdateState =
   | { status: 'checking' }
   | { status: 'up-to-date' }
   | { status: 'available'; info: IReleaseInfo }
-  | { status: 'downloading'; info: IReleaseInfo; downloaded: number; total: number }
-  | { status: 'ready'; info: IReleaseInfo; path: string }
-  | { status: 'installing'; info: IReleaseInfo }
   | { status: 'error'; message: string; info?: IReleaseInfo };
 
 let state: UpdateState = { status: 'idle' };
@@ -72,43 +69,13 @@ export async function checkForUpdate({ silent = false }: { silent?: boolean } = 
   }
 }
 
-/** Télécharge l'APK (empreinte vérifiée). */
-export async function downloadUpdate(info: IReleaseInfo): Promise<string | null> {
-  set({ status: 'downloading', info, downloaded: 0, total: -1 });
-  const subscription = Updater.onProgress(({ downloaded, total }) => set({ status: 'downloading', info, downloaded, total }));
-  try {
-    const path = await Updater.download(info.apkUrl, info.sha256);
-    set({ status: 'ready', info, path });
-    return path;
-  } catch (error) {
-    set({ status: 'error', message: messageOf(error), info });
-    return null;
-  } finally {
-    subscription.remove();
-  }
-}
-
 /**
- * Installe l'APK téléchargé. Android demande d'abord d'autoriser cette app à installer des APK (une fois) : on
- * l'explique, puis on ouvre le bon écran ; l'utilisateur revient et touche « Installer » de nouveau.
+ * Ouvre la page de la release sur GitHub : le membre y télécharge l'APK et l'installe avec son navigateur. L'app
+ * n'installe rien elle-même, donc ne demande aucune autorisation « installer des applications ».
  */
-export async function installUpdate(info: IReleaseInfo, path: string): Promise<void> {
-  if (!Updater.canInstall()) {
-    Alert.alert(
-      'Autoriser l’installation',
-      'Pour se mettre à jour, Actunime doit être autorisée à installer des applications. Active « Autoriser depuis cette source », puis reviens et touche « Installer ».',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Ouvrir les réglages', onPress: () => Updater.openInstallSettings() },
-      ],
-    );
-    return;
-  }
-  set({ status: 'installing', info });
+export async function openUpdatePage(info: IReleaseInfo): Promise<void> {
   try {
-    await Updater.install(path);
-    // « user-action » : Android affiche sa confirmation ; « installed » : l'app est déjà remplacée
-    set({ status: 'ready', info, path });
+    await Linking.openURL(info.pageUrl);
   } catch (error) {
     set({ status: 'error', message: messageOf(error), info });
   }
@@ -118,8 +85,8 @@ let launchChecked = false;
 
 /**
  * Au lancement, au plus une fois par jour (et seulement si les mises à jour automatiques sont actives) : cherche une
- * nouvelle version, la télécharge, puis propose de l'installer. Jamais bloquant : « Plus tard » laisse l'app utilisable,
- * et la version reste proposée dans le Profil.
+ * nouvelle version et la signale. Jamais bloquant : « Plus tard » laisse l'app utilisable, et la version reste
+ * proposée dans le Profil.
  */
 export async function runLaunchCheck(): Promise<void> {
   if (launchChecked) return;
@@ -133,10 +100,8 @@ export async function runLaunchCheck(): Promise<void> {
 
   const info = await checkForUpdate({ silent: true });
   if (!info) return;
-  const path = await downloadUpdate(info);
-  if (!path) return;
-  Alert.alert('Mise à jour prête', `La version ${info.version} est téléchargée.${info.notes ? `\n\n${info.notes}` : ''}`, [
+  Alert.alert('Nouvelle version', `La version ${info.version} est disponible.${info.notes ? `\n\n${info.notes}` : ''}`, [
     { text: 'Plus tard', style: 'cancel' },
-    { text: 'Installer', onPress: () => void installUpdate(info, path) },
+    { text: 'Page de téléchargement', onPress: () => void openUpdatePage(info) },
   ]);
 }

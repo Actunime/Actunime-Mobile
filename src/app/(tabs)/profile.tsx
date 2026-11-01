@@ -14,9 +14,8 @@ import { useMyEntries } from '@/lib/queries';
 import { listTotals } from '@/lib/suivi';
 import {
   checkForUpdate,
-  downloadUpdate,
   installedVersion,
-  installUpdate,
+  openUpdatePage,
   setAutoUpdate,
   useAutoUpdate,
   useUpdateState,
@@ -34,9 +33,7 @@ function Counter({ value, label }: Readonly<{ value: string | number; label: str
   );
 }
 
-const megabytes = (bytes: number) => `${(bytes / 1_048_576).toFixed(1).replace('.', ',')} Mo`;
-
-/** Phrase d'état de la mise à jour, et l'action qui suit (rien, télécharger, installer). */
+/** Phrase d'état de la mise à jour, et l'action qui suit (rien, ouvrir la page de téléchargement). */
 function updateLine(update: UpdateState): string {
   switch (update.status) {
     case 'checking':
@@ -45,14 +42,6 @@ function updateLine(update: UpdateState): string {
       return 'Tu as la dernière version.';
     case 'available':
       return `Version ${update.info.version} disponible.`;
-    case 'downloading':
-      return update.total > 0
-        ? `Téléchargement de la version ${update.info.version} : ${megabytes(update.downloaded)} sur ${megabytes(update.total)}.`
-        : `Téléchargement de la version ${update.info.version}…`;
-    case 'ready':
-      return `Version ${update.info.version} téléchargée, prête à installer.`;
-    case 'installing':
-      return 'Installation en cours…';
     case 'error':
       return update.message;
     default:
@@ -63,7 +52,7 @@ function updateLine(update: UpdateState): string {
 function AppUpdate() {
   const update = useUpdateState();
   const auto = useAutoUpdate();
-  const busy = update.status === 'checking' || update.status === 'downloading' || update.status === 'installing';
+  const busy = update.status === 'checking';
   let version = '';
   try {
     version = installedVersion().versionName;
@@ -79,7 +68,7 @@ function AppUpdate() {
         <View style={styles.names}>
           <ThemedText type="smallBold">Mises à jour automatiques</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Actunime cherche une nouvelle version au lancement, au plus une fois par jour, et te propose de l’installer.
+            Actunime cherche une nouvelle version au lancement, au plus une fois par jour, et te prévient quand elle est publiée. Le téléchargement se fait sur GitHub, l’app n’installe rien elle-même.
           </ThemedText>
         </View>
         <Switch
@@ -95,9 +84,7 @@ function AppUpdate() {
         {line}
       </ThemedText>
       {update.status === 'available' ? (
-        <Button label="Télécharger la mise à jour" onPress={() => void downloadUpdate(update.info)} />
-      ) : update.status === 'ready' ? (
-        <Button label="Installer la mise à jour" onPress={() => void installUpdate(update.info, update.path)} />
+        <Button label="Ouvrir la page de téléchargement" onPress={() => void openUpdatePage(update.info)} />
       ) : (
         <Button
           label="Rechercher une mise à jour"

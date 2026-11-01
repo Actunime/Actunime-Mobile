@@ -50,8 +50,17 @@ describe('pickRelease / parseManifest', () => {
       versionCode: 7,
       sha256: SHA,
       apkUrl: 'https://dl.example/app-7.apk',
+      pageUrl: 'https://github.com/Actunime/Actunime-Mobile/releases',
       notes: 'fix: un correctif',
     });
+  });
+
+  it('renvoie vers la page de la release du dépôt, jamais vers une autre adresse', () => {
+    const page = 'https://github.com/Actunime/Actunime-Mobile/releases/tag/v0.1.0-beta.7';
+    expect(parseManifest(manifest(), { ...release(), html_url: page })?.pageUrl).toBe(page);
+    expect(parseManifest(manifest(), { ...release(), html_url: 'https://evil.example/releases/x' })?.pageUrl).toBe(
+      'https://github.com/Actunime/Actunime-Mobile/releases',
+    );
   });
 
   it('refuse une fiche incomplète ou suspecte', () => {
