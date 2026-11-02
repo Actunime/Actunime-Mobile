@@ -10,6 +10,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { ConfigWizard } from './config-wizard';
 import { fieldStyle } from './wizard-parts';
 import { SearchSheet } from './search-sheet';
+import { TabCountButton } from './tab-switcher';
 import { TrackingBar } from './tracking-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -62,13 +63,19 @@ function MenuRow({ icon, label, onPress }: Readonly<{ icon: React.ComponentProps
 
 interface IBrowserViewProps {
   url: string;
-  /** Retour à la page d'accueil du navigateur (bouton Accueil, ou retour Android depuis la première page). */
+  /** Retour à la page d'accueil du navigateur (menu, ou retour Android depuis la première page) ; l'onglet reste ouvert. */
   onHome: () => void;
+  /** Onglet affiché : un onglet en arrière-plan reste monté mais ne gère ni le retour d'Android ni les barres. */
+  active: boolean;
+  tabCount: number;
+  onOpenTabs: () => void;
+  /** Titre et adresse courants, pour la liste des onglets. */
+  onInfo: (info: { title?: string; url: string }) => void;
 }
 
 /** Page web avec barre d'outils et suivi Actunime. Une nouvelle adresse venue de l'extérieur remonte le composant (`key`). */
-export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewProps>) {
-  const focused = useIsFocused();
+export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenTabs, onInfo }: Readonly<IBrowserViewProps>) {
+  const focused = useIsFocused() && active;
   const settings = useBrowserSettings();
   const webview = useRef<WebView>(null);
   const tracking = useTracking(webview);
@@ -138,10 +145,11 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
     (state: WebViewNavigation) => {
       setNavigation({ canGoBack: state.canGoBack, canGoForward: state.canGoForward, loading: state.loading });
       setPageUrl(state.url);
+      if (!state.loading) onInfo({ title: state.title || undefined, url: state.url });
       if (!editing) setAddress(state.url);
       if (!state.loading && getBrowserSettings().history) void recordVisit(state.url);
     },
-    [editing],
+    [editing, onInfo],
   );
 
   const submitAddress = useCallback(() => {
@@ -234,7 +242,7 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
       <SafeAreaView style={styles.container} edges={['top']}>
         {showFullBar ? (
         <ThemedView type="backgroundElement" style={styles.toolbar}>
-          <IconButton name="home-outline" label="Accueil du navigateur" onPress={onHome} />
+          <TabCountButton count={tabCount} onPress={onOpenTabs} />
           <IconButton
             name="chevron-back"
             label="Page précédente"
@@ -335,6 +343,14 @@ export function BrowserView({ url: initialUrl, onHome }: Readonly<IBrowserViewPr
 
         <BottomSheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Navigateur">
           <View style={styles.menu}>
+            <MenuRow
+              icon="home-outline"
+              label="Accueil du navigateur"
+              onPress={() => {
+                setMenuOpen(false);
+                onHome();
+              }}
+            />
             {current && currentNumber !== undefined ? (
               <MenuRow icon="play-skip-forward-outline" label={`${unit} suivant`} onPress={() => void goNext()} />
             ) : null}

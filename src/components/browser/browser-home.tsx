@@ -8,6 +8,7 @@ import { Button } from '@/components/button';
 import { Poster } from '@/components/poster';
 import { Screen } from '@/components/screen';
 import { Pressable } from '@/components/tap';
+import { TabCountButton } from './tab-switcher';
 import { ThemedText } from '@/components/themed-text';
 import { Sheen } from '@/components/ui/sheen';
 import { Colors, Floating, Fonts, ScreenGutter, Spacing, Tw } from '@/constants/theme';
@@ -113,7 +114,7 @@ function SiteRow({ site, onOpen, onPin, onForget }: Readonly<{ site: IBrowserSit
  * Accueil du navigateur : lire ou regarder sur n'importe quel site (mangas comme animes en streaming), avec le suivi
  * Actunime. Retrouver sa lecture d'un geste, puis ses sites ; l'adresse reste en haut pour les autres cas.
  */
-export function BrowserHome({ onOpen }: Readonly<{ onOpen: (url: string) => void }>) {
+export function BrowserHome({ onOpen, tabCount = 0, onOpenTabs }: Readonly<{ onOpen: (url: string) => void; tabCount?: number; onOpenTabs?: () => void }>) {
   const client = useQueryClient();
   const settings = useBrowserSettings();
   const [address, setAddress] = useState('');
@@ -167,6 +168,7 @@ export function BrowserHome({ onOpen }: Readonly<{ onOpen: (url: string) => void
               Lis un manga ou regarde un anime sur le site de ton choix : ta liste se met à jour.
             </ThemedText>
           </View>
+          {tabCount > 0 && onOpenTabs ? <TabCountButton count={tabCount} onPress={onOpenTabs} /> : null}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Réglages du navigateur"
