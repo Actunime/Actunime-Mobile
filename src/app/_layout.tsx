@@ -75,6 +75,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="media/[kind]/[id]" />
             <Stack.Screen name="edit/[kind]/[id]" />
+            <Stack.Screen name="propose/[kind]/[id]" />
             <Stack.Screen name="browser-settings" />
             <Stack.Screen name="character/[id]" />
             <Stack.Screen name="person/[id]" />

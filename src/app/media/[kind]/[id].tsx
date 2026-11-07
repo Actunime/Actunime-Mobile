@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
   Activity,
@@ -393,7 +393,7 @@ export default function MediaScreen() {
                 Les informations de cette page sont incompletes.
               </Txt>
             </View>
-            <Pressable onPress={() => showSoon('La modification d’une fiche')} style={[styles.warningButton, { opacity: SOON_OPACITY }]}>
+            <Pressable onPress={() => router.push(`/propose/${kind}/${id}` as Href)} style={styles.warningButton}>
               <Txt size="xs" weight="medium" color="#000">
                 Completer
               </Txt>
@@ -410,7 +410,7 @@ export default function MediaScreen() {
             <ChevronDown size={14} color={alpha(Tw.color.foreground, 0.6)} style={styles.tabChevron} />
           </Pressable>
           <View style={styles.icons}>
-            <IconButton icon={Pencil} label="Modifier" soon onPress={() => showSoon('La modification d’une fiche')} />
+            <IconButton icon={Pencil} label="Modifier" onPress={() => router.push(`/propose/${kind}/${id}` as Href)} />
             <IconButton icon={Share2} label="Partager" onPress={() => Share.share({ message: `${mediaTitle(data)} — ${WEB_URL}${sitePath}` }).catch(() => undefined)} />
             <Pressable
               accessibilityRole="button"
@@ -640,7 +640,7 @@ export default function MediaScreen() {
                 <Txt size="sm" color={Tw.color.mutedForeground} style={styles.flex}>
                   Cette fiche n'a pas encore de musiques.
                 </Txt>
-                <Pressable onPress={() => showSoon('La modification d’une fiche')} style={[styles.inline, { opacity: SOON_OPACITY }]}>
+                <Pressable onPress={() => router.push(`/propose/${kind}/${id}` as Href)} style={styles.inline}>
                   <Pencil size={16} color={Tw.color.primary} />
                   <Txt size="sm" weight="medium" color={Tw.color.primary}>
                     Compléter

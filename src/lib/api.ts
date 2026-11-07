@@ -590,4 +590,17 @@ export const api = {
   async blockMember(memberId: string) {
     return body(await client().userBlocks.block(memberId));
   },
+
+  /** Propose une correction de fiche (mise à jour) : la modération la vérifie avant qu'elle soit appliquée. */
+  async proposeMediaUpdate(kind: MediaKind, id: string, changes: Record<string, unknown>) {
+    return body(
+      await client().proposals.create({
+        mode: 'UPDATE',
+        entityType: mediaTypeOf(kind),
+        targetEntityId: id,
+        mainDependency: changes,
+        dependencies: [],
+      } as never),
+    );
+  },
 };

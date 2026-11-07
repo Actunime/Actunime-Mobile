@@ -97,17 +97,19 @@ export function ScoreField({ value, onChange }: Readonly<{ value?: number; onCha
 }
 
 interface IDateFieldProps {
+  /** Autorise les dates à venir (sorties prévues) ; sinon la date ne peut pas dépasser aujourd'hui. */
+  allowFuture?: boolean;
   value: string | null;
   onChange: (value: string | null) => void;
 }
 
 /** Date choisie au sélecteur natif d'Android ; « Effacer » vide le champ. */
-export function DateField({ value, onChange }: Readonly<IDateFieldProps>) {
+export function DateField({ value, onChange, allowFuture }: Readonly<IDateFieldProps>) {
   const open = () =>
     DateTimePickerAndroid.open({
       value: value ? new Date(value) : new Date(),
       mode: 'date',
-      maximumDate: new Date(),
+      maximumDate: allowFuture ? undefined : new Date(),
       onChange: (event, date) => {
         if (event.type !== 'set' || !date) return;
         // midi local : évite qu'un décalage de fuseau fasse changer le jour à l'enregistrement
