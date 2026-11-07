@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { notificationGroups, notificationRoute, preferenceValue, timeAgo } from './notifications';
+import { notificationGroups, notificationRoute, plainDescribe, preferenceValue, timeAgo } from './notifications';
 
 describe('notificationRoute', () => {
   it('traduit les liens du site en pages de l’app', () => {
@@ -36,5 +36,14 @@ describe('préférences', () => {
     const groups = notificationGroups();
     expect(groups.length).toBeGreaterThan(2);
     expect(groups.flatMap((g) => g.types).length).toBeGreaterThan(15);
+  });
+});
+
+describe('plainDescribe', () => {
+  it('garde le texte des liens internes', () => {
+    expect(plainDescribe("Ajout de l'anime [ai wo taberu](Anime:8212073982) à la liste (Terminé)")).toBe("Ajout de l'anime ai wo taberu à la liste (Terminé)");
+  });
+  it('laisse le reste intact', () => {
+    expect(plainDescribe('Mise à jour (note, date de fin)')).toBe('Mise à jour (note, date de fin)');
   });
 });

@@ -66,3 +66,8 @@ export function notificationGroups(): INotificationGroup[] {
     }))
     .filter((group) => group.types.length > 0);
 }
+
+/** Retire le balisage de liens internes des textes d'activité : `[ai wo taberu](Anime:8212073982)` → `ai wo taberu`. */
+export function plainDescribe(text: string): string {
+  return text.replace(/\[([^\]]+)\]\((?:Anime|Manga|Character|Person|PersonGroup|Company|Track|Member|User)[:/][^)]*\)/g, '$1');
+}

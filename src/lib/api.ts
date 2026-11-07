@@ -518,7 +518,9 @@ export const api = {
   async getMediaThread(kind: MediaKind, id: string) {
     const c = client().community;
     const mediaType = mediaTypeOf(kind);
-    return (body(await c.getMediaThread(id, mediaType)) ?? body(await c.ensureMediaThread({ mediaId: id, mediaType }))) as ICommunityThread;
+    const thread = (body(await c.getMediaThread(id, mediaType)) ?? body(await c.ensureMediaThread({ mediaId: id, mediaType }))) as ICommunityThread;
+    // Ce fil arrive tel que stocké (`_id`), sans `id`.
+    return withId(thread);
   },
 
   async getThreadMessages(threadId: string, page = 1, limit = 30) {

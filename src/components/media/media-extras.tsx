@@ -11,7 +11,7 @@ import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
 import { Colors, Fonts, Radius, Spacing, Tw } from '@/constants/theme';
 import { api, type MediaKind } from '@/lib/api';
-import { timeAgo } from '@/lib/notifications';
+import { plainDescribe, timeAgo } from '@/lib/notifications';
 
 interface ISectionProps {
   kind: MediaKind;
@@ -111,7 +111,7 @@ export function MediaActivitiesSection({ kind, id, onLayout }: Readonly<ISection
         <View style={styles.stack}>
           {items.map((activity) => (
             <View key={activity.id} style={styles.item}>
-              <Txt size="sm">{activity.describe || activity.action}</Txt>
+              <Txt size="sm">{plainDescribe(activity.describe || activity.action)}</Txt>
               <Txt size="xs" color={Tw.color.mutedForeground}>
                 {activity.author?.displayName ? `${activity.author.displayName} · ` : ''}
                 {timeAgo(activity.createdAt)}
