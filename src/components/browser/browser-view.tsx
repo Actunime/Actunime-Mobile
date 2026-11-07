@@ -3,7 +3,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { router, useIsFocused } from 'expo-router';
 import { Alert, BackHandler, Linking, Share, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { WebView, type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
+import {
+  WebView,
+  type WebViewMessageEvent,
+  type WebViewNavigation,
+} from 'react-native-webview';
 
 import { Pressable } from '@/components/tap';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -20,6 +24,7 @@ import type { StrategyResult } from '@/detection/core/types';
 import { INJECTED_DETECTION } from '@/detection/injected.generated';
 import { commandScript, parseInPageMessage, type PickedElement } from '@/detection/messages';
 import { resolveAddress } from '@/lib/address';
+import { allowNavigation, isSameSite } from '@/lib/navigation-guard';
 import { nextNumberUrl } from '@/lib/next-chapter';
 import { setReadingChromeHidden, useReadingChromeHidden } from '@/lib/reading-chrome';
 import { getBrowserSettings, setBrowserSetting, useBrowserSettings } from '@/lib/browser-settings';
@@ -151,6 +156,27 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
     },
     [editing, onInfo],
   );
+
+  // Dernier toucher sur la page : une navigation vers un autre site sans toucher récent est une redirection de pub.
+  const lastTouch = useRef(0);
+  const pageUrlRef = useRef(initialUrl);
+  pageUrlRef.current = pageUrl;
+  const onShouldStart = useCallback(
+    (request: { url: string; isTopFrame?: boolean }) =>
+      allowNavigation({
+        target: request.url,
+        current: pageUrlRef.current,
+        isTopFrame: request.isTopFrame ?? true,
+        sinceTouchMs: Date.now() - lastTouch.current,
+      }),
+    [],
+  );
+  // Les fenêtres ouvertes par `window.open` sont ignorées, sauf vers le même site (lien en nouvelle fenêtre) :
+  // celles-ci s'ouvrent dans la page, jamais dans une fenêtre qui échapperait au blocage.
+  const onOpenWindow = useCallback((event: { nativeEvent: { targetUrl: string } }) => {
+    const target = event.nativeEvent.targetUrl;
+    if (isSameSite(target, pageUrlRef.current)) setSource(target);
+  }, []);
 
   const submitAddress = useCallback(() => {
     const target = resolveAddress(address);
@@ -306,7 +332,7 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
           {navigation.loading && <View style={[styles.progressBar, { width: `${Math.round(progress * 100)}%` }]} />}
         </View>
 
-        <View style={styles.container}>
+        <View style={styles.container} onStartShouldSetResponderCapture={() => { lastTouch.current = Date.now(); return false; }}>
           <WebView
             ref={webview}
             source={{ uri: source, headers: PRIVACY_HEADERS }}
@@ -315,7 +341,9 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
             onMessage={onMessage}
             onNavigationStateChange={onNavigationStateChange}
             onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
-            setSupportMultipleWindows={false}
+            setSupportMultipleWindows
+            onOpenWindow={onOpenWindow}
+            onShouldStartLoadWithRequest={onShouldStart}
             thirdPartyCookiesEnabled={false}
             mixedContentMode="never"
             allowsBackForwardNavigationGestures
