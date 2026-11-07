@@ -627,7 +627,25 @@ export default function MediaScreen() {
               onLayout={at('characters')}
             >
               <CardCarousel items={characterItems} placeholder={User} square />
+              <Pressable onPress={() => router.push(`/complete/${kind}/${id}/characters` as Href)} style={styles.inline}>
+                <Pencil size={16} color={Tw.color.primary} />
+                <Txt size="sm" weight="medium" color={Tw.color.primary}>
+                  Ajouter un personnage
+                </Txt>
+              </Pressable>
             </SectionCard>
+          ) : characters.data ? (
+            <View style={styles.emptyTracks}>
+              <Txt size="sm" color={Tw.color.mutedForeground} style={styles.flex}>
+                Cette fiche n'a pas encore de personnages.
+              </Txt>
+              <Pressable onPress={() => router.push(`/complete/${kind}/${id}/characters` as Href)} style={styles.inline}>
+                <Pencil size={16} color={Tw.color.primary} />
+                <Txt size="sm" weight="medium" color={Tw.color.primary}>
+                  Compléter
+                </Txt>
+              </Pressable>
+            </View>
           ) : null}
           {staffItems.length > 0 ? (
             <SectionCard

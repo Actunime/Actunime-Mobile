@@ -1,8 +1,8 @@
-import { CompanyTypeObj, TrackTypeObj } from '@actunime/types';
+import { CharacterGenderObj, CharacterRoleObj, CompanyTypeObj, TrackTypeObj } from '@actunime/types';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
-import { Building2, Music } from 'lucide-react-native';
+import { Building2, Music, User } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
@@ -18,8 +18,9 @@ import { entityBadge, entityImage, entityName } from '@/lib/entity';
 import { mediaTitle } from '@/lib/media';
 import { buildRelationAdd, buildRelationCreate, type RelationKind } from '@/lib/propose';
 
-const CONFIG: Record<RelationKind, { entity: 'track' | 'company'; title: string; hint: string; empty: string; icon: typeof Music; create: string; nameLabel: string }> = {
+const CONFIG: Record<RelationKind, { entity: 'track' | 'company' | 'character'; title: string; hint: string; empty: string; icon: typeof Music; create: string; nameLabel: string }> = {
   tracks: { entity: 'track', title: 'Ajouter une musique', hint: 'Rechercher une musique', empty: 'Aucune musique trouvée.', icon: Music, create: 'Elle n’est pas dans la liste ? La créer', nameLabel: 'Titre de la musique' },
+  characters: { entity: 'character', title: 'Ajouter un personnage', hint: 'Rechercher un personnage', empty: 'Aucun personnage trouvé.', icon: User, create: 'Il n’est pas dans la liste ? Le créer', nameLabel: 'Nom du personnage' },
   companies: { entity: 'company', title: 'Ajouter une société', hint: 'Rechercher un studio, un éditeur…', empty: 'Aucune société trouvée.', icon: Building2, create: 'Elle n’est pas dans la liste ? La créer', nameLabel: 'Nom de la société' },
 };
 
@@ -27,7 +28,12 @@ const CONFIG: Record<RelationKind, { entity: 'track' | 'company'; title: string;
 const TYPE_OPTIONS: Record<RelationKind, { value: string; label: string }[]> = {
   tracks: Object.values(TrackTypeObj).map((type) => ({ value: type.value, label: type.label })),
   companies: Object.entries(CompanyTypeObj).map(([value, label]) => ({ value, label })),
+  characters: [],
 };
+
+/** Rôle dans l'œuvre (obligatoire) et genre (facultatif) d'un personnage. */
+const ROLE_OPTIONS = Object.entries(CharacterRoleObj).map(([value, role]) => ({ value, label: role.label }));
+const GENDER_OPTIONS = Object.entries(CharacterGenderObj).map(([value, gender]) => ({ value, label: gender.label }));
 
 /**
  * Compléter une fiche (petit parcours, à la place du formulaire complet du site) : chercher une musique ou une société
@@ -36,7 +42,7 @@ const TYPE_OPTIONS: Record<RelationKind, { value: string; label: string }[]> = {
 export default function CompleteScreen() {
   const { kind: rawKind, id, what: rawWhat } = useLocalSearchParams<{ kind: string; id: string; what: string }>();
   const kind: MediaKind = rawKind === 'manga' ? 'manga' : 'anime';
-  const what: RelationKind = rawWhat === 'companies' ? 'companies' : 'tracks';
+  const what: RelationKind = rawWhat === 'companies' ? 'companies' : rawWhat === 'characters' ? 'characters' : 'tracks';
   const config = CONFIG[what];
   const Icon = config.icon;
 
@@ -64,18 +70,23 @@ export default function CompleteScreen() {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [gender, setGender] = useState<string | null>(null);
   const [start, setStart] = useState<number | undefined>(undefined);
   const [end, setEnd] = useState<number | undefined>(undefined);
   const withEpisodes = what === 'tracks' && kind === 'anime';
-  const canCreate = name.trim().length > 0 && !!type;
+  const isCharacter = what === 'characters';
+  // Le rôle est obligatoire pour un personnage (il décrit sa place dans l'œuvre) ; le type pour une musique ou une société.
+  const canCreate = name.trim().length > 0 && (isCharacter ? !!role : !!type);
+  const canAddPicked = !isCharacter || !!role;
   const send = useMutation({
     mutationFn: () =>
       api.proposeRelationAdd(
         kind,
         id,
         creating
-          ? buildRelationCreate(what, { name, type: type as string, startEpisode: start, endEpisode: end })
-          : buildRelationAdd(what, { id: picked!.id, startEpisode: start, endEpisode: end }),
+          ? buildRelationCreate(what, { name, type: type ?? undefined, role: role ?? undefined, gender: gender ?? undefined, startEpisode: start, endEpisode: end })
+          : buildRelationAdd(what, { id: picked!.id, startEpisode: start, endEpisode: end, role: role ?? undefined }),
       ),
   });
 
@@ -100,9 +111,10 @@ export default function CompleteScreen() {
               ) : null}
             </View>
           </View>
+          {isCharacter ? <Chips label="Rôle dans l’œuvre" options={ROLE_OPTIONS} value={role} onChange={setRole} /> : null}
           {withEpisodes ? <EpisodeFields start={start} end={end} onStart={setStart} onEnd={setEnd} /> : null}
           {send.isError ? <StatusNote tone="error">{errorMessage(send.error)}</StatusNote> : null}
-          <Button label={send.isPending ? 'Envoi…' : 'Proposer l’ajout'} disabled={send.isPending} onPress={() => send.mutate()} />
+          <Button label={send.isPending ? 'Envoi…' : 'Proposer l’ajout'} disabled={!canAddPicked || send.isPending} onPress={() => send.mutate()} />
           <Button label="Choisir autre chose" variant="outline" disabled={send.isPending} onPress={() => setPicked(null)} />
         </SettingsCard>
       ) : creating ? (
@@ -110,23 +122,17 @@ export default function CompleteScreen() {
           <Field label={config.nameLabel}>
             <TextInput value={name} onChangeText={setName} maxLength={200} style={styles.input} placeholderTextColor={Colors.textSecondary} />
           </Field>
-          <Field label="Type">
-            <View style={styles.chips}>
-              {TYPE_OPTIONS[what].map((option) => {
-                const selected = type === option.value;
-                return (
-                  <Pressable key={option.value} accessibilityRole="button" accessibilityState={{ selected }} onPress={() => setType(option.value)} style={[styles.chip, selected && styles.chipOn]}>
-                    <Txt size="sm" weight="medium" color={selected ? Tw.color.primaryForeground : Tw.color.mutedForeground}>
-                      {option.label}
-                    </Txt>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </Field>
+          {isCharacter ? (
+            <>
+              <Chips label="Rôle dans l’œuvre" options={ROLE_OPTIONS} value={role} onChange={setRole} />
+              <Chips label="Genre (facultatif)" options={GENDER_OPTIONS} value={gender} onChange={(value) => setGender(gender === value ? null : value)} />
+            </>
+          ) : (
+            <Chips label="Type" options={TYPE_OPTIONS[what]} value={type} onChange={setType} />
+          )}
           {withEpisodes ? <EpisodeFields start={start} end={end} onStart={setStart} onEnd={setEnd} /> : null}
           <Txt size="xs" color={Tw.color.mutedForeground}>
-            Le reste (couverture, liens, artistes…) pourra être complété ensuite. La modération vérifie avant d’appliquer.
+            Le reste (image, liens, artistes ou doubleurs…) pourra être complété ensuite, depuis sa propre page. La modération vérifie avant d’appliquer.
           </Txt>
           {send.isError ? <StatusNote tone="error">{errorMessage(send.error)}</StatusNote> : null}
           <Button label={send.isPending ? 'Envoi…' : 'Proposer la création et l’ajout'} disabled={!canCreate || send.isPending} onPress={() => send.mutate()} />
@@ -173,6 +179,25 @@ export default function CompleteScreen() {
         </>
       )}
     </SettingsPage>
+  );
+}
+
+function Chips({ label, options, value, onChange }: Readonly<{ label: string; options: { value: string; label: string }[]; value: string | null; onChange: (value: string) => void }>) {
+  return (
+    <Field label={label}>
+      <View style={styles.chips}>
+        {options.map((option) => {
+          const selected = value === option.value;
+          return (
+            <Pressable key={option.value} accessibilityRole="button" accessibilityState={{ selected }} onPress={() => onChange(option.value)} style={[styles.chip, selected && styles.chipOn]}>
+              <Txt size="sm" weight="medium" color={selected ? Tw.color.primaryForeground : Tw.color.mutedForeground}>
+                {option.label}
+              </Txt>
+            </Pressable>
+          );
+        })}
+      </View>
+    </Field>
   );
 }
 

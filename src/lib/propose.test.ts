@@ -34,6 +34,18 @@ describe('buildRelationAdd', () => {
   });
 });
 
+describe('personnages', () => {
+  it('ajoute un personnage existant avec son rôle', () => {
+    expect(buildRelationAdd('characters', { id: 'p1', role: 'PRINCIPAL' })).toEqual({ characters: [{ id: 'p1', role: 'PRINCIPAL' }] });
+  });
+  it('crée un personnage (nom, genre facultatif) avec son rôle sur la relation, sans artistes', () => {
+    expect(buildRelationCreate('characters', { name: ' Maya ', role: 'SECONDAIRE', gender: 'FEMININ' }, 'temp_z')).toEqual({
+      characters: [{ id: 'temp_z', role: 'SECONDAIRE' }],
+      dependencies: [{ tempId: 'temp_z', entityType: 'Character', mainDependency: { name: { original: 'Maya' }, gender: 'FEMININ' } }],
+    });
+  });
+});
+
 describe('buildRelationCreate', () => {
   it('crée une musique avec son nom et son type, rattachée par un identifiant provisoire', () => {
     expect(buildRelationCreate('tracks', { name: '  Mon opening ', type: 'OPENING', startEpisode: 1 }, 'temp_x')).toEqual({
