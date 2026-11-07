@@ -11,6 +11,7 @@ import { CardCarousel, InfoRow, PRIMARY_PILL, Pill, SectionCard, type ICarouselI
 import { openMedia } from '@/components/media-row';
 import { Screen } from '@/components/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/states';
+import { MemberActions } from '@/components/member/member-actions';
 import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
 import { ScreenGutter, Tw, alpha } from '@/constants/theme';
@@ -238,6 +239,7 @@ export function MemberScreen({ username, initialTab = 'profil' }: Readonly<{ use
     <View>
       <View style={styles.topBack}>{back}</View>
       <Header member={member} />
+      {!isOwner && auth ? <MemberActions memberId={member.id} username={member.username} displayName={member.displayName} /> : null}
       <Tabs tabs={tabs} active={tab} onChange={(next) => { setTab(next); setStatus('ALL'); }} />
       {isList ? (
         <View style={styles.strip}>

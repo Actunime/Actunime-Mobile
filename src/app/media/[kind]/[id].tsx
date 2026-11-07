@@ -40,6 +40,7 @@ import { ListEntrySheetTrigger } from '@/components/media/list-button';
 import { openEntity, openMediaRelations } from '@/components/entity/open-entity';
 import { openMember } from '@/components/member/open-member';
 import { SOON_OPACITY, showSoon } from '@/lib/soon';
+import { ReportSheet } from '@/components/report/report-sheet';
 import { MediaActivitiesSection, MediaEpisodesSection, MediaStatsSection } from '@/components/media/media-extras';
 import { CardCarousel, InfoRow, NewsList, PRIMARY_PILL, Pill, STATUS_PILL, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
 import { ManageEntry } from '@/components/list/manage-entry';
@@ -129,6 +130,7 @@ export default function MediaScreen() {
   const toggleFavorite = useToggleFavorite(id, mediaType);
   const [manageOpen, setManageOpen] = useState(false);
   const [tabsOpen, setTabsOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const insets = useSafeAreaInsets();
   const scroll = useRef<ScrollView>(null);
   // voile sous la barre d'état dès que le contenu défile dessous (sinon l'heure et les icônes se mêlent au texte)
@@ -422,7 +424,7 @@ export default function MediaScreen() {
               </Txt>
             </Pressable>
             <View style={styles.iconSeparator}>
-              <IconButton icon={TriangleAlert} label="Signaler" soon onPress={() => showSoon('Le signalement')} />
+              <IconButton icon={TriangleAlert} label="Signaler" onPress={() => setReportOpen(true)} />
             </View>
           </View>
         </View>
@@ -652,6 +654,8 @@ export default function MediaScreen() {
       {scrolled ? (
         <View pointerEvents="none" style={[styles.statusVeil, { height: insets.top }]} />
       ) : null}
+
+      <ReportSheet open={reportOpen} onClose={() => setReportOpen(false)} targetId={id} targetType={anime ? 'Anime' : 'Manga'} targetName={mediaTitle(data)} />
 
       <ManageEntry kind={kind} media={data} entry={entry} open={manageOpen} onClose={() => setManageOpen(false)} genres={genres.map((g) => g.name)} hideViewEntity />
 

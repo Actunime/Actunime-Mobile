@@ -35,7 +35,7 @@ import type {
   ITrackRelation,
   IMediaRelation as ILibMediaRelation,
 } from '@actunime/types';
-import type { IAnimePaginationBody, IListEntryCreateBody, IMangaPaginationBody, INotificationPreferencesBody } from '@actunime/validations';
+import type { IReportCreateBody, IAnimePaginationBody, IListEntryCreateBody, IMangaPaginationBody, INotificationPreferencesBody } from '@actunime/validations';
 
 import { ApiError } from './api-error';
 import { api as client } from './client';
@@ -562,5 +562,32 @@ export const api = {
       sort: { createdAt: -1 },
     } as never);
     return body(res) as IPage<IProposal>;
+  },
+
+  /** Motifs de signalement proposés (selon qu'on signale une fiche ou un membre). */
+  async getReportSubjects(target: 'media' | 'member') {
+    return body(await client().metadata.search({ type: target === 'member' ? 'REPORT_MEMBER_SUBJECT' : 'REPORT_MEDIA_SUBJECT' } as never));
+  },
+
+  async sendReport(request: IReportCreateBody) {
+    return body(await client().reports.create(request));
+  },
+
+  /** Où en est l'amitié entre moi et un membre (aucune, demande reçue ou envoyée, amis, bloqué). */
+  async friendshipStatus(memberId: string) {
+    const map = body(await client().friendships.statusBatch({ ids: [memberId] }));
+    return map[memberId] ?? { status: 'NONE' as const };
+  },
+
+  async sendFriendRequest(memberId: string) {
+    return body(await client().friendships.request(memberId));
+  },
+
+  async removeFriend(memberId: string) {
+    return body(await client().friendships.remove(memberId));
+  },
+
+  async blockMember(memberId: string) {
+    return body(await client().userBlocks.block(memberId));
   },
 };
