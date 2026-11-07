@@ -95,6 +95,8 @@ export default function RootLayout() {
             <Stack.Screen name="notifications" />
             <Stack.Screen name="favoris" />
             <Stack.Screen name="communaute" />
+            <Stack.Screen name="contributeurs" />
+            <Stack.Screen name="propositions" />
             <Stack.Screen name="membres" />
             <Stack.Screen name="discover/[kind]" />
             <Stack.Screen name="statistiques" />

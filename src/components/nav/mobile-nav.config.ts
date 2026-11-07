@@ -53,8 +53,8 @@ const AGENDA = item('agenda', 'Agenda', 'calendar', { native: '/agenda' });
 const COMMUNITY = item('community', 'Communauté', 'community', {
   children: [
     item('community-home', 'Communauté', 'community', { native: '/communaute' }),
-    item('community-proposals', 'Propositions', 'proposal', { path: '/propositions' }),
-    item('community-top', 'Contributeurs', 'trophy', { path: '/communaute/contributeurs' }),
+    item('community-proposals', 'Propositions', 'proposal', { native: '/propositions' }),
+    item('community-top', 'Contributeurs', 'trophy', { native: '/contributeurs' }),
     item('community-lab', 'Laboratoire', 'lab', { path: '/laboratoire' }),
   ],
 });
@@ -106,7 +106,7 @@ const SETTINGS = item('settings', 'Paramètres', 'settings', {
 const ACCOUNT = item('account', 'Mon compte', 'user', {
   children: [
     item('account-favorites', 'Favoris', 'heart', { native: '/favoris' }),
-    item('account-contributions', 'Contributions', 'document', { path: '/contribute/proposals' }),
+    item('account-contributions', 'Contributions', 'document', { native: '/propositions' }),
     item('account-stats', 'Statistiques', 'stats', { native: '/statistiques' }),
     item('account-profile', 'Mon profil', 'user', { native: '/profile' }),
     SETTINGS,

@@ -16,8 +16,6 @@ import type {
   IMediaFollowerEntry as ILibMediaFollowerEntry,
   IMediaFollowersInfo,
   IActivity,
-  ICommunityMessage,
-  ICommunityThread,
   IMediaRelationCarouselResponse,
   INotification,
   IMember,
@@ -514,24 +512,6 @@ export const api = {
     return body(await client().crunchyroll.getAnimeEpisodes(id)) ?? [];
   },
 
-  /** Fil de discussion d'une œuvre (créé à la première visite) et ses messages, du plus récent au plus ancien. */
-  async getMediaThread(kind: MediaKind, id: string) {
-    const c = client().community;
-    const mediaType = mediaTypeOf(kind);
-    const thread = (body(await c.getMediaThread(id, mediaType)) ?? body(await c.ensureMediaThread({ mediaId: id, mediaType }))) as ICommunityThread;
-    // Ce fil arrive tel que stocké (`_id`), sans `id`.
-    return withId(thread);
-  },
-
-  async getThreadMessages(threadId: string, page = 1, limit = 30) {
-    const res = await client().community.paginateMessages({ page, limit, query: { threadId }, sort: { createdAt: -1 } } as never);
-    return body(res) as IPage<ICommunityMessage>;
-  },
-
-  async postThreadMessage(thread: { id: string; channelId: string }, content: string) {
-    return body(await client().community.createMessage({ channelId: thread.channelId, threadId: thread.id, content }));
-  },
-
   /** Une page de personnages, personnes, musiques ou sociétés, filtrée par un texte (annuaire « Découvrir »). */
   async searchEntities(kind: EntityKind, search: string, page = 1, limit = 20) {
     const c = client();
@@ -566,5 +546,21 @@ export const api = {
   async searchMembers(search: string, page = 1, limit = 20) {
     const res = await client().members.paginate({ page, limit, query: search ? { search } : {}, sort: { createdAt: 'desc' } } as never);
     return body(res) as IPage<IMember>;
+  },
+
+  /** Classement des contributeurs (propositions validées, points, palier). */
+  async getContributorsLeaderboard(period: 'week' | 'month' | 'all' = 'month', limit = 20) {
+    return body(await client().proposals.leaderboard({ period, limit }));
+  },
+
+  /** Une page de propositions, les plus récentes d'abord ; `status` filtre sur un statut. */
+  async listProposals(status: string | undefined, page = 1, limit = 20) {
+    const res = await client().proposals.paginate({
+      page,
+      limit,
+      query: status ? { status } : {},
+      sort: { createdAt: -1 },
+    } as never);
+    return body(res) as IPage<IProposal>;
   },
 };
