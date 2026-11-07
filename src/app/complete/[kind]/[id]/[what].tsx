@@ -1,3 +1,4 @@
+import { CompanyTypeObj, TrackTypeObj } from '@actunime/types';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
@@ -15,11 +16,17 @@ import { Colors, Fonts, Radius, Spacing, Tw } from '@/constants/theme';
 import { api, type IEntity, type MediaKind } from '@/lib/api';
 import { entityBadge, entityImage, entityName } from '@/lib/entity';
 import { mediaTitle } from '@/lib/media';
-import { buildRelationAdd, type RelationKind } from '@/lib/propose';
+import { buildRelationAdd, buildRelationCreate, type RelationKind } from '@/lib/propose';
 
-const CONFIG: Record<RelationKind, { entity: 'track' | 'company'; title: string; hint: string; empty: string; icon: typeof Music }> = {
-  tracks: { entity: 'track', title: 'Ajouter une musique', hint: 'Rechercher une musique', empty: 'Aucune musique trouvée.', icon: Music },
-  companies: { entity: 'company', title: 'Ajouter une société', hint: 'Rechercher un studio, un éditeur…', empty: 'Aucune société trouvée.', icon: Building2 },
+const CONFIG: Record<RelationKind, { entity: 'track' | 'company'; title: string; hint: string; empty: string; icon: typeof Music; create: string; nameLabel: string }> = {
+  tracks: { entity: 'track', title: 'Ajouter une musique', hint: 'Rechercher une musique', empty: 'Aucune musique trouvée.', icon: Music, create: 'Elle n’est pas dans la liste ? La créer', nameLabel: 'Titre de la musique' },
+  companies: { entity: 'company', title: 'Ajouter une société', hint: 'Rechercher un studio, un éditeur…', empty: 'Aucune société trouvée.', icon: Building2, create: 'Elle n’est pas dans la liste ? La créer', nameLabel: 'Nom de la société' },
+};
+
+/** Types proposés à la création : seul strict minimum demandé, le reste de la fiche sera complété plus tard. */
+const TYPE_OPTIONS: Record<RelationKind, { value: string; label: string }[]> = {
+  tracks: Object.values(TrackTypeObj).map((type) => ({ value: type.value, label: type.label })),
+  companies: Object.entries(CompanyTypeObj).map(([value, label]) => ({ value, label })),
 };
 
 /**
@@ -54,10 +61,22 @@ export default function CompleteScreen() {
   });
 
   const [picked, setPicked] = useState<IEntity | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [name, setName] = useState('');
+  const [type, setType] = useState<string | null>(null);
   const [start, setStart] = useState<number | undefined>(undefined);
   const [end, setEnd] = useState<number | undefined>(undefined);
+  const withEpisodes = what === 'tracks' && kind === 'anime';
+  const canCreate = name.trim().length > 0 && !!type;
   const send = useMutation({
-    mutationFn: () => api.proposeRelationAdd(kind, id, buildRelationAdd(what, { id: picked!.id, startEpisode: start, endEpisode: end })),
+    mutationFn: () =>
+      api.proposeRelationAdd(
+        kind,
+        id,
+        creating
+          ? buildRelationCreate(what, { name, type: type as string, startEpisode: start, endEpisode: end })
+          : buildRelationAdd(what, { id: picked!.id, startEpisode: start, endEpisode: end }),
+      ),
   });
 
   return (
@@ -81,23 +100,46 @@ export default function CompleteScreen() {
               ) : null}
             </View>
           </View>
-          {what === 'tracks' && kind === 'anime' ? (
-            <>
-              <Field label="À partir de l’épisode" hint="facultatif">
-                <NumberField value={start} onChange={setStart} />
-              </Field>
-              <Field label="Jusqu’à l’épisode" hint="facultatif">
-                <NumberField value={end} onChange={setEnd} />
-              </Field>
-            </>
-          ) : null}
+          {withEpisodes ? <EpisodeFields start={start} end={end} onStart={setStart} onEnd={setEnd} /> : null}
           {send.isError ? <StatusNote tone="error">{errorMessage(send.error)}</StatusNote> : null}
           <Button label={send.isPending ? 'Envoi…' : 'Proposer l’ajout'} disabled={send.isPending} onPress={() => send.mutate()} />
           <Button label="Choisir autre chose" variant="outline" disabled={send.isPending} onPress={() => setPicked(null)} />
         </SettingsCard>
+      ) : creating ? (
+        <SettingsCard>
+          <Field label={config.nameLabel}>
+            <TextInput value={name} onChangeText={setName} maxLength={200} style={styles.input} placeholderTextColor={Colors.textSecondary} />
+          </Field>
+          <Field label="Type">
+            <View style={styles.chips}>
+              {TYPE_OPTIONS[what].map((option) => {
+                const selected = type === option.value;
+                return (
+                  <Pressable key={option.value} accessibilityRole="button" accessibilityState={{ selected }} onPress={() => setType(option.value)} style={[styles.chip, selected && styles.chipOn]}>
+                    <Txt size="sm" weight="medium" color={selected ? Tw.color.primaryForeground : Tw.color.mutedForeground}>
+                      {option.label}
+                    </Txt>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Field>
+          {withEpisodes ? <EpisodeFields start={start} end={end} onStart={setStart} onEnd={setEnd} /> : null}
+          <Txt size="xs" color={Tw.color.mutedForeground}>
+            Le reste (couverture, liens, artistes…) pourra être complété ensuite. La modération vérifie avant d’appliquer.
+          </Txt>
+          {send.isError ? <StatusNote tone="error">{errorMessage(send.error)}</StatusNote> : null}
+          <Button label={send.isPending ? 'Envoi…' : 'Proposer la création et l’ajout'} disabled={!canCreate || send.isPending} onPress={() => send.mutate()} />
+          <Button label="Revenir à la recherche" variant="outline" disabled={send.isPending} onPress={() => setCreating(false)} />
+        </SettingsCard>
       ) : (
         <>
           <TextInput value={text} onChangeText={setText} placeholder={config.hint} placeholderTextColor={Colors.textSecondary} autoCapitalize="none" autoCorrect={false} style={styles.input} />
+          <Pressable accessibilityRole="button" onPress={() => { setName(text.trim()); setCreating(true); }} style={styles.createLink}>
+            <Txt size="sm" weight="medium" color={Tw.color.primary}>
+              {config.create}
+            </Txt>
+          </Pressable>
           {search.length < 2 ? (
             <Txt size="sm" color={Tw.color.mutedForeground}>
               Tape au moins deux lettres pour chercher.
@@ -134,6 +176,19 @@ export default function CompleteScreen() {
   );
 }
 
+function EpisodeFields({ start, end, onStart, onEnd }: Readonly<{ start?: number; end?: number; onStart: (v: number | undefined) => void; onEnd: (v: number | undefined) => void }>) {
+  return (
+    <>
+      <Field label="À partir de l’épisode" hint="facultatif">
+        <NumberField value={start} onChange={onStart} />
+      </Field>
+      <Field label="Jusqu’à l’épisode" hint="facultatif">
+        <NumberField value={end} onChange={onEnd} />
+      </Field>
+    </>
+  );
+}
+
 function Thumb({ image, Icon }: Readonly<{ image: string | null; Icon: typeof Music }>) {
   return (
     <View style={styles.thumb}>
@@ -149,5 +204,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   item: { minHeight: 60, padding: 8, borderRadius: Tw.radius.lg, borderWidth: 1, borderColor: Tw.color.border, backgroundColor: Tw.color.card },
   dim: { opacity: 0.5 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { minHeight: 40, paddingHorizontal: 14, justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: Tw.color.border, backgroundColor: Tw.color.card },
+  chipOn: { backgroundColor: Tw.color.primary, borderColor: Tw.color.primary },
+  createLink: { minHeight: 44, justifyContent: 'center' },
   thumb: { width: 44, height: 44, borderRadius: Tw.radius.md, overflow: 'hidden', backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center' },
 });

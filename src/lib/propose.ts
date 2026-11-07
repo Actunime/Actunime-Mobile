@@ -59,3 +59,31 @@ export function buildRelationAdd(what: RelationKind, pick: IRelationPick): Recor
   if (pick.endEpisode && pick.endEpisode > 0) track.endEpisode = pick.endEpisode;
   return { tracks: [track] };
 }
+
+export interface IRelationCreate {
+  /** Nom ou titre de l'élément à créer. */
+  name: string;
+  /** Type de la musique (`OPENING`…) ou de la société (`STUDIO`…). */
+  type: string;
+  startEpisode?: number;
+  endEpisode?: number;
+}
+
+/**
+ * Proposition qui CRÉE l'élément manquant avec le strict minimum (nom et type) et le rattache à la fiche : l'élément
+ * est une dépendance de la proposition, désignée par un identifiant provisoire `temp_…` que l'API remplace à la validation.
+ */
+export function buildRelationCreate(what: RelationKind, input: IRelationCreate, tempId = newTempId()): Record<string, unknown> {
+  const name = { original: input.name.trim() };
+  const dependency = {
+    tempId,
+    entityType: what === 'tracks' ? 'Track' : 'Company',
+    mainDependency: { name, type: input.type },
+  };
+  const relation = buildRelationAdd(what, { id: tempId, startEpisode: input.startEpisode, endEpisode: input.endEpisode });
+  return { ...relation, dependencies: [dependency] };
+}
+
+export function newTempId(): string {
+  return `temp_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}

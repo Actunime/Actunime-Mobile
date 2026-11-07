@@ -612,8 +612,9 @@ export const api = {
         entityType: mediaTypeOf(kind),
         targetEntityId: id,
         mainDependency: {},
-        ...relation,
         dependencies: [],
+        // `dependencies` du fragment (élément créé en même temps) remplace la liste vide.
+        ...relation,
       } as never),
     );
   },

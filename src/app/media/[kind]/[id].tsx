@@ -466,7 +466,11 @@ export default function MediaScreen() {
           ) : null}
 
           {(companies.data?.results ?? []).some((c) => c.data) ? (
-            <SectionCard title={anime ? 'Studios & Producteurs' : 'Éditeurs & Producteurs'} icon={Building2}>
+            <SectionCard
+              title={anime ? 'Studios & Producteurs' : 'Éditeurs & Producteurs'}
+              icon={Building2}
+              action={{ label: 'Ajouter', onPress: () => router.push(`/complete/${kind}/${id}/companies` as Href) }}
+            >
               <View style={styles.stack}>
                 {companies.data!.results.filter((c) => c.data).map((c) => (
                   <Pressable key={c.id ?? c.data!.id} onPress={() => openEntity('company', c.data!.id)} style={styles.company}>
@@ -491,6 +495,18 @@ export default function MediaScreen() {
                 ))}
               </View>
             </SectionCard>
+          ) : companies.data ? (
+            <View style={styles.emptyTracks}>
+              <Txt size="sm" color={Tw.color.mutedForeground} style={styles.flex}>
+                {anime ? "Cette fiche n'a pas encore de studio." : "Cette fiche n'a pas encore d'éditeur."}
+              </Txt>
+              <Pressable onPress={() => router.push(`/complete/${kind}/${id}/companies` as Href)} style={styles.inline}>
+                <Pencil size={16} color={Tw.color.primary} />
+                <Txt size="sm" weight="medium" color={Tw.color.primary}>
+                  Compléter
+                </Txt>
+              </Pressable>
+            </View>
           ) : null}
 
           <SectionCard title="Tags">

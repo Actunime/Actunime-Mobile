@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildMediaUpdate, buildRelationAdd, type IMediaDraft } from './propose';
+import { buildMediaUpdate, buildRelationAdd, buildRelationCreate, newTempId, type IMediaDraft } from './propose';
 
 const base: IMediaDraft = { synopsis: 'Un synopsis.', total: 12, status: 'AIRING', start: '2026-01-05T12:00:00.000Z', end: null };
 
@@ -31,5 +31,23 @@ describe('buildRelationAdd', () => {
     expect(buildRelationAdd('tracks', { id: 't1', startEpisode: 1, endEpisode: 12 })).toEqual({ tracks: [{ id: 't1', startEpisode: 1, endEpisode: 12 }] });
     expect(buildRelationAdd('tracks', { id: 't1' })).toEqual({ tracks: [{ id: 't1' }] });
     expect(buildRelationAdd('tracks', { id: 't1', startEpisode: 0, endEpisode: 0 })).toEqual({ tracks: [{ id: 't1' }] });
+  });
+});
+
+describe('buildRelationCreate', () => {
+  it('crée une musique avec son nom et son type, rattachée par un identifiant provisoire', () => {
+    expect(buildRelationCreate('tracks', { name: '  Mon opening ', type: 'OPENING', startEpisode: 1 }, 'temp_x')).toEqual({
+      tracks: [{ id: 'temp_x', startEpisode: 1 }],
+      dependencies: [{ tempId: 'temp_x', entityType: 'Track', mainDependency: { name: { original: 'Mon opening' }, type: 'OPENING' } }],
+    });
+  });
+  it('crée une société', () => {
+    expect(buildRelationCreate('companies', { name: 'Studio Test', type: 'STUDIO' }, 'temp_y')).toEqual({
+      companies: [{ id: 'temp_y' }],
+      dependencies: [{ tempId: 'temp_y', entityType: 'Company', mainDependency: { name: { original: 'Studio Test' }, type: 'STUDIO' } }],
+    });
+  });
+  it("l'identifiant provisoire commence par temp_", () => {
+    expect(newTempId()).toMatch(/^temp_[a-z0-9]+$/);
   });
 });
