@@ -201,6 +201,7 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
         return false;
       }
       if (isTopFrame && matchesClick(request.url, lastClick.current, now)) chainOpen.current = true;
+      if (isTopFrame) setRefused(null);
       return true;
     },
     [],
