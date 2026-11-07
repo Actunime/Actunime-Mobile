@@ -44,7 +44,7 @@ const DISCOVER = item('discover', 'Découvrir', 'compass', {
     item('discover-persons', 'Personnes', 'staff', { native: '/discover/persons' }),
     item('discover-tracks', 'Musiques', 'music', { native: '/discover/tracks' }),
     item('discover-companies', 'Sociétés', 'company', { native: '/discover/companies' }),
-    item('discover-members', 'Membres', 'user', { path: '/membres' }),
+    item('discover-members', 'Membres', 'user', { native: '/membres' }),
   ],
 });
 
@@ -52,7 +52,7 @@ const AGENDA = item('agenda', 'Agenda', 'calendar', { native: '/agenda' });
 
 const COMMUNITY = item('community', 'Communauté', 'community', {
   children: [
-    item('community-home', 'Communauté', 'community', { path: '/communaute' }),
+    item('community-home', 'Communauté', 'community', { native: '/communaute' }),
     item('community-proposals', 'Propositions', 'proposal', { path: '/propositions' }),
     item('community-top', 'Contributeurs', 'trophy', { path: '/communaute/contributeurs' }),
     item('community-lab', 'Laboratoire', 'lab', { path: '/laboratoire' }),

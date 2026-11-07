@@ -544,4 +544,25 @@ export const api = {
             : await c.companies.paginate(request);
     return body(res) as IPage<IEntity>;
   },
+
+  /** Chiffres de la communauté sur une période (hub Communauté du site). */
+  async getCommunityStats(period: '7d' | '30d' | 'season' = '7d') {
+    return body(await client().community.getStats(period));
+  },
+
+  /** Œuvres regardées en ce moment par la communauté. */
+  async getCommunityNowWatching(limit = 10) {
+    return body(await client().community.getNowWatching(limit));
+  },
+
+  /** Œuvres les plus ajoutées ou en hausse sur la période. */
+  async getCommunityRankings(metric: 'most-added' | 'rising', period: '7d' | '30d' | 'season' = '7d', limit = 10) {
+    return body(await client().community.getRankings(metric, { period, limit }));
+  },
+
+  /** Une page de l'annuaire des membres (les profils privés n'y apparaissent pas ou sont anonymisés par l'API). */
+  async searchMembers(search: string, page = 1, limit = 20) {
+    const res = await client().members.paginate({ page, limit, query: search ? { search } : {}, sort: { createdAt: 'desc' } } as never);
+    return body(res) as IPage<IMember>;
+  },
 };
