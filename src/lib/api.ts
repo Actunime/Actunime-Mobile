@@ -109,6 +109,12 @@ async function paginateMedia(kind: MediaKind, request: IMediaSearchBody): Promis
   return res.data;
 }
 
+/** Quelques routes d'écriture de liste renvoient le document stocké (`_id`) au lieu de `id`. */
+const withId = <T extends { id: string }>(doc: T): T => {
+  const stored = doc as T & { _id?: string };
+  return { ...doc, id: stored.id ?? stored._id } as T;
+};
+
 /** Les modules du client partagé enveloppent la réponse HTTP : l'app ne garde que le corps. */
 const body = <R extends { data: unknown }>(response: R): R['data'] => response.data;
 
@@ -398,7 +404,9 @@ export const api = {
     status?: ListStatus;
     aliases?: string[];
   }) {
-    return body(await client().lists.quickAdd(request));
+    const result = body(await client().lists.quickAdd(request));
+    // Cette route renvoie l'entrée telle que stockée (`_id`), contrairement aux autres routes de liste (`id`).
+    return { ...result, entry: result.entry ? withId(result.entry) : null } as typeof result;
   },
 
   /** Ajoute à ma liste une œuvre proposée mais pas encore validée. */
@@ -408,7 +416,7 @@ export const api = {
     status: string;
     preview: { title: string; coverImage?: string };
   }) {
-    return (await client().getHttp().post<IListEntry>('/lists/from-proposal', request)).data;
+    return withId((await client().getHttp().post<IListEntry>('/lists/from-proposal', request)).data);
   },
 
   /** L'œuvre est-elle dans mes favoris ? */
