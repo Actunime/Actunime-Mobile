@@ -52,8 +52,10 @@ export default function ProposalsScreen() {
       ) : (
         <View style={styles.list}>
           {items.map((proposal) => {
+            // Une mise à jour ne porte que les champs changés : le titre est celui de la fiche d'origine.
             const data = proposal.mainDependency as IProposalData | undefined;
-            const title = data?.title?.original ?? data?.name?.original ?? 'Sans titre';
+            const original = (proposal as { originalData?: IProposalData }).originalData;
+            const title = data?.title?.original ?? data?.name?.original ?? original?.title?.original ?? original?.name?.original ?? 'Sans titre';
             const tone = STATUS_TONE[proposal.status] ?? Tw.color.mutedForeground;
             return (
               <View key={proposal.id} style={styles.item}>
@@ -61,7 +63,7 @@ export default function ProposalsScreen() {
                   {title}
                 </Txt>
                 <Txt size="xs" color={Tw.color.mutedForeground}>
-                  {proposal.entityType} · {ProposalModeObj[proposal.mode] ?? proposal.mode} · {proposal.author?.displayName ?? 'Membre'} · {timeAgo(proposal.createdAt)}
+                  {proposal.entityType} · {ProposalModeObj[proposal.mode] ?? proposal.mode} · {proposal.author?.displayName ?? proposal.author?.username ?? 'Membre'} · {timeAgo(proposal.createdAt)}
                 </Txt>
                 <Txt size="xs" weight="bold" color={tone}>
                   {ProposalStatusObj[proposal.status as keyof typeof ProposalStatusObj] ?? proposal.status}
