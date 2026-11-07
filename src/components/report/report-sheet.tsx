@@ -96,7 +96,7 @@ export function ReportSheet({ open, onClose, targetId, targetType, targetName }:
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: 14 },
+  stack: { gap: 14, paddingHorizontal: 16, paddingBottom: 16 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { minHeight: 40, paddingHorizontal: 14, justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: Tw.color.border, backgroundColor: Tw.color.card },
   chipOn: { backgroundColor: Tw.color.primary, borderColor: Tw.color.primary },

@@ -72,6 +72,6 @@ export function MemberActions({ memberId, username, displayName }: Readonly<IMem
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 8, paddingHorizontal: 16, paddingBottom: 8 },
+  wrap: { gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
 });
