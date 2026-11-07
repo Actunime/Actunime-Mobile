@@ -171,10 +171,10 @@ const statRows = (label: string, stats?: IListStats) =>
  * Profil public d'un membre, transposé de `membres/$username` du site : identité, badges, puis sections Profil, Liste
  * Anime, Liste Manga, Favoris et Statistiques. Les listes et favoris suivent ce que le membre laisse voir.
  */
-export function MemberScreen({ username }: Readonly<{ username: string }>) {
+export function MemberScreen({ username, initialTab = 'profil' }: Readonly<{ username: string; initialTab?: MemberTab }>) {
   const { auth } = useAuth();
   const profile = useMemberProfile(username);
-  const [tab, setTab] = useState<MemberTab>('profil');
+  const [tab, setTab] = useState<MemberTab>(initialTab);
   const [status, setStatus] = useState<ListStatusFilter>('ALL');
   const [favoriteType, setFavoriteType] = useState<FavoriteType | 'ALL'>('ALL');
 

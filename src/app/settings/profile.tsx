@@ -6,7 +6,7 @@ import { Button } from '@/components/button';
 import { Field } from '@/components/form-fields';
 import { SettingsCard, SettingsPage, StatusNote } from '@/components/settings/settings-ui';
 import { ErrorState, Loading } from '@/components/states';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { Colors, Fonts, Radius, Spacing, Tw } from '@/constants/theme';
 import { api } from '@/lib/api';
 import { errorMessage } from '@/components/states';
 
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Radius.medium,
-    backgroundColor: Colors.backgroundElement,
+    backgroundColor: Tw.color.input,
     color: Colors.text,
     fontFamily: Fonts.medium,
     fontSize: 14,

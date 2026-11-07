@@ -16,6 +16,7 @@ import type {
   IMediaFollowerEntry as ILibMediaFollowerEntry,
   IMediaFollowersInfo,
   IMediaRelationCarouselResponse,
+  INotification,
   IMember,
   IMemberDetailStats as ILibMemberDetailStats,
   IMemberPublicProfile as ILibMemberPublicProfile,
@@ -33,7 +34,7 @@ import type {
   ITrackRelation,
   IMediaRelation as ILibMediaRelation,
 } from '@actunime/types';
-import type { IAnimePaginationBody, IListEntryCreateBody, IMangaPaginationBody } from '@actunime/validations';
+import type { IAnimePaginationBody, IListEntryCreateBody, IMangaPaginationBody, INotificationPreferencesBody } from '@actunime/validations';
 
 import { ApiError } from './api-error';
 import { api as client } from './client';
@@ -71,6 +72,7 @@ export type IMyProfile = IMember;
 export type IFriendRequest = IFriendship;
 export type ISession = ILibSession;
 export type INewsArticle = ILibNewsArticle;
+export type { INotification };
 export type ISearchMedia = IMedia;
 export type IGenre = ILibMetadata;
 export type IPendingProposal = IProposal;
@@ -434,5 +436,56 @@ export const api = {
 
   async deleteListEntry(id: string) {
     return body(await client().lists.delete(id));
+  },
+
+  /** Mes notifications, les plus récentes d'abord. */
+  async listNotifications(page = 1, limit = 20) {
+    const res = await client().notifications.paginate({ page, limit });
+    return body(res) as IPage<INotification>;
+  },
+
+  async notificationStats() {
+    return body(await client().notifications.stats());
+  },
+
+  async markNotificationsRead(ids: string[]) {
+    return body(await client().notifications.markAsRead({ notificationIds: ids }));
+  },
+
+  async markAllNotificationsRead() {
+    return body(await client().notifications.markAllAsRead());
+  },
+
+  async deleteReadNotifications() {
+    return body(await client().notifications.deleteReadAll());
+  },
+
+  async getNotificationPreferences() {
+    return body(await client().notifications.getMyPreferences());
+  },
+
+  async setNotificationPreferences(preferences: INotificationPreferencesBody['preferences']) {
+    return body(await client().notifications.setMyPreferences({ preferences }));
+  },
+
+  /** Mon compte (`hasPassword` : faux pour un compte créé avec Discord, qui n'a pas de mot de passe à saisir). */
+  async getAccount() {
+    return body(await client().auth.getMe());
+  },
+
+  async changePassword(request: { currentPassword: string; newPassword: string }) {
+    return body(await client().auth.changePassword(request));
+  },
+
+  async requestAccountDeletion(request: { reason: string; confirmPassword?: string }) {
+    return body(await client().auth.requestAccountDeletion(request));
+  },
+
+  async cancelAccountDeletion() {
+    return body(await client().auth.cancelAccountDeletion());
+  },
+
+  async getAccountDeletionStatus() {
+    return (body(await client().auth.getAccountDeletionStatus()) || null) as Awaited<ReturnType<ReturnType<typeof client>['auth']['getAccountDeletionStatus']>>['data'];
   },
 };

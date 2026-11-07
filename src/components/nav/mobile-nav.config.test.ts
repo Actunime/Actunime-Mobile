@@ -55,11 +55,11 @@ describe('isSoonEntry', () => {
     expect(isSoonEntry(leaf({ children: [soon, leaf({ native: '/list' })] }))).toBe(false);
   });
 
-  it('dans l’éventail : Agenda et Paramètres sont disponibles, Notifications et À propos ne le sont pas', () => {
+  it('dans l’éventail : Agenda, Paramètres et Notifications sont disponibles, À propos ne l’est pas', () => {
     const byId = (id: string) => all.find((entry) => entry.item.id === id)!.item;
     expect(isSoonEntry(byId('agenda'))).toBe(false);
     expect(isSoonEntry(byId('settings'))).toBe(false);
-    expect(isSoonEntry(byId('notifications'))).toBe(true);
+    expect(isSoonEntry(byId('notifications'))).toBe(false);
     expect(isSoonEntry(byId('about'))).toBe(true);
   });
 });

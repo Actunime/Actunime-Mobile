@@ -84,7 +84,7 @@ const CONTRIBUTE = item('contribute', 'Contribuer', 'pencil', {
 const SETTINGS = item('settings', 'Paramètres', 'settings', {
   children: [
     item('settings-profile', 'Profil', 'user', { native: '/settings/profile' }),
-    item('settings-notifications', 'Notifications', 'bell', { path: '/settings/notifications' }),
+    item('settings-notifications', 'Notifications', 'bell', { native: '/settings/notifications' }),
     item('settings-lists', 'Import / export', 'transfer', { path: '/settings/list' }),
     item('settings-social', 'Social', 'community', {
       children: [
@@ -95,9 +95,9 @@ const SETTINGS = item('settings', 'Paramètres', 'settings', {
     }),
     item('settings-security-group', 'Sécurité', 'shield', {
       children: [
-        item('settings-security', 'Sécurité', 'shield', { path: '/settings/security' }),
+        item('settings-security', 'Sécurité', 'shield', { native: '/settings/security' }),
         item('settings-sessions', 'Appareils', 'device', { native: '/settings/appareils' }),
-        item('settings-delete', 'Supprimer', 'trash', { path: '/settings/delete-account' }),
+        item('settings-delete', 'Supprimer', 'trash', { native: '/settings/delete-account' }),
       ],
     }),
   ],
@@ -105,9 +105,9 @@ const SETTINGS = item('settings', 'Paramètres', 'settings', {
 
 const ACCOUNT = item('account', 'Mon compte', 'user', {
   children: [
-    item('account-favorites', 'Favoris', 'heart', { path: '/suivi/favoris' }),
+    item('account-favorites', 'Favoris', 'heart', { native: '/favoris' }),
     item('account-contributions', 'Contributions', 'document', { path: '/contribute/proposals' }),
-    item('account-stats', 'Statistiques', 'stats', { path: '/suivi/statistiques' }),
+    item('account-stats', 'Statistiques', 'stats', { native: '/statistiques' }),
     item('account-profile', 'Mon profil', 'user', { native: '/profile' }),
     SETTINGS,
     item('account-logout', 'Se déconnecter', 'logout', { action: 'logout' }),
@@ -120,7 +120,7 @@ export const MEMBER_FAN: readonly IMobileNavItem[] = [
   AGENDA,
   COMMUNITY,
   CONTRIBUTE,
-  item('notifications', 'Notifications', 'bell', { path: '/notifications' }),
+  item('notifications', 'Notifications', 'bell', { native: '/notifications' }),
   ACCOUNT,
   ABOUT,
 ];

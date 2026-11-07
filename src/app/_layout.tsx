@@ -89,6 +89,12 @@ export default function RootLayout() {
             <Stack.Screen name="settings/blocages" />
             <Stack.Screen name="settings/amis" />
             <Stack.Screen name="settings/appareils" />
+            <Stack.Screen name="settings/notifications" />
+            <Stack.Screen name="settings/security" />
+            <Stack.Screen name="settings/delete-account" />
+            <Stack.Screen name="notifications" />
+            <Stack.Screen name="favoris" />
+            <Stack.Screen name="statistiques" />
           </Stack.Protected>
           <Stack.Screen name="auth/callback" />
         </Stack>
