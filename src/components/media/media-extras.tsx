@@ -1,15 +1,15 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Activity, BarChart3, MessagesSquare, PlayCircle } from 'lucide-react-native';
+import { Activity, BarChart3, PlayCircle } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { SectionCard } from '@/components/media/detail-parts';
-import { EmptyState, ErrorState, Loading, errorMessage } from '@/components/states';
+import { ErrorState, Loading } from '@/components/states';
 import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
-import { Colors, Fonts, Radius, Spacing, Tw } from '@/constants/theme';
+import { Tw } from '@/constants/theme';
 import { api, type MediaKind } from '@/lib/api';
 import { plainDescribe, timeAgo } from '@/lib/notifications';
 
@@ -165,70 +165,6 @@ export function MediaEpisodesSection({ id, onLayout }: Readonly<Omit<ISectionPro
   );
 }
 
-/** Discussion de la fiche : les derniers messages du fil et un champ pour répondre (rafraîchi à l'ouverture et après envoi). */
-export function MediaDiscussionSection({ kind, id, onLayout }: Readonly<ISectionProps>) {
-  const client = useQueryClient();
-  const [text, setText] = useState('');
-  const thread = useQuery({ queryKey: ['media-thread', kind, id], queryFn: () => api.getMediaThread(kind, id), staleTime: 5 * 60_000 });
-  const threadId = thread.data?.id;
-  const messages = useInfiniteQuery({
-    queryKey: ['media-thread-messages', threadId],
-    queryFn: ({ pageParam }) => api.getThreadMessages(threadId as string, pageParam),
-    initialPageParam: 1,
-    getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
-    enabled: !!threadId,
-  });
-  const send = useMutation({
-    mutationFn: () => api.postThreadMessage(thread.data as { id: string; channelId: string }, text.trim()),
-    onSuccess: () => {
-      setText('');
-      void client.invalidateQueries({ queryKey: ['media-thread-messages', threadId] });
-    },
-  });
-  const items = useMemo(() => (messages.data?.pages.flatMap((page) => page.results) ?? []).filter((m) => !m.deletedAt), [messages.data]);
-
-  return (
-    <SectionCard title="Discussion" icon={MessagesSquare} onLayout={onLayout}>
-      {thread.isPending || (!!threadId && messages.isPending) ? (
-        <Loading />
-      ) : thread.isError || messages.isError ? (
-        <ErrorState error={thread.error ?? messages.error} onRetry={() => { void thread.refetch(); void messages.refetch(); }} />
-      ) : (
-        <View style={styles.stack}>
-          <View style={styles.composer}>
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder="Écrire un message…"
-              placeholderTextColor={Colors.textSecondary}
-              multiline
-              maxLength={2000}
-              style={styles.input}
-            />
-            <Button label={send.isPending ? 'Envoi…' : 'Envoyer'} disabled={!text.trim() || send.isPending} onPress={() => send.mutate()} />
-          </View>
-          {send.isError ? <Txt size="xs" color={Tw.color.destructive}>{errorMessage(send.error)}</Txt> : null}
-          {items.length === 0 ? (
-            <EmptyState title="Aucun message" hint="Lance la discussion sur cette fiche." />
-          ) : (
-            items.map((message) => (
-              <View key={message.id} style={styles.item}>
-                <Txt size="xs" weight="bold" color={Tw.color.mutedForeground}>
-                  {message.author?.displayName ?? message.authorName ?? 'Membre'} · {timeAgo(message.createdAt)}
-                </Txt>
-                <Txt size="sm">{message.content}</Txt>
-              </View>
-            ))
-          )}
-          {messages.hasNextPage ? (
-            <Button label={messages.isFetchingNextPage ? 'Chargement…' : 'Messages plus anciens'} variant="outline" disabled={messages.isFetchingNextPage} onPress={() => void messages.fetchNextPage()} />
-          ) : null}
-        </View>
-      )}
-    </SectionCard>
-  );
-}
-
 const styles = StyleSheet.create({
   stack: { gap: 10 },
   counters: { flexDirection: 'row', gap: 10 },
@@ -239,16 +175,4 @@ const styles = StyleSheet.create({
   barFill: { height: 8, borderRadius: 4 },
   barCount: { width: 32, textAlign: 'right' },
   item: { gap: 3, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Tw.color.border },
-  composer: { gap: 8 },
-  input: {
-    minHeight: 72,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.medium,
-    backgroundColor: Tw.color.input,
-    color: Colors.text,
-    fontFamily: Fonts.medium,
-    fontSize: 14,
-    textAlignVertical: 'top',
-  },
 });

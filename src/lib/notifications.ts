@@ -53,10 +53,14 @@ export interface INotificationGroup {
   types: { type: INotificationType; label: string }[];
 }
 
+/** Catégories pas encore reprises dans l'app : les discussions seront refaites dans l'app, leurs réglages reviendront avec. */
+const HIDDEN_CATEGORIES: INotificationCategory[] = ['COMMUNITY'];
+
 /** Les types de notification regroupés par catégorie, dans l'ordre du catalogue de l'API. */
 export function notificationGroups(): INotificationGroup[] {
   const types = Object.keys(NotificationTypeObj) as INotificationType[];
   return (Object.keys(NotificationCategoryObj) as INotificationCategory[])
+    .filter((category) => !HIDDEN_CATEGORIES.includes(category))
     .map((category) => ({
       category,
       label: NotificationCategoryObj[category].label,
