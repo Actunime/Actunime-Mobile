@@ -1,0 +1,3 @@
+# sortie de compilation Gradle du module
+android/build/
+android/.cxx/

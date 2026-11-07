@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { StyleSheet, Switch, View } from 'react-native';
 
+import { PhoneNotificationsCard } from '@/components/settings/phone-notifications-card';
 import { SettingsCard, SettingsPage } from '@/components/settings/settings-ui';
 import { ErrorState, Loading } from '@/components/states';
 import { Txt } from '@/components/tw';
@@ -23,6 +24,7 @@ export default function NotificationSettings() {
 
   return (
     <SettingsPage title="Notifications" description="Choisis, pour chaque type, où tu veux être prévenu : dans l’application ou par message privé Discord.">
+      <PhoneNotificationsCard />
       {prefs.isPending ? (
         <Loading />
       ) : prefs.isError ? (

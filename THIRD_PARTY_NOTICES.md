@@ -11,6 +11,8 @@ tiers, chacun sous sa propre licence.
 | [react-native-webview](https://github.com/react-native-webview/react-native-webview) | navigateur intégré (un correctif local ajoute un crochet de filtrage des requêtes, voir `patches/`) | MIT |
 | [TanStack Query](https://github.com/TanStack/query) | cache des données serveur | MIT |
 | [lucide-react-native](https://github.com/lucide-icons/lucide) | icônes | ISC |
+| [socket.io-client-java](https://github.com/socketio/socket.io-client-java) | socket des notifications instantanées (`modules/actunime-notifications`) | MIT |
+| [AndroidX WorkManager](https://developer.android.com/jetpack/androidx/releases/work) | vérification régulière des notifications | Apache-2.0 |
 | [adblock-rust](https://github.com/brave/adblock-rust) (Brave) | moteur de filtres du bloqueur de publicités (`modules/actunime-adblock/rust`) | MPL-2.0 |
 | Cœur de détection d'Actunime Sync (`src/detection/core/`) | reconnaissance du titre, du chapitre et de l'épisode | MIT (même organisation) |
 

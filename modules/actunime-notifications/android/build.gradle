@@ -1,0 +1,26 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.actunimenotifications'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.actunimenotifications"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+  }
+}
+
+dependencies {
+  // Interrogation périodique (mode par défaut) et notifications du système.
+  implementation "androidx.work:work-runtime:2.9.1"
+  implementation "androidx.core:core:1.13.1"
+  // Mode instantané : la socket `/notifications` de l'API (Socket.IO), la même que celle du site.
+  implementation "io.socket:socket.io-client:2.1.1"
+
+  testImplementation "junit:junit:4.13.2"
+  testImplementation "org.json:json:20240303"
+}

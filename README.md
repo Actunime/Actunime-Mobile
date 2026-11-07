@@ -25,12 +25,15 @@ un agenda des sorties et un navigateur qui reconnaît ce que tu lis ou regardes 
 - **Ma liste** : animes et mangas, par statut, avec recherche, tri, filtres et quatre modes d'affichage. Modification rapide d'une entrée (statut, progression, note, dates, notes).
 - **Fiches** : synopsis, informations, genres, personnages, staff, musiques, studios, relations entre œuvres, actualités, communauté et amis qui suivent l'œuvre. Chaque personnage, personne, musique et société a sa propre fiche.
 - **Agenda** : les sorties de la semaine ou du mois, filtrables (« dans ma liste », plateformes), et les animes de la saison.
-- **Profil des membres** : badges, listes, favoris et statistiques, selon ce que chacun laisse voir.
+- **Profil des membres** : badges, listes, favoris et statistiques, selon ce que chacun laisse voir. Ajouter en ami, bloquer ou signaler un membre depuis son profil.
+- **Communauté** : chiffres de la période, œuvres regardées en ce moment, classements, annuaire des membres, contributeurs et paliers, propositions.
+- **Notifications** : liste dans l'application et réglages par type ; sur le téléphone, vérification régulière (environ toutes les 15 minutes) ou mode instantané en option, **sans service externe**. Voir [Notifications sur le téléphone](#notifications-sur-le-téléphone).
+- **Contribuer** : signaler une fiche, proposer une modification (synopsis, nombre d'épisodes ou de chapitres, statut, dates).
 - **Navigateur de lecture** : lis un manga ou regarde un anime sur le site de ton choix ; l'application repère l'œuvre et le chapitre ou l'épisode et met ta liste à jour. Voir [Le navigateur](#le-navigateur).
-- **Paramètres** : profil, confidentialité, amis, blocages et appareils connectés.
+- **Paramètres** : profil, notifications, confidentialité, amis, blocages, sécurité (mot de passe), appareils connectés et suppression du compte.
 - **Mises à jour automatiques** : l'application cherche une nouvelle version au lancement et te propose de l'installer.
 
-Ce qui n'est pas encore dans l'application est grisé avec la mention « Bientôt disponible » : discussions, fil d'activité et statistiques d'une œuvre, modification d'une fiche, signalement, notifications, import et export de listes.
+Ce qui n'est pas encore dans l'application est grisé avec la mention « Bientôt disponible » : discussions, création d'une fiche, import et export de listes.
 
 <div align="center">
 
@@ -76,11 +79,20 @@ C'est l'équivalent mobile de l'extension [Actunime Sync](https://github.com/Act
 - Sur les lecteurs dessinés sans titre dans la page (MANGA Plus), le titre est repris de la page de la série ouverte juste avant ; ouvrir un chapitre directement par son adresse ne suffit pas.
 - Certains sites exigent d'avoir vu leur page de série (cookies) avant d'ouvrir un chapitre.
 
+## Notifications sur le téléphone
+
+Aucun Firebase ni autre service externe : tout passe par ton compte Actunime.
+
+- **Vérifier régulièrement** (activé par défaut) : une tâche Android (WorkManager) interroge l'API environ toutes les 15 minutes, même application fermée. C'est le minimum qu'Android autorise ; l'heure exacte n'est pas garantie.
+- **Notifications instantanées** (option, Paramètres → Notifications) : un service au premier plan garde ouverte la même socket que le site (`/notifications`, authentifiée par ton jeton) et affiche chaque notification tout de suite. Android impose alors une icône permanente ; pour que le service survive, exclus Actunime de l'optimisation de batterie (certains constructeurs coupent sinon la connexion).
+- Le jeton d'accès est copié côté natif à chaque connexion ou renouvellement ; la partie native ne le renouvelle jamais. Si tu n'ouvres pas l'application pendant plus de 7 jours, les notifications s'arrêtent jusqu'à la prochaine ouverture.
+- Sur Android 13 et plus, l'autorisation d'afficher des notifications est demandée depuis Paramètres → Notifications.
+
 ## Confidentialité
 
 - Ton jeton de connexion est gardé dans le coffre sécurisé d'Android (`expo-secure-store`). Il se renouvelle tout seul : tu n'as pas à te reconnecter toutes les semaines (révocable depuis Paramètres → appareils connectés).
 - L'historique du navigateur, les sites épinglés et la dernière page lue de chaque œuvre restent **uniquement sur ton téléphone** et s'effacent d'un geste.
-- Aucun SDK d'analyse d'usage, aucun traqueur publicitaire dans l'application.
+- Aucun SDK d'analyse d'usage, aucun traqueur publicitaire dans l'application, et aucun service de notification tiers.
 - Les listes de filtres du bloqueur de publicités sont téléchargées depuis leurs éditeurs ; elles ne sont pas livrées avec l'application.
 
 Voir aussi [SECURITY.md](SECURITY.md).

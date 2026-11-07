@@ -16,6 +16,7 @@ import { ReduceMotion, ReducedMotionConfig } from 'react-native-reanimated';
 import { MobileNav } from '@/components/nav/mobile-nav';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-store';
+import { useSyncPhoneNotifications } from '@/lib/phone-notifications';
 import { queryClient } from '@/lib/query-client';
 import { runLaunchCheck } from '@/lib/update-store';
 
@@ -42,6 +43,7 @@ export default function RootLayout() {
   });
 
   const { auth, loaded } = useAuth();
+  useSyncPhoneNotifications();
 
   // Les données en cache appartiennent au membre connecté : on les vide à la déconnexion.
   useEffect(() => {
