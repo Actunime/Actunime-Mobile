@@ -57,9 +57,9 @@ export const useMetadataList = (type: string) =>
   useQuery({ queryKey: ['metadata-list', type], queryFn: () => api.searchMetadata(type), staleTime: Infinity });
 
 /** Noms des métadonnées (genres, thèmes…) d'identifiants donnés : résolus par lot comme `useDetailedAnimeCards`. */
-export const useMetadataNames = (ids: string[]) =>
+export const useMetadataNames = (ids: (string | number)[]) =>
   useQuery({
-    queryKey: ['genres', [...new Set(ids)].sort().join(',')],
+    queryKey: ['genres', [...new Set(ids)].map(String).sort().join(',')],
     queryFn: () => api.getGenres([...new Set(ids)]),
     enabled: ids.length > 0,
     staleTime: Infinity,
@@ -185,7 +185,7 @@ export function useSaveEntry() {
   const invalidate = useInvalidateList();
   return useMutation({
     mutationFn: ({ mediaId, mediaType, entry, fields, update }: ISaveEntryInput) => {
-      const id = entry?.id ?? entry?._id;
+      const id = entry?.id;
       return id ? api.updateListEntry(id, update) : api.createListEntry({ mediaId, mediaType, ...fields });
     },
     onSuccess: (_data, input) => invalidate(input.mediaId),
@@ -195,7 +195,7 @@ export function useSaveEntry() {
 export function useRemoveEntry() {
   const invalidate = useInvalidateList();
   return useMutation({
-    mutationFn: ({ entry }: { entry: IListEntry; mediaId: string }) => api.deleteListEntry((entry.id ?? entry._id) as string),
+    mutationFn: ({ entry }: { entry: IListEntry; mediaId: string }) => api.deleteListEntry(entry.id),
     onSuccess: (_data, input) => invalidate(input.mediaId),
   });
 }
@@ -205,7 +205,7 @@ export function useQuickProgress() {
   const invalidate = useInvalidateList();
   return useMutation({
     mutationFn: ({ entry }: { entry: IListEntry; mediaId: string }) => {
-      const id = (entry.id ?? entry._id) as string;
+      const id = entry.id;
       return entry.mediaType === 'Manga'
         ? api.updateListEntry(id, { chaptersRead: (entry.chaptersRead ?? 0) + 1 })
         : api.updateListEntry(id, { episodesWatched: (entry.episodesWatched ?? 0) + 1 });
@@ -256,17 +256,17 @@ export function usePatchEntry() {
   const invalidate = useInvalidateList();
   return useMutation({
     mutationFn: ({ entry, patch }: { entry: IListEntry; patch: IEntryPatch }) =>
-      api.updateListEntry((entry.id ?? entry._id) as string, patchToFields(entry, patch)),
+      api.updateListEntry(entry.id, patchToFields(entry, patch)),
     onMutate: async ({ entry, patch }) => {
       // Ma liste complète ET les listes par statut de « Mon suivi » sont mises à jour sur place.
       const keys = [['my-list', 'entries', entry.mediaType ?? 'Anime'], ['my-list', 'all']];
       await Promise.all(keys.map((queryKey) => client.cancelQueries({ queryKey })));
       const previous = keys.flatMap((queryKey) => client.getQueriesData<IListEntry[]>({ queryKey }));
       const fields = patchToFields(entry, patch);
-      const id = entry.id ?? entry._id;
+      const id = entry.id;
       for (const queryKey of keys) {
         client.setQueriesData<IListEntry[]>({ queryKey }, (old) =>
-          Array.isArray(old) ? old.map((e) => ((e.id ?? e._id) === id ? { ...e, ...fields, updatedAt: e.updatedAt } : e)) : old,
+          Array.isArray(old) ? old.map((e) => (e.id === id ? { ...e, ...fields, updatedAt: e.updatedAt } : e)) : old,
         );
       }
       return { previous };

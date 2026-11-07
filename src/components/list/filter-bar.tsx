@@ -188,7 +188,7 @@ function useActiveBadges(kind: MediaKind, query: IListQuery, setFields: (patch: 
   const themes = useMetadataList('THEME');
   const demographics = useMetadataList('DEMOGRAPHIC');
   const tags = useMetadataList('TAG');
-  const names: Record<FacetKey, { id: string; name: string }[] | undefined> = {
+  const names: Record<FacetKey, { id: string | number; name: string }[] | undefined> = {
     genres: genres.data,
     themes: themes.data,
     demographics: demographics.data,

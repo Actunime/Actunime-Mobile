@@ -43,7 +43,7 @@ function rowOfMediaLink(what: MediaWhat, link: IMediaLink): IRow | null {
         ? (CHARACTER_ROLE_LABELS[link.role] ?? link.role)
         : undefined
       : what === 'tracks'
-        ? (TRACK_TYPE_LABELS[link.type ?? data.type ?? ''] ?? data.type)
+        ? (TRACK_TYPE_LABELS[data.type ?? ''] ?? data.type)
         : what === 'companies'
           ? (COMPANY_TYPE_LABELS[data.type ?? ''] ?? data.type)
           : undefined;

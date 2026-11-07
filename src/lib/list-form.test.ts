@@ -48,7 +48,7 @@ describe('applyStatus', () => {
 
   it('conserve les dates déjà saisies', () => {
     const entry = { status: 'WATCHING', startedAt: '2026-01-01T00:00:00.000Z' } as const;
-    const form = applyStatus(entryToForm('Anime', entry), 'COMPLETED', { mediaType: 'Anime', entry, now: NOW });
+    const form = applyStatus(entryToForm('Anime', entry as never), 'COMPLETED', { mediaType: 'Anime', entry: entry as never, now: NOW });
 
     expect(form.startedAt).toBe('2026-01-01T00:00:00.000Z');
     expect(form.completedAt).toBe(NOW.toISOString());
@@ -77,7 +77,7 @@ describe('corps envoyé', () => {
   });
 
   it('omet des notes vides à la création mais les efface à la mise à jour', () => {
-    const form = entryToForm('Anime', { status: 'WATCHING', notes: '   ' });
+    const form = entryToForm('Anime', ({ status: 'WATCHING', notes: '   ' } as never));
 
     expect(buildFields(form, 'Anime').notes).toBeUndefined();
     expect(buildUpdate(form, 'Anime').notes).toBe('');

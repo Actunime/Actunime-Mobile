@@ -11,17 +11,17 @@ const weekly = (weeks: number, extra: Partial<IMedia> = {}): IMedia => {
   const start = new Date(NOW);
   start.setHours(18, 30, 0, 0);
   start.setDate(start.getDate() - weeks * 7);
-  return { id: `a${weeks}`, status: 'AIRING', date: { start: start.toISOString() }, episodesInfo: { total: 24 }, ...extra };
+  return { id: `a${weeks}`, status: 'AIRING', date: { start: start.toISOString() }, episodesInfo: { total: 24 }, ...extra } as IMedia;
 };
 
-const entry = (media: IMedia, over: Partial<IListEntry> = {}): IListEntry => ({
+const entry = (media: IMedia, over: Partial<IListEntry> = {}): IListEntry => (({
   id: `e-${media.id}`,
   mediaType: 'Anime',
   status: 'WATCHING',
   episodesWatched: 0,
   media,
   ...over,
-});
+} as never));
 
 describe('estimatedAired', () => {
   it('compte une sortie par semaine depuis la première (l’épisode de ce soir n’est pas encore sorti à midi), bornée au total', () => {

@@ -268,7 +268,7 @@ export default function MediaScreen() {
               ? rel.job !== undefined
                 ? nameOf(rel.job)
                 : undefined
-              : TRACK_LABELS[rel.type ?? rel.data!.type ?? ''] ?? rel.data!.type,
+              : TRACK_LABELS[rel.data!.type ?? ''] ?? rel.data!.type,
         onPress: () => openEntity(what === 'characters' ? 'character' : what === 'staffs' ? 'person' : 'track', rel.data!.id),
       }));
   };

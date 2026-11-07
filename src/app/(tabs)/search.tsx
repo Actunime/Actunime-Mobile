@@ -69,7 +69,7 @@ export default function SearchScreen() {
   const genresOf = (media?: IMedia | null) =>
     (media?.genres ?? [])
       .map((id) => genres.data?.find((g) => String(g.id) === String(id)))
-      .filter((g): g is { id: string; name: string } => !!g);
+      .filter((g): g is NonNullable<typeof g> => !!g);
 
   const rows = useMemo(() => {
     const columns = COLUMNS[viewMode];

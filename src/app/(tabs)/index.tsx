@@ -136,7 +136,7 @@ export default function SuiviScreen() {
               <Section title="À rattraper" hint={`${behind.length} anime${behind.length > 1 ? 's' : ''} en retard`}>
                 {behind.slice(0, 5).map((item) => (
                   <EntryCard
-                    key={(item.entry.id ?? item.entry._id) as string}
+                    key={item.entry.id}
                     kind="anime"
                     entry={item.entry}
                     note={`${item.behind} épisode${item.behind > 1 ? 's' : ''} de retard`}
@@ -148,7 +148,7 @@ export default function SuiviScreen() {
             {resume.length > 0 && (
               <Section title="Reprendre">
                 {resume.map((entry) => (
-                  <EntryCard key={(entry.id ?? entry._id) as string} kind={entry.mediaType === 'Manga' ? 'manga' : 'anime'} entry={entry} />
+                  <EntryCard key={entry.id} kind={entry.mediaType === 'Manga' ? 'manga' : 'anime'} entry={entry} />
                 ))}
               </Section>
             )}

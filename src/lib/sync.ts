@@ -1,6 +1,6 @@
 import type { PageDetection } from '@/detection/messages';
 
-import { api, ApiError, mediaId, type IListEntry, type IPendingProposal, type ISearchMedia } from './api';
+import { api, ApiError, mediaId, type IListEntry, type IPendingProposal, type IProposalData, type ISearchMedia } from './api';
 import { forgetMatch, getMatches, saveMatch, type IMatch } from './storage';
 import { fuzzyTitleMatch } from './title-match';
 
@@ -36,7 +36,7 @@ export interface ICandidate {
 }
 
 const mediaTypeOf = (kind: Kind) => (kind === 'manga' ? 'Manga' : 'Anime');
-const entryId = (e: IListEntry) => (e.id ?? e._id) as string;
+const entryId = (e: IListEntry) => e.id;
 
 function fromMedia(media: ISearchMedia): ICandidate {
   const id = mediaId(media);
@@ -51,16 +51,17 @@ function fromMedia(media: ISearchMedia): ICandidate {
 }
 
 function fromProposal(proposal: IPendingProposal): ICandidate | null {
-  const id = proposal.id ?? proposal._id;
-  const title = proposal.mainDependency?.title?.original;
+  const id = proposal.id;
+  const dependency = proposal.mainDependency as IProposalData | undefined;
+  const title = dependency?.title?.original;
   if (!id || !title) return null;
   return {
     key: `proposal:${id}`,
     origin: 'proposal',
     id,
     title,
-    posterUrl: proposal.mainDependency?.poster?.url ?? proposal.mainDependency?.poster?.file ?? null,
-    aliases: proposal.mainDependency?.title?.alias ?? [],
+    posterUrl: dependency?.poster?.url ?? null,
+    aliases: dependency?.title?.alias ?? [],
   };
 }
 

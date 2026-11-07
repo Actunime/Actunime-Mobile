@@ -8,14 +8,9 @@ import type { IListEntry, IMedia, ListStatus } from './api';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-interface IAiringMedia extends IMedia {
-  format?: string;
-  episodesInfo?: IMedia['episodesInfo'] & { nextAiringDate?: string };
-}
-
 /** Épisodes estimés diffusés : semaines écoulées depuis la première, recalées sur le compteur `airing` du staff. */
 export function estimatedAired(media: IMedia, from = new Date()): number {
-  const m = media as IAiringMedia;
+  const m = media;
   const info = m.episodesInfo;
   const total = info?.total;
   const clamp = (aired: number) => Math.max(0, Math.min(aired, total && total > 0 ? total : aired));
@@ -37,7 +32,7 @@ export function estimatedAired(media: IMedia, from = new Date()): number {
 
 /** Prochaine diffusion du créneau hebdomadaire (même jour et heure que la première), ou `null` si indéterminée. */
 export function nextBroadcast(media: IMedia, from = new Date()): Date | null {
-  const m = media as IAiringMedia;
+  const m = media;
   if (m.format === 'FILM') return null;
   const info = m.episodesInfo;
 

@@ -11,7 +11,10 @@ vi.mock('./storage', () => ({
   clearAuth,
 }));
 
+import { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+
 import { api, ApiError } from './api';
+import { api as client } from './client';
 import { sessionFromTokens } from './session';
 
 const user = { id: 'u1', username: 'maud' };
@@ -40,7 +43,26 @@ const renewedTokens = {
   refreshExpiresIn: 2_592_000,
 };
 
+/** Les requêtes de l'app passent par axios (client partagé) : l'adaptateur de test les redirige vers `fetchMock`. */
+async function fetchAdapter(config: InternalAxiosRequestConfig) {
+  let res: Response;
+  try {
+    res = await fetchMock(`${config.baseURL ?? ''}${config.url ?? ''}`, {
+      method: (config.method ?? 'get').toUpperCase(),
+      headers: config.headers.toJSON() as Record<string, string>,
+      body: config.data,
+    });
+  } catch {
+    throw new AxiosError('Network Error', 'ERR_NETWORK', config);
+  }
+  const text = await res.text();
+  const response = { data: text ? JSON.parse(text) : '', status: res.status, statusText: '', headers: {}, config, request: {} };
+  if (res.status >= 200 && res.status < 300) return response;
+  throw new AxiosError('Request failed', 'ERR_BAD_RESPONSE', config, {}, response);
+}
+
 beforeEach(() => {
+  client().getHttp().defaults.adapter = fetchAdapter;
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(NOW);
   db.stored = session();

@@ -158,7 +158,7 @@ export function AgendaScreen() {
             Aucune sortie
           </Txt>
         ) : (
-          list.map((occurrence) => <OccurrenceRow key={`${occurrence.anime.id ?? occurrence.anime._id}-${occurrence.episode}`} occurrence={occurrence} mine={mineIds.has(mediaId(occurrence.anime))} />)
+          list.map((occurrence) => <OccurrenceRow key={`${occurrence.anime.id}-${occurrence.episode}`} occurrence={occurrence} mine={mineIds.has(mediaId(occurrence.anime))} />)
         )}
       </View>
     );

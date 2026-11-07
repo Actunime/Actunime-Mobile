@@ -39,7 +39,7 @@ function buildItems(sections: { key: string; label: string; entries: IListEntry[
   const pushRows = (entries: IListEntry[], prefix: string) => {
     for (let i = 0; i < entries.length; i += columns) {
       const chunk = entries.slice(i, i + columns);
-      items.push({ type: 'row', key: `${prefix}-${chunk.map((e) => e.id ?? e._id).join('-')}`, entries: chunk });
+      items.push({ type: 'row', key: `${prefix}-${chunk.map((e) => e.id).join('-')}`, entries: chunk });
     }
   };
   if (sections) {
@@ -53,7 +53,10 @@ function buildItems(sections: { key: string; label: string; entries: IListEntry[
 
 /** Œuvre affichable d'une entrée : la fiche, ou l'aperçu d'une proposition en attente. */
 const mediaOf = (entry: IListEntry): IMedia =>
-  entry.media ?? { title: { original: entry.preview?.title || 'Titre inconnu' }, posterUrl: entry.preview?.coverImage ?? null };
+  (entry.media ?? {
+    title: { original: entry.preview?.title || 'Titre inconnu' },
+    posterUrl: entry.preview?.coverImage ?? null,
+  }) as IMedia;
 
 /**
  * Ma liste, transposée de `Actunime-Web/src/routes/_authenticated/suivi/animes.tsx` et `mangas.tsx` (téléphone) :
@@ -76,7 +79,7 @@ export default function MyListScreen() {
   const genreIds = useMemo(() => all.flatMap((e) => e.media?.genres ?? []), [all]);
   const genres = useMetadataNames(genreIds);
   const genresOf = (media?: IMedia | null) =>
-    (media?.genres ?? []).map((id) => genres.data?.find((g) => String(g.id) === String(id))).filter((g): g is { id: string; name: string } => !!g);
+    (media?.genres ?? []).map((id) => genres.data?.find((g) => String(g.id) === String(id))).filter((g): g is NonNullable<typeof g> => !!g);
 
   const counts = useMemo(() => countByStatus(all), [all]);
   const filtered = useMemo(() => filterListEntries(all, status, query, sort), [all, status, query, sort]);
@@ -91,14 +94,14 @@ export default function MyListScreen() {
     setSort({});
   };
 
-  const sheetEntry = sheetId ? all.find((e) => (e.id ?? e._id) === sheetId) ?? null : null;
+  const sheetEntry = sheetId ? all.find((e) => e.id === sheetId) ?? null : null;
 
   const renderCard = (entry: IListEntry) => {
     const media = mediaOf(entry);
     const pending = !entry.mediaId && !!entry.proposalId;
     const rejected = entry.listEntryStatus === 'REJECTED';
     const manageable = !!entry.media && !!entry.mediaId;
-    const id = (entry.id ?? entry._id) as string;
+    const id = entry.id;
     const open = entry.mediaId ? () => openMedia(kind, entry.mediaId as string) : undefined;
     const edit = () => setSheetId(id);
     const footer = pending ? (
@@ -209,7 +212,7 @@ export default function MyListScreen() {
             ) : (
               <View style={[styles.row, { gap: GAP[viewMode], marginBottom: GAP[viewMode] }]}>
                 {item.entries.map((entry) => (
-                  <View key={(entry.id ?? entry._id) as string} style={styles.cell}>
+                  <View key={entry.id} style={styles.cell}>
                     {renderCard(entry)}
                   </View>
                 ))}

@@ -5,6 +5,9 @@ import type { IListEntry, IListEntryFields, ListStatus, ListVisibility } from '.
  * (`ui/src/components/AddToListDialog/AddToListDialog.tsx`) pour que les deux écrans se comportent pareil.
  */
 
+/** Date de l'API en texte ISO (les types partagés admettent `Date` ; l'API sérialise en texte). */
+const toDay = (value?: string | Date | null): string | null => (value instanceof Date ? value.toISOString() : (value ?? null));
+
 export type ListMediaType = 'Anime' | 'Manga';
 
 export const ANIME_STATUSES: ListStatus[] = ['WATCHING', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'PLAN_TO_WATCH'];
@@ -70,9 +73,9 @@ export function entryToForm(mediaType: ListMediaType, entry?: IListEntry | null)
     volumesRead: entry?.volumesRead,
     notes: entry?.notes ?? '',
     notesPublic: entry?.notesPublic ?? false,
-    startedAt: entry?.startedAt ?? null,
-    completedAt: entry?.completedAt ?? null,
-    onHoldSince: entry?.onHoldSince ?? null,
+    startedAt: toDay(entry?.startedAt),
+    completedAt: toDay(entry?.completedAt),
+    onHoldSince: toDay(entry?.onHoldSince),
     rewatchCount: entry?.rewatchCount ?? 0,
     visibility: entry?.visibility ?? 'PUBLIC',
   };
@@ -150,7 +153,7 @@ export function formatScore(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1).replace('.', ',');
 }
 
-export function formatFrenchDate(iso: string | null | undefined): string {
+export function formatFrenchDate(iso: string | Date | null | undefined): string {
   if (!iso) return '';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';

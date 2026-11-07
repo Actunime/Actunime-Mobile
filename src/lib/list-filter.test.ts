@@ -13,9 +13,9 @@ import {
   sortListEntries,
 } from './list-filter';
 
-const media = (id: string, extra: Partial<IMedia> = {}): IMedia => ({ id, title: { original: id }, ...extra });
+const media = (id: string, extra: Partial<IMedia> = {}): IMedia => (({ id, title: { original: id }, ...extra } as never));
 
-const entry = (id: string, over: Partial<IListEntry> = {}, m: Partial<IMedia> = {}): IListEntry => ({
+const entry = (id: string, over: Partial<IListEntry> = {}, m: Partial<IMedia> = {}): IListEntry => (({
   id: `e-${id}`,
   mediaId: id,
   mediaType: 'Anime',
@@ -23,7 +23,7 @@ const entry = (id: string, over: Partial<IListEntry> = {}, m: Partial<IMedia> = 
   episodesWatched: 0,
   media: media(id, m),
   ...over,
-});
+} as never));
 
 describe('cycleSort', () => {
   it('passe de décroissant à croissant puis retire le champ', () => {
@@ -43,7 +43,7 @@ describe('matchesListQuery', () => {
   });
 
   it('filtre par format et par genre inclus / exclu', () => {
-    const e = entry('a', {}, { format: 'FILM', genres: ['1', '2'] });
+    const e = entry('a', {}, { format: 'FILM', genres: [1, 2] });
     expect(matchesListQuery(e, { format: 'FILM' })).toBe(true);
     expect(matchesListQuery(e, { format: 'OVA' })).toBe(false);
     expect(matchesListQuery(e, { genres: [2] })).toBe(true);

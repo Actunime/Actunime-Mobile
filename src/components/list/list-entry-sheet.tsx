@@ -58,7 +58,7 @@ function SectionTitle({ children, aside }: Readonly<{ children: React.ReactNode;
 }
 
 /** Date choisie au sélecteur natif, enregistrée au format `AAAA-MM-JJ` comme le champ `date` du site. */
-function DateButton({ value, onChange, label }: Readonly<{ value?: string | null; onChange: (value: string | null) => void; label: string }>) {
+function DateButton({ value, onChange, label }: Readonly<{ value?: string | Date | null; onChange: (value: string | null) => void; label: string }>) {
   const open = () =>
     DateTimePickerAndroid.open({
       value: value ? new Date(value) : new Date(),

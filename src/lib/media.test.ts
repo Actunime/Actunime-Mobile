@@ -10,21 +10,21 @@ describe('media', () => {
   });
 
   it('ignore un total à zéro (inconnu)', () => {
-    expect(totalOf('anime', { episodesInfo: { total: 0 } })).toBeUndefined();
-    expect(totalOf('manga', { chaptersInfo: { total: 40 } })).toBe(40);
+    expect(totalOf('anime', ({ episodesInfo: { total: 0 } } as never))).toBeUndefined();
+    expect(totalOf('manga', ({ chaptersInfo: { total: 40 } } as never))).toBe(40);
   });
 
   it('formate la progression avec ou sans total', () => {
-    expect(progressLabel({ status: 'WATCHING', mediaType: 'Anime', episodesWatched: 5 }, { episodesInfo: { total: 12 } })).toBe(
+    expect(progressLabel(({ status: 'WATCHING', mediaType: 'Anime', episodesWatched: 5 } as never), { episodesInfo: { total: 12 } } as never)).toBe(
       '5 / 12 ép.',
     );
-    expect(progressLabel({ status: 'READING', mediaType: 'Manga', chaptersRead: 8 })).toBe('8 ch.');
-    expect(progressLabel({ status: 'PLAN_TO_WATCH', mediaType: 'Anime' })).toBeNull();
+    expect(progressLabel(({ status: 'READING', mediaType: 'Manga', chaptersRead: 8 } as never))).toBe('8 ch.');
+    expect(progressLabel(({ status: 'PLAN_TO_WATCH', mediaType: 'Anime' } as never))).toBeNull();
   });
 
   it('extrait l’année de début', () => {
-    expect(formatYear({ date: { start: '2026-01-16T00:00:00.000Z' } })).toBe('2026');
-    expect(formatYear({})).toBeNull();
+    expect(formatYear(({ date: { start: '2026-01-16T00:00:00.000Z' } } as never))).toBe('2026');
+    expect(formatYear(({} as never))).toBeNull();
   });
 
   it('rend le format lisible', () => {

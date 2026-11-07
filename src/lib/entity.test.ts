@@ -4,32 +4,32 @@ import { ENTITY_SECTIONS, entityBadge, entityImage, entityInfoRows, entityName }
 
 describe('entityName / entityImage', () => {
   it('prend le nom d’origine, ou « Sans nom »', () => {
-    expect(entityName({ name: { original: ' Youngwoo Shin ' } })).toBe('Youngwoo Shin');
-    expect(entityName({})).toBe('Sans nom');
+    expect(entityName(({ name: { original: ' Youngwoo Shin ' } } as never))).toBe('Youngwoo Shin');
+    expect(entityName(({} as never))).toBe('Sans nom');
     expect(entityName(null)).toBe('Sans nom');
   });
 
   it('prend l’avatar, puis la pochette, puis le logo', () => {
-    expect(entityImage({ avatarUrl: 'a', coverUrl: 'c', logoUrl: 'l' })).toBe('a');
-    expect(entityImage({ avatarUrl: null, coverUrl: 'c', logoUrl: 'l' })).toBe('c');
-    expect(entityImage({ logoUrl: 'l' })).toBe('l');
-    expect(entityImage({})).toBeNull();
+    expect(entityImage({ avatarUrl: 'a', coverUrl: 'c', logoUrl: 'l' } as never)).toBe('a');
+    expect(entityImage({ avatarUrl: null, coverUrl: 'c', logoUrl: 'l' } as never)).toBe('c');
+    expect(entityImage(({ logoUrl: 'l' } as never))).toBe('l');
+    expect(entityImage(({} as never))).toBeNull();
   });
 });
 
 describe('entityBadge', () => {
   it('rôle d’un personnage, type d’une musique ou d’une société, rien pour une personne', () => {
-    expect(entityBadge('character', { role: 'PRINCIPAL' })).toBe('Principal');
-    expect(entityBadge('track', { type: 'ENDING' })).toBe('Ending');
-    expect(entityBadge('company', { type: 'PRODUCER' })).toBe('Producteur');
-    expect(entityBadge('person', { role: 'PRINCIPAL' })).toBeUndefined();
-    expect(entityBadge('character', {})).toBeUndefined();
+    expect(entityBadge('character', ({ role: 'PRINCIPAL' } as never))).toBe('Principal');
+    expect(entityBadge('track', ({ type: 'ENDING' } as never))).toBe('Ending');
+    expect(entityBadge('company', ({ type: 'PRODUCER' } as never))).toBe('Producteur');
+    expect(entityBadge('person', ({ role: 'PRINCIPAL' } as never))).toBeUndefined();
+    expect(entityBadge('character', ({} as never))).toBeUndefined();
   });
 });
 
 describe('entityInfoRows', () => {
   it('personnage : espèce, genre, âge (0 compris)', () => {
-    expect(entityInfoRows('character', { species: 'ELFE', gender: 'FEMININ', age: 0 })).toEqual([
+    expect(entityInfoRows('character', ({ species: 'ELFE', gender: 'FEMININ', age: 0 } as never))).toEqual([
       { label: 'Espèce', value: 'Elfe' },
       { label: 'Genre', value: 'Féminin' },
       { label: 'Âge', value: '0' },
@@ -37,15 +37,15 @@ describe('entityInfoRows', () => {
   });
 
   it('personne : naissance et décès en dates longues', () => {
-    const rows = entityInfoRows('person', { birthDate: '1980-05-03T00:00:00.000Z' });
+    const rows = entityInfoRows('person', ({ birthDate: '1980-05-03T00:00:00.000Z' } as never));
     expect(rows).toHaveLength(1);
     expect(rows[0]!.label).toBe('Naissance');
     expect(rows[0]!.value).toMatch(/1980/);
   });
 
   it('société : année de fondation ; rien sans donnée', () => {
-    expect(entityInfoRows('company', { createdDate: '1999-04-01T00:00:00.000Z' })).toEqual([{ label: 'Fondée', value: '1999' }]);
-    expect(entityInfoRows('track', {})).toEqual([]);
+    expect(entityInfoRows('company', ({ createdDate: '1999-04-01T00:00:00.000Z' } as never))).toEqual([{ label: 'Fondée', value: '1999' }]);
+    expect(entityInfoRows('track', ({} as never))).toEqual([]);
     expect(entityInfoRows('person', null)).toEqual([]);
   });
 });

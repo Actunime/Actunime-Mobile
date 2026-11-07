@@ -1,4 +1,4 @@
-import type { EntityKind, EntityRelation, IEntity } from './api';
+import type { EntityKind, EntityRelation, IRelated } from './api';
 import { formatLongDate } from './media';
 
 /** Libellés français des champs d'un personnage, d'une musique, d'une société (`*Obj` des types partagés). */
@@ -35,16 +35,16 @@ export const COMPANY_TYPE_LABELS: Record<string, string> = {
   LABEL: 'Label',
 };
 
-export const entityId = (entity: { id?: string; _id?: string }): string => (entity.id ?? entity._id) as string;
+export const entityId = (entity: { id: string }): string => entity.id;
 
-export const entityName = (entity?: IEntity | null): string => entity?.name?.original?.trim() || 'Sans nom';
+export const entityName = (entity?: IRelated | null): string => entity?.name?.original?.trim() || 'Sans nom';
 
 /** Visuel d'une entité : avatar (personnage, personne), pochette (musique) ou logo (société). */
-export const entityImage = (entity?: IEntity | null): string | null =>
+export const entityImage = (entity?: IRelated | null): string | null =>
   entity?.avatarUrl ?? entity?.coverUrl ?? entity?.logoUrl ?? null;
 
 /** Pastille sous le nom : rôle d'un personnage, type d'une musique ou d'une société. */
-export function entityBadge(kind: EntityKind, entity?: IEntity | null): string | undefined {
+export function entityBadge(kind: EntityKind, entity?: IRelated | null): string | undefined {
   if (!entity) return undefined;
   if (kind === 'character') return entity.role ? (CHARACTER_ROLE_LABELS[entity.role] ?? entity.role) : undefined;
   if (kind === 'track') return entity.type ? (TRACK_TYPE_LABELS[entity.type] ?? entity.type) : undefined;
@@ -58,7 +58,7 @@ export interface IEntityRow {
 }
 
 /** Lignes d'informations de la fiche (colonne latérale du site) : espèce, genre, âge, naissance, sortie, fondation. */
-export function entityInfoRows(kind: EntityKind, entity?: IEntity | null): IEntityRow[] {
+export function entityInfoRows(kind: EntityKind, entity?: IRelated | null): IEntityRow[] {
   if (!entity) return [];
   const rows: (IEntityRow | null)[] = [];
   if (kind === 'character') {

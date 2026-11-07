@@ -6,7 +6,7 @@ export function mediaTitle(media?: Pick<IMedia, 'title'> | null): string {
 }
 
 export function entryId(entry: IListEntry): string {
-  return (entry.id ?? entry._id) as string;
+  return entry.id;
 }
 
 export const kindOf = (mediaType?: 'Anime' | 'Manga'): MediaKind => (mediaType === 'Manga' ? 'manga' : 'anime');
@@ -78,7 +78,8 @@ export function statusTone(status?: string): 'success' | 'warning' | 'destructiv
 }
 
 /** Date longue en français (« 16 janvier 2026 »), ou `null` si absente ou invalide. */
-export function formatLongDate(value?: string | null): string | null {
+/** Les dates de l'API arrivent en texte ISO ; les types partagés admettent aussi `Date`. */
+export function formatLongDate(value?: string | Date | null): string | null {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;

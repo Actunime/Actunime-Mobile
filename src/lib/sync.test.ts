@@ -59,7 +59,7 @@ const pendingEntry: IListEntry = {
   status: 'READING',
   chaptersRead: 3,
   preview: { title: 'Mon Manga Proposé' },
-};
+} as IListEntry;
 
 beforeEach(() => {
   Object.keys(matches).forEach((key) => delete matches[key]);
@@ -95,15 +95,15 @@ describe('resolve', () => {
 
   it('continue vers le catalogue quand la liste en attente est indisponible', async () => {
     mocked.getPendingListEntries.mockRejectedValue(new Error('indisponible'));
-    mocked.searchByKind.mockResolvedValue([{ id: 'm1', title: { original: 'Mon Manga Proposé' } }]);
+    mocked.searchByKind.mockResolvedValue([({ id: 'm1', title: { original: 'Mon Manga Proposé' } } as never)]);
 
     expect((await resolve(detection())).match).toEqual({ kind: 'media', id: 'm1', title: 'Mon Manga Proposé' });
   });
 
   it('associe automatiquement une œuvre validée au titre exact, sans la proposer', async () => {
     mocked.searchByKind.mockResolvedValue([
-      { id: 'm1', title: { original: 'Mon Manga Proposé' } },
-      { id: 'm2', title: { original: 'Mon Manga Proposé 2' } },
+      ({ id: 'm1', title: { original: 'Mon Manga Proposé' } } as never),
+      ({ id: 'm2', title: { original: 'Mon Manga Proposé 2' } } as never),
     ]);
 
     const result = await resolve(detection());
@@ -113,8 +113,8 @@ describe('resolve', () => {
 
   it('propose les candidats quand deux œuvres portent le même titre', async () => {
     mocked.searchByKind.mockResolvedValue([
-      { id: 'm1', title: { original: 'Mon Manga Proposé' } },
-      { id: 'm2', title: { original: 'Mon Manga Proposé' } },
+      ({ id: 'm1', title: { original: 'Mon Manga Proposé' } } as never),
+      ({ id: 'm2', title: { original: 'Mon Manga Proposé' } } as never),
     ]);
 
     const result = await resolve(detection());
@@ -125,7 +125,7 @@ describe('resolve', () => {
 
   it('propose une proposition en attente d’un autre membre comme candidate', async () => {
     mocked.searchPendingProposals.mockResolvedValue([
-      { id: 'p1', mainDependency: { title: { original: 'Mon Manga Proposé' } } },
+      ({ id: 'p1', mainDependency: { title: { original: 'Mon Manga Proposé' } } } as never),
     ]);
 
     const result = await resolve(detection());
@@ -146,7 +146,7 @@ describe('resolve', () => {
 describe('searchCandidates', () => {
   it('met mes œuvres en attente avant le catalogue', async () => {
     mocked.getPendingListEntries.mockResolvedValue([pendingEntry]);
-    mocked.searchByKind.mockResolvedValue([{ id: 'm1', title: { original: 'Mon Manga' } }]);
+    mocked.searchByKind.mockResolvedValue([({ id: 'm1', title: { original: 'Mon Manga' } } as never)]);
 
     const results = await searchCandidates('manga', 'mon manga');
 
@@ -156,7 +156,7 @@ describe('searchCandidates', () => {
 
 describe('confirm', () => {
   it('ajoute une proposition à ma liste puis suit l’entrée créée', async () => {
-    mocked.createListEntryFromProposal.mockResolvedValue({ id: 'e42', status: 'READING' });
+    mocked.createListEntryFromProposal.mockResolvedValue(({ id: 'e42', status: 'READING' } as never));
     const candidate = {
       key: 'proposal:p1',
       origin: 'proposal' as const,
@@ -208,15 +208,15 @@ describe('pushProgress', () => {
   });
 
   it('met à jour une œuvre validée plus en retard, et laisse inchangée une plus avancée', async () => {
-    mocked.getListByMedia.mockResolvedValue({ id: 'e5', status: 'READING', chaptersRead: 3 });
+    mocked.getListByMedia.mockResolvedValue(({ id: 'e5', status: 'READING', chaptersRead: 3 } as never));
     expect(await pushProgress(detection(), { kind: 'media', id: 'm1', title: 'x' })).toBe('updated');
 
-    mocked.getListByMedia.mockResolvedValue({ id: 'e5', status: 'READING', chaptersRead: 7 });
+    mocked.getListByMedia.mockResolvedValue(({ id: 'e5', status: 'READING', chaptersRead: 7 } as never));
     expect(await pushProgress(detection(), { kind: 'media', id: 'm1', title: 'x' })).toBe('unchanged');
   });
 
   it('écrit les épisodes d’un anime dans `episodesWatched`', async () => {
-    mocked.getListByMedia.mockResolvedValue({ id: 'e6', status: 'WATCHING', episodesWatched: 1 });
+    mocked.getListByMedia.mockResolvedValue(({ id: 'e6', status: 'WATCHING', episodesWatched: 1 } as never));
 
     await pushProgress(detection({ kind: 'anime', chapter: undefined, episode: 4 }), {
       kind: 'media',
@@ -274,7 +274,7 @@ describe('markPreviousSeen', () => {
   });
 
   it('suit le champ des épisodes pour un anime', async () => {
-    mocked.getListByMedia.mockResolvedValue({ id: 'e9', mediaType: 'Anime', status: 'WATCHING', episodesWatched: 2 });
+    mocked.getListByMedia.mockResolvedValue(({ id: 'e9', mediaType: 'Anime', status: 'WATCHING', episodesWatched: 2 } as never));
 
     expect(
       await markPreviousSeen(detection({ kind: 'anime', chapter: undefined, episode: 6 }), { kind: 'media', id: 'm1', title: 'x' }, 2),

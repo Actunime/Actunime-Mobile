@@ -28,13 +28,13 @@ describe('statusCounts', () => {
 
 describe('favoriteTarget', () => {
   it('prend le titre d’une œuvre ou le nom d’une entité, et son visuel', () => {
-    expect(favoriteTarget({ targetId: 'a1', targetType: 'Anime', target: { title: { original: 'Overgeared' }, posterUrl: 'p' } })).toEqual({
+    expect(favoriteTarget({ targetId: 'a1', targetType: 'Anime', target: { title: { original: 'Overgeared' }, posterUrl: 'p' } } as never)).toEqual({
       kind: 'anime',
       id: 'a1',
       title: 'Overgeared',
       imageUrl: 'p',
     });
-    expect(favoriteTarget({ targetId: 'c1', targetType: 'Character', target: { name: { original: 'Doren' }, avatarUrl: 'v' } })).toEqual({
+    expect(favoriteTarget({ targetId: 'c1', targetType: 'Character', target: { name: { original: 'Doren' }, avatarUrl: 'v' } } as never)).toEqual({
       kind: 'character',
       id: 'c1',
       title: 'Doren',
@@ -43,7 +43,7 @@ describe('favoriteTarget', () => {
   });
 
   it('ignore un favori dont la cible a disparu', () => {
-    expect(favoriteTarget({ targetId: 'x', targetType: 'Anime', target: null })).toBeNull();
+    expect(favoriteTarget(({ targetId: 'x', targetType: 'Anime', target: null } as never))).toBeNull();
   });
 });
 

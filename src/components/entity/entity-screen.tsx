@@ -64,7 +64,7 @@ function RelationSection({ kind, id, section }: Readonly<{ kind: EntityKind; id:
         items={results.map((related) => itemOf(section, related))}
         kind={section.itemKind === 'manga' ? 'manga' : 'anime'}
         width={media ? 112 : 144}
-        placeholder={ICONS[section.itemKind === 'anime' || section.itemKind === 'manga' ? 'person' : section.itemKind]}
+        placeholder={ICONS[section.itemKind === 'anime' || section.itemKind === 'manga' ? 'person' : (section.itemKind as EntityKind)]}
         square={!media}
       />
     </SectionCard>

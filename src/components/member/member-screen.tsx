@@ -293,7 +293,7 @@ export function MemberScreen({ username }: Readonly<{ username: string }>) {
                       .filter((entry) => mediaOf(entry))
                       .slice(0, 10)
                       .map((entry): ICarouselItem => ({
-                        id: entry.id ?? entry._id ?? mediaId(mediaOf(entry)!),
+                        id: entry.id ?? mediaId(mediaOf(entry)!),
                         title: mediaOf(entry)?.title?.original ?? 'Sans titre',
                         imageUrl: mediaOf(entry)?.posterUrl,
                         subtitle: progressLabel(entry, mediaOf(entry)) ?? undefined,
@@ -373,7 +373,7 @@ export function MemberScreen({ username }: Readonly<{ username: string }>) {
     <Screen>
       <FlatList<IListEntry | IFavoriteTarget>
         data={isList ? (entries as (IListEntry | IFavoriteTarget)[]) : tab === 'favoris' ? favoriteTargets : []}
-        keyExtractor={(item, index) => ('kind' in item ? `${item.kind}:${item.id}` : (item.id ?? item._id ?? String(index)))}
+        keyExtractor={(item, index) => ('kind' in item ? `${item.kind}:${item.id}` : (item.id ?? String(index)))}
         ListHeaderComponent={header}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.6}

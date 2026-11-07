@@ -184,7 +184,7 @@ export function NewsList({ articles, onOpen }: Readonly<{ articles: INewsArticle
       {articles.map((article) => {
         const cover = newsCover(article);
         return (
-          <View key={article.id ?? article._id ?? article.title} style={styles.newsRow}>
+          <View key={article.id ?? article.title} style={styles.newsRow}>
             {cover ? <Image source={{ uri: cover }} style={styles.newsCover} contentFit="cover" transition={150} /> : null}
             <View style={styles.newsBody}>
               <View style={styles.newsMeta}>

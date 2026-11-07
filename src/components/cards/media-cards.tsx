@@ -58,7 +58,7 @@ export function Badge({ label, background, color = '#ffffff', size = '10' }: Rea
 const formatScore = (value: number) => value.toFixed(1).replace('.', ',');
 
 /** Ligne de notes : communauté (« ★ 8,1 » ou « Pas encore assez de notes (2/3) ») et ma note avec l'écart. */
-export function ScoreLine({ community, mine }: Readonly<{ community?: IListEntry['communityScore']; mine?: number | null }>) {
+export function ScoreLine({ community, mine }: Readonly<{ community?: { average?: number; count: number }; mine?: number | null }>) {
   const myScore = mine && mine > 0 ? mine : undefined;
   const average = community?.average;
   if (average === undefined && !myScore && !community?.count) return null;
@@ -352,7 +352,7 @@ export function CardActionButton({
 
 interface IDetailedCardProps extends ICardBaseProps {
   /** Genres déjà résolus (noms). */
-  genres?: { id: string; name: string }[];
+  genres?: { id: string | number; name: string }[];
   /** Ma liste : la carte entière ouvre le tiroir et ne garde que la gestion (titre, format, progression, statut). */
   manage?: boolean;
   onListChange?: (patch: IEntryPatch) => void;

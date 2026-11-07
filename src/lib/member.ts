@@ -41,21 +41,30 @@ export interface IFavoriteTarget {
   imageUrl: string | null;
 }
 
+interface IFavoriteTargetData {
+  title?: { original?: string };
+  name?: { original?: string };
+  posterUrl?: string | null;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
+  logoUrl?: string | null;
+}
+
 const FAVORITE_KINDS: Record<FavoriteType, MediaKind | EntityKind> = {
   Anime: 'anime',
   Manga: 'manga',
   Character: 'character',
   Person: 'person',
   Company: 'company',
-  Track: 'track',
 };
 
 /** Cible d'un favori : de quoi l'afficher et l'ouvrir ; `null` si la cible a disparu. */
 export function favoriteTarget(favorite: IFavorite): IFavoriteTarget | null {
-  const target = favorite.target;
+  // La cible est jointe selon son type : on la lit comme une fiche aux champs facultatifs.
+  const target = favorite.target as unknown as IFavoriteTargetData | null;
   if (!target) return null;
-  const kind = FAVORITE_KINDS[favorite.targetType];
-  if (!kind) return null;
+  const kind = FAVORITE_KINDS[favorite.targetType as FavoriteType];
+  if (!kind || !favorite.targetId) return null;
   return {
     kind,
     id: favorite.targetId,
@@ -73,7 +82,7 @@ export const FAVORITE_FILTERS: { id: FavoriteType | 'ALL'; label: string }[] = [
 ];
 
 /** Membre depuis, en français (« octobre 2026 »). */
-export function memberSince(value?: string): string | null {
+export function memberSince(value?: string | Date): string | null {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
