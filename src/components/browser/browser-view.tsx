@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { router, useIsFocused } from 'expo-router';
 import { Alert, BackHandler, Linking, Share, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,8 +23,9 @@ import { titleAlternatives } from '@/detection/core/auto-strategy';
 import type { StrategyResult } from '@/detection/core/types';
 import { INJECTED_DETECTION } from '@/detection/injected.generated';
 import { commandScript, parseInPageMessage, type PickedElement } from '@/detection/messages';
+import { clickGuardScript } from './click-guard-script';
 import { resolveAddress } from '@/lib/address';
-import { allowNavigation, isSameSite } from '@/lib/navigation-guard';
+import { allowNavigation, isSameSite, matchesClick, siteOf, type IUserClick } from '@/lib/navigation-guard';
 import { nextNumberUrl } from '@/lib/next-chapter';
 import { setReadingChromeHidden, useReadingChromeHidden } from '@/lib/reading-chrome';
 import { getBrowserSettings, setBrowserSetting, useBrowserSettings } from '@/lib/browser-settings';
@@ -34,6 +35,18 @@ import { Adblock } from '../../../modules/actunime-adblock/src';
 
 /** Signaux de vie privée envoyés à chaque site : Do Not Track et Global Privacy Control. */
 const PRIVACY_HEADERS = { DNT: '1', 'Sec-GPC': '1' };
+
+/** Message de clic du script de garde : accepté seulement s'il porte le jeton de l'onglet. */
+function readGuardMessage(raw: string, token: string): { href: string | null } | null {
+  if (!raw.includes('actunimeGuard')) return null;
+  try {
+    const value = JSON.parse(raw) as { actunimeGuard?: string; href?: string | null };
+    if (value.actunimeGuard === token) return { href: typeof value.href === 'string' ? value.href : null };
+  } catch {
+    // message étranger
+  }
+  return null;
+}
 
 interface IconButtonProps {
   name: React.ComponentProps<typeof Ionicons>['name'];
@@ -150,6 +163,10 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
     (state: WebViewNavigation) => {
       setNavigation({ canGoBack: state.canGoBack, canGoForward: state.canGoForward, loading: state.loading });
       setPageUrl(state.url);
+      if (!state.loading) {
+        chainOpen.current = false;
+        approved.current = null;
+      }
       if (!state.loading) onInfo({ title: state.title || undefined, url: state.url });
       if (!editing) setAddress(state.url);
       if (!state.loading && getBrowserSettings().history) void recordVisit(state.url);
@@ -157,18 +174,35 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
     [editing, onInfo],
   );
 
-  // Dernier toucher sur la page : une navigation vers un autre site sans toucher récent est une redirection de pub.
-  const lastTouch = useRef(0);
+  // Redirections de pub : un autre site n'est ouvert que sur un vrai clic de lien visible (voir `navigation-guard`).
+  const guardToken = useRef(Math.random().toString(36).slice(2)).current;
+  const guardScript = useMemo(() => clickGuardScript(guardToken), [guardToken]);
+  const lastClick = useRef<IUserClick | null>(null);
+  const chainOpen = useRef(false);
+  const approved = useRef<string | null>(null);
+  const [refused, setRefused] = useState<string | null>(null);
   const pageUrlRef = useRef(initialUrl);
   pageUrlRef.current = pageUrl;
   const onShouldStart = useCallback(
-    (request: { url: string; isTopFrame?: boolean }) =>
-      allowNavigation({
+    (request: { url: string; isTopFrame?: boolean }) => {
+      const now = Date.now();
+      const isTopFrame = request.isTopFrame ?? true;
+      const allowed = allowNavigation({
         target: request.url,
         current: pageUrlRef.current,
-        isTopFrame: request.isTopFrame ?? true,
-        sinceTouchMs: Date.now() - lastTouch.current,
-      }),
+        isTopFrame,
+        click: lastClick.current,
+        now,
+        chainOpen: chainOpen.current,
+        approved: approved.current,
+      });
+      if (!allowed) {
+        if (isTopFrame && siteOf(request.url)) setRefused(request.url);
+        return false;
+      }
+      if (isTopFrame && matchesClick(request.url, lastClick.current, now)) chainOpen.current = true;
+      return true;
+    },
     [],
   );
   // Les fenêtres ouvertes par `window.open` sont ignorées, sauf vers le même site (lien en nouvelle fenêtre) :
@@ -177,6 +211,12 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
     const target = event.nativeEvent.targetUrl;
     if (isSameSite(target, pageUrlRef.current)) setSource(target);
   }, []);
+  const allowRefused = useCallback(() => {
+    if (!refused) return;
+    approved.current = refused;
+    setSource(refused);
+    setRefused(null);
+  }, [refused]);
 
   const submitAddress = useCallback(() => {
     const target = resolveAddress(address);
@@ -186,6 +226,11 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
 
   const onMessage = useCallback(
     (event: WebViewMessageEvent) => {
+      const guard = readGuardMessage(event.nativeEvent.data, guardToken);
+      if (guard) {
+        lastClick.current = { href: guard.href, at: Date.now() };
+        return;
+      }
       const message = parseInPageMessage(event.nativeEvent.data);
       if (!message) return;
       if (message.type === 'strategies') return setStrategies(message.results);
@@ -215,7 +260,7 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
       if (message.type === 'next-link') return nextLinkResolver.current?.(message.href);
       void tracking.onMessage(message);
     },
-    [tracking],
+    [tracking, guardToken],
   );
 
   const runStrategies = useCallback(() => {
@@ -332,12 +377,13 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
           {navigation.loading && <View style={[styles.progressBar, { width: `${Math.round(progress * 100)}%` }]} />}
         </View>
 
-        <View style={styles.container} onStartShouldSetResponderCapture={() => { lastTouch.current = Date.now(); return false; }}>
+        <View style={styles.container}>
           <WebView
             ref={webview}
             source={{ uri: source, headers: PRIVACY_HEADERS }}
             style={styles.container}
             injectedJavaScript={INJECTED_DETECTION}
+            injectedJavaScriptBeforeContentLoaded={guardScript}
             onMessage={onMessage}
             onNavigationStateChange={onNavigationStateChange}
             onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
@@ -348,6 +394,22 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
             mixedContentMode="never"
             allowsBackForwardNavigationGestures
           />
+
+          {refused && (
+            <View style={styles.refused}>
+              <ThemedText type="small" numberOfLines={1} style={styles.refusedText}>
+                Redirection bloquée : {siteOf(refused)}
+              </ThemedText>
+              <Pressable accessibilityRole="button" onPress={allowRefused} hitSlop={8}>
+                <ThemedText type="smallBold" themeColor="primary">
+                  Ouvrir
+                </ThemedText>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Fermer" onPress={() => setRefused(null)} hitSlop={8}>
+                <Ionicons name="close" size={18} color={Colors.textSecondary} />
+              </Pressable>
+            </View>
+          )}
 
           {!wizardOpen && (
             <TrackingBar
@@ -453,6 +515,20 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  refused: {
+    position: 'absolute',
+    top: Spacing.two,
+    left: Spacing.two,
+    right: Spacing.two,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.medium,
+    backgroundColor: Colors.backgroundElement,
+  },
+  refusedText: { flex: 1 },
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',

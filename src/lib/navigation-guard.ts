@@ -1,7 +1,7 @@
 /** Garde contre les popups et redirections publicitaires du navigateur intégré. */
 
-/** Délai après un toucher pendant lequel une navigation vers un autre site est jugée voulue. */
-export const USER_GESTURE_WINDOW_MS = 1500;
+/** Un clic sur un lien n'autorise une navigation que pendant ce délai. */
+export const CLICK_WINDOW_MS = 3000;
 
 const SECOND_LEVEL = new Set(['co', 'com', 'org', 'net', 'gov', 'edu', 'ac']);
 
@@ -27,25 +27,46 @@ export function isSameSite(a: string, b: string): boolean {
   return siteA !== null && siteA === siteOf(b);
 }
 
+function withoutHash(url: string): string {
+  const index = url.indexOf('#');
+  return index === -1 ? url : url.slice(0, index);
+}
+
+/** Dernier clic de l'utilisateur sur un vrai lien visible (`href` null : clic hors lien, ou lien superposé invisible). */
+export interface IUserClick {
+  href: string | null;
+  at: number;
+}
+
+/** Le clic récent portait sur un lien visible vers cette adresse. */
+export function matchesClick(target: string, click: IUserClick | null, now: number): boolean {
+  if (!click?.href || now - click.at > CLICK_WINDOW_MS) return false;
+  return withoutHash(click.href) === withoutHash(target);
+}
+
 interface IGuardInput {
-  /** Adresse demandée. */
   target: string;
-  /** Page actuellement affichée. */
   current: string;
-  /** Navigation du cadre principal (les cadres publicitaires intégrés ne sont pas concernés). */
+  /** Navigation du cadre principal (les sous-cadres ne sont pas concernés). */
   isTopFrame: boolean;
-  /** Millisecondes depuis le dernier toucher de l'utilisateur sur la page. */
-  sinceTouchMs: number;
+  click: IUserClick | null;
+  now: number;
+  /** Une navigation autorisée par un clic est encore en cours : ses redirections serveur suivent. */
+  chainOpen: boolean;
+  /** Adresse que l'utilisateur vient d'autoriser malgré le blocage. */
+  approved?: string | null;
 }
 
 /**
- * Une navigation du cadre principal vers un autre site, sans toucher récent, est une redirection de pub : refusée.
- * Les adresses qui ne sont pas http(s) (intents, applications de pub) sont toujours refusées.
+ * Une navigation du cadre principal vers un autre site n'est permise que si l'utilisateur vient de cliquer
+ * sur un lien visible qui y mène (ou pour les redirections d'un tel clic). Un script, une superposition
+ * transparente ou un `window.open` n'y suffisent pas. Les adresses non web (intents) sont toujours refusées.
  */
-export function allowNavigation({ target, current, isTopFrame, sinceTouchMs }: IGuardInput): boolean {
+export function allowNavigation({ target, current, isTopFrame, click, now, chainOpen, approved }: IGuardInput): boolean {
   if (target === 'about:blank' || target.startsWith('data:') || target.startsWith('blob:')) return true;
   if (siteOf(target) === null) return false;
   if (!isTopFrame) return true;
+  if (approved && withoutHash(approved) === withoutHash(target)) return true;
   if (isSameSite(target, current)) return true;
-  return sinceTouchMs <= USER_GESTURE_WINDOW_MS;
+  return chainOpen || matchesClick(target, click, now);
 }
