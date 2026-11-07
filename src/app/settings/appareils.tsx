@@ -9,7 +9,7 @@ import { Tw } from '@/constants/theme';
 import { api } from '@/lib/api';
 import { sessionName } from '@/lib/sessions';
 
-const lastActive = (value?: string): string => {
+const lastActive = (value?: string | Date): string => {
   if (!value) return 'Activité inconnue';
   const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60000);
   if (minutes < 5) return 'Actif à l’instant';
@@ -46,13 +46,12 @@ export default function SessionsSettings() {
                 <View style={styles.flex}>
                   <Txt size="sm" weight="semibold">
                     {sessionName(session)}
-                    {session.current ? ' · cet appareil' : ''}
                   </Txt>
                   <Txt size="xs" color={Tw.color.mutedForeground}>
                     {[session.location, lastActive(session.lastActiveAt)].filter(Boolean).join(' · ')}
                   </Txt>
                 </View>
-                {session.current ? null : <Button label="Fermer" variant="outline" disabled={close.isPending} onPress={() => close.mutate(session.id)} />}
+                <Button label="Fermer" variant="outline" disabled={close.isPending} onPress={() => close.mutate(session.id)} />
               </View>
             ))
           )}

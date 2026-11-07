@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Linking, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
@@ -10,6 +11,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Floating, Radius, Spacing } from '@/constants/theme';
 import { signOut, useAuth } from '@/lib/auth-store';
 import { WEB_URL } from '@/lib/config';
+import { api } from '@/lib/api';
 import { useMyEntries } from '@/lib/queries';
 import { listTotals } from '@/lib/suivi';
 import {
@@ -121,6 +123,8 @@ export default function ProfileScreen() {
   const { auth } = useAuth();
   const animeList = useMyEntries('Anime');
   const mangaList = useMyEntries('Manga');
+  // Le pseudo vient du profil lui-même : celui de la session peut être l'e-mail quand la connexion n'a pas trouvé le membre.
+  const me = useQuery({ queryKey: ['me', 'profile'], queryFn: () => api.getMyProfile(), enabled: !!auth });
   const stats = { data: animeList.data && mangaList.data ? listTotals([...animeList.data, ...mangaList.data]) : undefined };
   if (!auth) return null;
   const name = auth.user.displayName ?? auth.user.username;
@@ -169,7 +173,7 @@ export default function ProfileScreen() {
           <ThemedText type="small" themeColor="textSecondary">
             Ton profil public, tes favoris et tes statistiques détaillées.
           </ThemedText>
-          <Button label="Voir mon profil public" variant="outline" onPress={() => openMember(auth.user.username)} />
+          <Button label="Voir mon profil public" variant="outline" disabled={!me.data?.username} onPress={() => me.data?.username && openMember(me.data.username)} />
         </ThemedView>
 
         <AppUpdate />

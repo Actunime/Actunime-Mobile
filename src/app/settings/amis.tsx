@@ -15,8 +15,13 @@ import { api, type IFriendRequest } from '@/lib/api';
 type Direction = 'incoming' | 'outgoing';
 
 /** L'autre membre d'une demande : l'expéditeur pour une demande reçue, le destinataire pour une demande envoyée. */
-const otherMember = (request: IFriendRequest, direction: Direction) =>
-  (direction === 'incoming' ? request.requester : request.addressee) ?? request.member ?? null;
+const otherMember = (request: IFriendRequest, direction: Direction) => {
+  // L'API joint les deux membres de l'amitié (`userAMember`, `userBMember`) : `requestedBy` désigne l'expéditeur.
+  const senderIsA = request.requestedBy === request.userA;
+  const sender = senderIsA ? request.userAMember : request.userBMember;
+  const recipient = senderIsA ? request.userBMember : request.userAMember;
+  return (direction === 'incoming' ? sender : recipient) ?? null;
+};
 
 /** Amis (`settings/amis` du site) : demandes reçues (accepter, refuser) et envoyées (annuler). */
 export default function FriendsSettings() {
