@@ -3,6 +3,7 @@ name: Release APK
 # Secrets requis (Settings → Secrets and variables → Actions) :
 #   - BETA_API_URL            : ex. https://api-beta.actunime.fr
 #   - BETA_WEB_URL            : ex. https://beta.actunime.fr
+#   - NPM_TOKEN               : jeton GitHub (read:packages) pour installer @actunime/types, validations et client
 #   - ANDROID_KEYSTORE_BASE64 : keystore de signature encodé en base64 (`base64 -w0 actunime.jks`)
 #   - ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
 # La même clé doit signer toutes les versions : sinon Android refuse la mise à jour par-dessus l'ancienne.
@@ -44,6 +45,9 @@ jobs:
       - name: Installation des dépendances
         # `postinstall` applique le patch de react-native-webview (crochet de filtrage des requêtes)
         run: npm ci
+        env:
+          # Les bibliothèques @actunime/* sont sur GitHub Packages, qui demande un jeton de lecture même pour installer.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Bundle du script de détection injecté
         run: npm run build:injected

@@ -128,7 +128,7 @@ modules/            modules natifs Android : actunime-adblock (Rust + Kotlin), a
 patches/            correctif de react-native-webview (crochet de filtrage des requêtes)
 ```
 
-L'application est autonome : elle ne dépend d'aucune bibliothèque `@actunime/*` et parle à l'API par HTTP. La connexion suit le flux code + PKCE : l'application ouvre la page d'autorisation du site, puis échange le code contre un jeton renouvelable.
+L'application utilise les bibliothèques partagées `@actunime/types`, `validations` et `client` (GitHub Packages, versions exactes figées : après une publication, `npm install @actunime/<lib>@<version>` en `--save-exact`) et parle à l'API par HTTP. L'installation demande un jeton GitHub `read:packages` dans `NODE_AUTH_TOKEN` (secret `NPM_TOKEN` en CI). La connexion suit le flux code + PKCE : l'application ouvre la page d'autorisation du site, puis échange le code contre un jeton renouvelable.
 
 ### Versions
 
