@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildMediaUpdate, type IMediaDraft } from './propose';
+import { buildMediaUpdate, buildRelationAdd, type IMediaDraft } from './propose';
 
 const base: IMediaDraft = { synopsis: 'Un synopsis.', total: 12, status: 'AIRING', start: '2026-01-05T12:00:00.000Z', end: null };
 
@@ -20,5 +20,16 @@ describe('buildMediaUpdate', () => {
   });
   it('le statut change seul', () => {
     expect(buildMediaUpdate('anime', base, { ...base, status: 'ENDED' })).toEqual({ status: 'ENDED' });
+  });
+});
+
+describe('buildRelationAdd', () => {
+  it('ajoute une société par son identifiant', () => {
+    expect(buildRelationAdd('companies', { id: 'c1' })).toEqual({ companies: [{ id: 'c1' }] });
+  });
+  it('ajoute une musique avec ses épisodes quand ils sont donnés', () => {
+    expect(buildRelationAdd('tracks', { id: 't1', startEpisode: 1, endEpisode: 12 })).toEqual({ tracks: [{ id: 't1', startEpisode: 1, endEpisode: 12 }] });
+    expect(buildRelationAdd('tracks', { id: 't1' })).toEqual({ tracks: [{ id: 't1' }] });
+    expect(buildRelationAdd('tracks', { id: 't1', startEpisode: 0, endEpisode: 0 })).toEqual({ tracks: [{ id: 't1' }] });
   });
 });

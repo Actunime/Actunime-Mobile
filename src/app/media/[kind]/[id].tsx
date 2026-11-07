@@ -640,7 +640,7 @@ export default function MediaScreen() {
                 <Txt size="sm" color={Tw.color.mutedForeground} style={styles.flex}>
                   Cette fiche n'a pas encore de musiques.
                 </Txt>
-                <Pressable onPress={() => router.push(`/propose/${kind}/${id}` as Href)} style={styles.inline}>
+                <Pressable onPress={() => router.push(`/complete/${kind}/${id}/tracks` as Href)} style={styles.inline}>
                   <Pencil size={16} color={Tw.color.primary} />
                   <Txt size="sm" weight="medium" color={Tw.color.primary}>
                     Compléter

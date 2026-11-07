@@ -39,3 +39,23 @@ export function buildMediaUpdate(kind: MediaKind, original: IMediaDraft, draft: 
   if (Object.keys(date).length > 0) update.date = date;
   return update;
 }
+
+/** Relations qu'un membre peut ajouter à une fiche depuis l'app. */
+export type RelationKind = 'tracks' | 'companies';
+
+export interface IRelationPick {
+  id: string;
+  /** Musique : épisodes concernés (ouverture sur les épisodes 1 à 12, par exemple), facultatifs. */
+  startEpisode?: number;
+  endEpisode?: number;
+}
+
+/** Corps d'une proposition qui ajoute une relation (musique, société) à une fiche existante, sans toucher à ses champs. */
+export function buildRelationAdd(what: RelationKind, pick: IRelationPick): Record<string, unknown> {
+  if (what === 'companies') return { companies: [{ id: pick.id }] };
+  const track: Record<string, unknown> = { id: pick.id };
+  // 0 = champ laissé vide (le sélecteur affiche 0 tant qu'on n'a rien choisi).
+  if (pick.startEpisode && pick.startEpisode > 0) track.startEpisode = pick.startEpisode;
+  if (pick.endEpisode && pick.endEpisode > 0) track.endEpisode = pick.endEpisode;
+  return { tracks: [track] };
+}

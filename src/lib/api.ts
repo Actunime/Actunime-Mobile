@@ -603,4 +603,18 @@ export const api = {
       } as never),
     );
   },
+
+  /** Propose d'ajouter une relation (musique, société) à une fiche : la modération la vérifie avant de l'appliquer. */
+  async proposeRelationAdd(kind: MediaKind, id: string, relation: Record<string, unknown>) {
+    return body(
+      await client().proposals.create({
+        mode: 'UPDATE',
+        entityType: mediaTypeOf(kind),
+        targetEntityId: id,
+        mainDependency: {},
+        ...relation,
+        dependencies: [],
+      } as never),
+    );
+  },
 };
