@@ -41,6 +41,7 @@ import { ListEntrySheetTrigger } from '@/components/media/list-button';
 import { openEntity, openMediaRelations } from '@/components/entity/open-entity';
 import { openMember } from '@/components/member/open-member';
 import { SOON_OPACITY, showSoon } from '@/lib/soon';
+import { MediaActivitiesSection, MediaDiscussionSection, MediaEpisodesSection, MediaStatsSection } from '@/components/media/media-extras';
 import { CardCarousel, InfoRow, NewsList, PRIMARY_PILL, Pill, STATUS_PILL, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
 import { ManageEntry } from '@/components/list/manage-entry';
 import { openMedia } from '@/components/media-row';
@@ -217,10 +218,10 @@ export default function MediaScreen() {
     { id: 'staffs', label: 'Staff', icon: Users, section: 'staffs' },
     { id: 'personnages', label: 'Personnages', icon: Users, section: 'characters' },
     ...(anime ? [{ id: 'musiques', label: 'Musiques', icon: Music, section: 'tracks' }] : []),
-    { id: 'discussion', label: 'Discussion', icon: MessagesSquare, path: `${sitePath}/discussion` },
-    { id: 'activites', label: 'Activités', icon: Activity, path: `${sitePath}/activites` },
-    { id: 'statistiques', label: 'Statistiques', icon: BarChart3, path: `${sitePath}/statistiques` },
-    ...(anime ? [{ id: 'episodes', label: 'Épisodes', icon: PlayCircle, path: `${sitePath}/episodes` }] : []),
+    { id: 'discussion', label: 'Discussion', icon: MessagesSquare, section: 'discussion' },
+    { id: 'activites', label: 'Activités', icon: Activity, section: 'activities' },
+    { id: 'statistiques', label: 'Statistiques', icon: BarChart3, section: 'stats' },
+    ...(anime ? [{ id: 'episodes', label: 'Épisodes', icon: PlayCircle, section: 'episodes' }] : []),
   ];
   const goTab = (tab: (typeof tabs)[number]) => {
     setTabsOpen(false);
@@ -591,16 +592,10 @@ export default function MediaScreen() {
             </SectionCard>
           </View>
 
-          <SectionCard title="Activités récentes" icon={Activity}>
-            <Txt size="sm" color={Tw.color.mutedForeground}>
-              Le fil d’activité de l’œuvre arrive bientôt dans l’application.
-            </Txt>
-          </SectionCard>
-          <SectionCard title="Discussion" icon={MessagesSquare}>
-            <Txt size="sm" color={Tw.color.mutedForeground}>
-              La discussion de l’œuvre arrive bientôt dans l’application.
-            </Txt>
-          </SectionCard>
+          {anime ? <MediaEpisodesSection id={id} onLayout={at('episodes')} /> : null}
+          <MediaStatsSection kind={kind} id={id} onLayout={at('stats')} />
+          <MediaActivitiesSection kind={kind} id={id} onLayout={at('activities')} />
+          <MediaDiscussionSection kind={kind} id={id} onLayout={at('discussion')} />
 
           {(news.data ?? []).length > 0 ? (
             <SectionCard title="Actualités" icon={Newspaper}>

@@ -40,10 +40,10 @@ const DISCOVER = item('discover', 'Découvrir', 'compass', {
   children: [
     item('discover-animes', 'Animes', 'anime', { native: '/search?kind=anime' }),
     item('discover-mangas', 'Mangas', 'manga', { native: '/search?kind=manga' }),
-    item('discover-characters', 'Personnages', 'character', { path: '/personnages' }),
-    item('discover-persons', 'Personnes', 'staff', { path: '/personnes' }),
-    item('discover-tracks', 'Musiques', 'music', { path: '/musiques' }),
-    item('discover-companies', 'Sociétés', 'company', { path: '/societes' }),
+    item('discover-characters', 'Personnages', 'character', { native: '/discover/characters' }),
+    item('discover-persons', 'Personnes', 'staff', { native: '/discover/persons' }),
+    item('discover-tracks', 'Musiques', 'music', { native: '/discover/tracks' }),
+    item('discover-companies', 'Sociétés', 'company', { native: '/discover/companies' }),
     item('discover-members', 'Membres', 'user', { path: '/membres' }),
   ],
 });

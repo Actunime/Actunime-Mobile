@@ -94,6 +94,7 @@ export default function RootLayout() {
             <Stack.Screen name="settings/delete-account" />
             <Stack.Screen name="notifications" />
             <Stack.Screen name="favoris" />
+            <Stack.Screen name="discover/[kind]" />
             <Stack.Screen name="statistiques" />
           </Stack.Protected>
           <Stack.Screen name="auth/callback" />

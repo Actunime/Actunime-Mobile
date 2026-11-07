@@ -15,6 +15,9 @@ import type {
   IManga,
   IMediaFollowerEntry as ILibMediaFollowerEntry,
   IMediaFollowersInfo,
+  IActivity,
+  ICommunityMessage,
+  ICommunityThread,
   IMediaRelationCarouselResponse,
   INotification,
   IMember,
@@ -487,5 +490,58 @@ export const api = {
 
   async getAccountDeletionStatus() {
     return (body(await client().auth.getAccountDeletionStatus()) || null) as Awaited<ReturnType<ReturnType<typeof client>['auth']['getAccountDeletionStatus']>>['data'];
+  },
+
+  /** Statistiques de la fiche : répartition des listes, favoris, activité. */
+  async getMediaStats(kind: MediaKind, id: string) {
+    const c = client();
+    return body(kind === 'manga' ? await c.mangas.detailStats(id) : await c.animes.detailStats(id));
+  },
+
+  /** Activités récentes liées à une fiche. */
+  async getMediaActivities(kind: MediaKind, id: string, page = 1, limit = 20) {
+    const res = await client().activities.paginate({
+      page,
+      limit,
+      sort: { createdAt: -1 },
+      query: { targetId: id, targetType: mediaTypeOf(kind) },
+    } as never);
+    return body(res) as IPage<IActivity>;
+  },
+
+  /** Épisodes diffusés sur Crunchyroll pour un anime. */
+  async getAnimeEpisodes(id: string) {
+    return body(await client().crunchyroll.getAnimeEpisodes(id)) ?? [];
+  },
+
+  /** Fil de discussion d'une œuvre (créé à la première visite) et ses messages, du plus récent au plus ancien. */
+  async getMediaThread(kind: MediaKind, id: string) {
+    const c = client().community;
+    const mediaType = mediaTypeOf(kind);
+    return (body(await c.getMediaThread(id, mediaType)) ?? body(await c.ensureMediaThread({ mediaId: id, mediaType }))) as ICommunityThread;
+  },
+
+  async getThreadMessages(threadId: string, page = 1, limit = 30) {
+    const res = await client().community.paginateMessages({ page, limit, query: { threadId }, sort: { createdAt: -1 } } as never);
+    return body(res) as IPage<ICommunityMessage>;
+  },
+
+  async postThreadMessage(thread: { id: string; channelId: string }, content: string) {
+    return body(await client().community.createMessage({ channelId: thread.channelId, threadId: thread.id, content }));
+  },
+
+  /** Une page de personnages, personnes, musiques ou sociétés, filtrée par un texte (annuaire « Découvrir »). */
+  async searchEntities(kind: EntityKind, search: string, page = 1, limit = 20) {
+    const c = client();
+    const request = { page, limit, query: search ? { search } : {} };
+    const res =
+      kind === 'character'
+        ? await c.characters.paginate(request)
+        : kind === 'person'
+          ? await c.persons.paginate(request)
+          : kind === 'track'
+            ? await c.tracks.paginate(request)
+            : await c.companies.paginate(request);
+    return body(res) as IPage<IEntity>;
   },
 };
