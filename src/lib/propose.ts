@@ -41,7 +41,7 @@ export function buildMediaUpdate(kind: MediaKind, original: IMediaDraft, draft: 
 }
 
 /** Relations qu'un membre peut ajouter à une fiche depuis l'app. */
-export type RelationKind = 'tracks' | 'companies' | 'characters';
+export type RelationKind = 'tracks' | 'companies' | 'characters' | 'staffs';
 
 export interface IRelationPick {
   id: string;
@@ -50,11 +50,14 @@ export interface IRelationPick {
   endEpisode?: number;
   /** Personnage : rôle dans l'œuvre (`PRINCIPAL`…), obligatoire côté app. */
   role?: string;
+  /** Staff : identifiant du poste (métadonnée `JOB`), obligatoire. */
+  job?: number;
 }
 
 /** Corps d'une proposition qui ajoute une relation (musique, société) à une fiche existante, sans toucher à ses champs. */
 export function buildRelationAdd(what: RelationKind, pick: IRelationPick): Record<string, unknown> {
   if (what === 'companies') return { companies: [{ id: pick.id }] };
+  if (what === 'staffs') return { staffs: [{ id: pick.id, job: pick.job }] };
   if (what === 'characters') return { characters: [pick.role ? { id: pick.id, role: pick.role } : { id: pick.id }] };
   const track: Record<string, unknown> = { id: pick.id };
   // 0 = champ laissé vide (le sélecteur affiche 0 tant qu'on n'a rien choisi).
@@ -71,6 +74,7 @@ export interface IRelationCreate {
   /** Personnage : rôle dans l'œuvre (porté par la relation) et genre (facultatif). */
   role?: string;
   gender?: string;
+  job?: number;
   startEpisode?: number;
   endEpisode?: number;
 }
@@ -81,11 +85,11 @@ export interface IRelationCreate {
  */
 export function buildRelationCreate(what: RelationKind, input: IRelationCreate, tempId = newTempId()): Record<string, unknown> {
   const name = { original: input.name.trim() };
-  const entityType = what === 'tracks' ? 'Track' : what === 'companies' ? 'Company' : 'Character';
+  const entityType = what === 'tracks' ? 'Track' : what === 'companies' ? 'Company' : what === 'staffs' ? 'Person' : 'Character';
   const mainDependency: Record<string, unknown> =
-    what === 'characters' ? { name, ...(input.gender ? { gender: input.gender } : {}) } : { name, type: input.type };
+    what === 'characters' ? { name, ...(input.gender ? { gender: input.gender } : {}) } : what === 'staffs' ? { name } : { name, type: input.type };
   const dependency = { tempId, entityType, mainDependency };
-  const relation = buildRelationAdd(what, { id: tempId, startEpisode: input.startEpisode, endEpisode: input.endEpisode, role: input.role });
+  const relation = buildRelationAdd(what, { id: tempId, startEpisode: input.startEpisode, endEpisode: input.endEpisode, role: input.role, job: input.job });
   return { ...relation, dependencies: [dependency] };
 }
 

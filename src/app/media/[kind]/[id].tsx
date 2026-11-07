@@ -656,7 +656,25 @@ export default function MediaScreen() {
               onLayout={at('staffs')}
             >
               <CardCarousel items={staffItems} placeholder={User} square />
+              <Pressable onPress={() => router.push(`/complete/${kind}/${id}/staffs` as Href)} style={styles.inline}>
+                <Pencil size={16} color={Tw.color.primary} />
+                <Txt size="sm" weight="medium" color={Tw.color.primary}>
+                  Ajouter un membre du staff
+                </Txt>
+              </Pressable>
             </SectionCard>
+          ) : staffs.data ? (
+            <View style={styles.emptyTracks}>
+              <Txt size="sm" color={Tw.color.mutedForeground} style={styles.flex}>
+                Cette fiche n'a pas encore de staff.
+              </Txt>
+              <Pressable onPress={() => router.push(`/complete/${kind}/${id}/staffs` as Href)} style={styles.inline}>
+                <Pencil size={16} color={Tw.color.primary} />
+                <Txt size="sm" weight="medium" color={Tw.color.primary}>
+                  Compléter
+                </Txt>
+              </Pressable>
+            </View>
           ) : null}
           {anime ? (
             trackItems.length > 0 ? (

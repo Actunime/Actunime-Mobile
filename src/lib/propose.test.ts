@@ -46,6 +46,18 @@ describe('personnages', () => {
   });
 });
 
+describe('staff', () => {
+  it('ajoute une personne avec son poste', () => {
+    expect(buildRelationAdd('staffs', { id: 'p1', job: 12 })).toEqual({ staffs: [{ id: 'p1', job: 12 }] });
+  });
+  it('crée la personne (nom seulement) et la rattache avec son poste', () => {
+    expect(buildRelationCreate('staffs', { name: 'Yuki Test', job: 7 }, 'temp_s')).toEqual({
+      staffs: [{ id: 'temp_s', job: 7 }],
+      dependencies: [{ tempId: 'temp_s', entityType: 'Person', mainDependency: { name: { original: 'Yuki Test' } } }],
+    });
+  });
+});
+
 describe('buildRelationCreate', () => {
   it('crée une musique avec son nom et son type, rattachée par un identifiant provisoire', () => {
     expect(buildRelationCreate('tracks', { name: '  Mon opening ', type: 'OPENING', startEpisode: 1 }, 'temp_x')).toEqual({

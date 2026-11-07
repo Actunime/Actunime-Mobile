@@ -18,8 +18,9 @@ import { entityBadge, entityImage, entityName } from '@/lib/entity';
 import { mediaTitle } from '@/lib/media';
 import { buildRelationAdd, buildRelationCreate, type RelationKind } from '@/lib/propose';
 
-const CONFIG: Record<RelationKind, { entity: 'track' | 'company' | 'character'; title: string; hint: string; empty: string; icon: typeof Music; create: string; nameLabel: string }> = {
+const CONFIG: Record<RelationKind, { entity: 'track' | 'company' | 'character' | 'person'; title: string; hint: string; empty: string; icon: typeof Music; create: string; nameLabel: string }> = {
   tracks: { entity: 'track', title: 'Ajouter une musique', hint: 'Rechercher une musique', empty: 'Aucune musique trouvée.', icon: Music, create: 'Elle n’est pas dans la liste ? La créer', nameLabel: 'Titre de la musique' },
+  staffs: { entity: 'person', title: 'Ajouter un membre du staff', hint: 'Rechercher une personne', empty: 'Aucune personne trouvée.', icon: User, create: 'Elle n’est pas dans la liste ? La créer', nameLabel: 'Nom de la personne' },
   characters: { entity: 'character', title: 'Ajouter un personnage', hint: 'Rechercher un personnage', empty: 'Aucun personnage trouvé.', icon: User, create: 'Il n’est pas dans la liste ? Le créer', nameLabel: 'Nom du personnage' },
   companies: { entity: 'company', title: 'Ajouter une société', hint: 'Rechercher un studio, un éditeur…', empty: 'Aucune société trouvée.', icon: Building2, create: 'Elle n’est pas dans la liste ? La créer', nameLabel: 'Nom de la société' },
 };
@@ -29,6 +30,7 @@ const TYPE_OPTIONS: Record<RelationKind, { value: string; label: string }[]> = {
   tracks: Object.values(TrackTypeObj).map((type) => ({ value: type.value, label: type.label })),
   companies: Object.entries(CompanyTypeObj).map(([value, label]) => ({ value, label })),
   characters: [],
+  staffs: [],
 };
 
 /** Rôle dans l'œuvre (obligatoire) et genre (facultatif) d'un personnage. */
@@ -42,7 +44,7 @@ const GENDER_OPTIONS = Object.entries(CharacterGenderObj).map(([value, gender]) 
 export default function CompleteScreen() {
   const { kind: rawKind, id, what: rawWhat } = useLocalSearchParams<{ kind: string; id: string; what: string }>();
   const kind: MediaKind = rawKind === 'manga' ? 'manga' : 'anime';
-  const what: RelationKind = rawWhat === 'companies' ? 'companies' : rawWhat === 'characters' ? 'characters' : 'tracks';
+  const what: RelationKind = rawWhat === 'companies' ? 'companies' : rawWhat === 'characters' ? 'characters' : rawWhat === 'staffs' ? 'staffs' : 'tracks';
   const config = CONFIG[what];
   const Icon = config.icon;
 
@@ -72,21 +74,23 @@ export default function CompleteScreen() {
   const [type, setType] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [gender, setGender] = useState<string | null>(null);
+  const [job, setJob] = useState<number | null>(null);
   const [start, setStart] = useState<number | undefined>(undefined);
   const [end, setEnd] = useState<number | undefined>(undefined);
   const withEpisodes = what === 'tracks' && kind === 'anime';
   const isCharacter = what === 'characters';
   // Le rôle est obligatoire pour un personnage (il décrit sa place dans l'œuvre) ; le type pour une musique ou une société.
-  const canCreate = name.trim().length > 0 && (isCharacter ? !!role : !!type);
-  const canAddPicked = !isCharacter || !!role;
+  const isStaff = what === 'staffs';
+  const canCreate = name.trim().length > 0 && (isCharacter ? !!role : isStaff ? job !== null : !!type);
+  const canAddPicked = isStaff ? job !== null : !isCharacter || !!role;
   const send = useMutation({
     mutationFn: () =>
       api.proposeRelationAdd(
         kind,
         id,
         creating
-          ? buildRelationCreate(what, { name, type: type ?? undefined, role: role ?? undefined, gender: gender ?? undefined, startEpisode: start, endEpisode: end })
-          : buildRelationAdd(what, { id: picked!.id, startEpisode: start, endEpisode: end, role: role ?? undefined }),
+          ? buildRelationCreate(what, { name, type: type ?? undefined, role: role ?? undefined, gender: gender ?? undefined, job: job ?? undefined, startEpisode: start, endEpisode: end })
+          : buildRelationAdd(what, { id: picked!.id, startEpisode: start, endEpisode: end, role: role ?? undefined, job: job ?? undefined }),
       ),
   });
 
@@ -112,6 +116,7 @@ export default function CompleteScreen() {
             </View>
           </View>
           {isCharacter ? <Chips label="Rôle dans l’œuvre" options={ROLE_OPTIONS} value={role} onChange={setRole} /> : null}
+          {isStaff ? <JobPicker value={job} onChange={setJob} /> : null}
           {withEpisodes ? <EpisodeFields start={start} end={end} onStart={setStart} onEnd={setEnd} /> : null}
           {send.isError ? <StatusNote tone="error">{errorMessage(send.error)}</StatusNote> : null}
           <Button label={send.isPending ? 'Envoi…' : 'Proposer l’ajout'} disabled={!canAddPicked || send.isPending} onPress={() => send.mutate()} />
@@ -127,6 +132,8 @@ export default function CompleteScreen() {
               <Chips label="Rôle dans l’œuvre" options={ROLE_OPTIONS} value={role} onChange={setRole} />
               <Chips label="Genre (facultatif)" options={GENDER_OPTIONS} value={gender} onChange={(value) => setGender(gender === value ? null : value)} />
             </>
+          ) : isStaff ? (
+            <JobPicker value={job} onChange={setJob} />
           ) : (
             <Chips label="Type" options={TYPE_OPTIONS[what]} value={type} onChange={setType} />
           )}
@@ -179,6 +186,31 @@ export default function CompleteScreen() {
         </>
       )}
     </SettingsPage>
+  );
+}
+
+/** Poste du staff (obligatoire) : liste officielle des postes (métadonnées `JOB`), filtrable par un mot. */
+function JobPicker({ value, onChange }: Readonly<{ value: number | null; onChange: (value: number) => void }>) {
+  const [filter, setFilter] = useState('');
+  const jobs = useQuery({ queryKey: ['metadata', 'JOB'], queryFn: () => api.searchMetadata('JOB'), staleTime: 30 * 60_000 });
+  const shown = (jobs.data ?? []).filter((job) => job.name.toLowerCase().includes(filter.trim().toLowerCase())).slice(0, 14);
+  return (
+    <Field label="Poste" hint={value === null ? 'obligatoire' : undefined}>
+      <TextInput value={filter} onChangeText={setFilter} placeholder="Filtrer les postes…" placeholderTextColor={Colors.textSecondary} autoCapitalize="none" autoCorrect={false} style={styles.input} />
+      {jobs.isPending ? (
+        <Loading />
+      ) : (
+        <View style={styles.chips}>
+          {shown.map((job) => (
+            <Pressable key={job.id} accessibilityRole="button" accessibilityState={{ selected: value === job.id }} onPress={() => onChange(job.id)} style={[styles.chip, value === job.id && styles.chipOn]}>
+              <Txt size="sm" weight="medium" color={value === job.id ? Tw.color.primaryForeground : Tw.color.mutedForeground}>
+                {job.name}
+              </Txt>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </Field>
   );
 }
 
