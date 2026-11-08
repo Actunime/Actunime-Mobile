@@ -9,13 +9,18 @@ import { getBrowserSettings } from './browser-settings';
 import { progressNotice } from './notices';
 import { getPattern, isHostIgnored, removePattern, savePattern, setHostIgnored } from './patterns';
 import type { IMatch } from './storage';
-import { confirm, currentProgress, forget, markPreviousSeen, pushProgress, quickAddWork, resolve, StaleMatchError, type ICandidate } from './sync';
+import { skipModeOf, skipWork, resumeWork, firstSight, type SkipMode } from './skipped-works';
+import { progressAllowed } from './tracking-guards';
+import { confirm, currentProgress, forget, markPreviousSeen, matchKey, pushProgress, quickAddWork, resolve, StaleMatchError, type ICandidate } from './sync';
 
 export type TrackingState =
   | { kind: 'idle' }
   | { kind: 'resolving'; detection: PageDetection }
-  | { kind: 'confirm'; detection: PageDetection; candidates: ICandidate[] }
+  /** `announce` : première fois qu'on voit cette œuvre pendant la session (le panneau s'ouvre ; ensuite, une simple pastille). */
+  | { kind: 'confirm'; detection: PageDetection; candidates: ICandidate[]; announce: boolean }
   | { kind: 'matched'; detection: PageDetection; match: IMatch; progress?: number }
+  /** Œuvre que le lecteur ne suit pas (pour le moment, ou jusqu'à nouvel ordre) : rien n'est demandé ni écrit. */
+  | { kind: 'skipped'; detection: PageDetection; mode: SkipMode }
   | { kind: 'ignored' };
 
 export interface INotice {
@@ -58,6 +63,9 @@ export function useTracking(webview: RefObject<WebView | null>) {
   const [inferredKind, setInferredKind] = useState<'anime' | 'manga'>('manga');
   // Détection la plus récente : sert aux actions qui ne reçoivent pas la détection en paramètre.
   const latest = useRef<PageDetection | null>(null);
+  // « Génération » de la page : chaque nouvelle page ou détection l'incrémente. Un résultat asynchrone (recherche de l'œuvre,
+  // écriture de la progression) qui revient après un changement de page est périmé : il ne doit rien écraser.
+  const generation = useRef(0);
 
   const send = useCallback(
     (command: Parameters<typeof commandScript>[0]) => webview.current?.injectJavaScript(commandScript(command)),
@@ -103,23 +111,24 @@ export function useTracking(webview: RefObject<WebView | null>) {
   const identify = useCallback(
     async (detection: PageDetection) => {
       latest.current = detection;
+      const mine = generation.current;
+      const current = () => mine === generation.current;
       setTracking({ kind: 'resolving', detection });
       try {
         const resolution = await resolve(detection);
+        if (!current()) return;
         if (resolution.match) {
+          const progress = await progressOf(detection, resolution.match);
+          if (!current()) return;
           void rememberSite(detection);
-          setTracking({
-            kind: 'matched',
-            detection,
-            match: resolution.match,
-            progress: await progressOf(detection, resolution.match),
-          });
+          setTracking({ kind: 'matched', detection, match: resolution.match, progress });
         } else {
-          setTracking({ kind: 'confirm', detection, candidates: resolution.candidates });
+          setTracking({ kind: 'confirm', detection, candidates: resolution.candidates, announce: firstSight(matchKey(detection)) });
         }
       } catch (err) {
+        if (!current()) return;
         fail(err);
-        setTracking({ kind: 'confirm', detection, candidates: [] });
+        setTracking({ kind: 'confirm', detection, candidates: [], announce: firstSight(matchKey(detection)) });
       }
     },
     [fail, progressOf, rememberSite],
@@ -129,14 +138,18 @@ export function useTracking(webview: RefObject<WebView | null>) {
     async (detection: PageDetection, match: IMatch) => {
       const number = numberOf(detection);
       if (number === undefined) return setNotice({ tone: 'error', text: `Numéro de ${unitOf(detection)} non détecté` });
+      const mine = generation.current;
       try {
         const result = await pushProgress(detection, match);
         setNotice({ tone: 'success', text: progressNotice(detection.kind, number, result) });
-        setTracking({ kind: 'matched', detection, match, progress: await progressOf(detection, match) });
+        const progress = await progressOf(detection, match);
+        // La progression est écrite quoi qu'il arrive ; l'affichage ne change que si on est toujours sur cette page.
+        if (mine === generation.current) setTracking({ kind: 'matched', detection, match, progress });
       } catch (err) {
         if (err instanceof StaleMatchError) {
           // association périmée : on l'oublie et on retrouve l'œuvre (liste, catalogue, ou choix de l'utilisateur)
           await forget(detection);
+          if (mine !== generation.current) return;
           setNotice({ tone: 'info', text: err.message });
           return identify(detection);
         }
@@ -149,29 +162,44 @@ export function useTracking(webview: RefObject<WebView | null>) {
   const onMessage = useCallback(
     async (message: InPageMessage) => {
       if (message.type === 'ready') {
+        // Nouvelle page : plus rien de ce qui se calculait pour la précédente ne doit s'afficher.
+        const mine = ++generation.current;
+        latest.current = null;
         setHost(message.host);
         setInferredKind(message.inferredKind);
         setNotice(null);
-        setTracking({ kind: 'idle' });
         const [stored, ignored] = await Promise.all([getPattern(message.host), isHostIgnored(message.host)]);
+        if (mine !== generation.current) return;
         setPattern(stored);
         if (ignored) return setTracking({ kind: 'ignored' });
+        setTracking({ kind: 'idle' });
         send({ type: 'set-pattern', pattern: stored });
         send({ type: 'set-options', episodeThreshold: getBrowserSettings().episodeThreshold / 100 });
         return;
       }
 
       if (message.type === 'detection') {
+        const mine = ++generation.current;
         setNotice(null);
         if (!message.detection) {
           latest.current = null;
           setTracking((current) => (current.kind === 'ignored' ? current : { kind: 'idle' }));
           return;
         }
-        if (await isHostIgnored(message.detection.host)) return;
-        await identify(message.detection);
+        const detection = message.detection;
+        latest.current = detection;
+        if (await isHostIgnored(detection.host)) return;
+        // Œuvre mise de côté : ni question, ni écriture dans la liste ; juste de quoi la reprendre.
+        const skipped = await skipModeOf(matchKey(detection));
+        if (mine !== generation.current) return;
+        if (skipped) return setTracking({ kind: 'skipped', detection, mode: skipped });
+        await identify(detection);
         return;
       }
+
+      // Les messages de progression ne valent que pour la page affichée : une œuvre mise de côté, ou une page déjà
+      // quittée, n'écrit rien dans la liste.
+      if ((message.type === 'progress-started' || message.type === 'progress-reached') && !(await progressAllowed(message.detection, latest.current))) return;
 
       if (message.type === 'progress-started') {
         // Lecture réellement entamée : seulement pour une œuvre déjà identifiée, sans rien demander à l'utilisateur.
@@ -250,6 +278,27 @@ export function useTracking(webview: RefObject<WebView | null>) {
     [host, push],
   );
 
+  /** « Pas pour le moment » (la session) ou « Ne plus suivre cette œuvre » (mémorisé) : l'œuvre n'est plus ni demandée ni suivie. */
+  const skip = useCallback(
+    async (mode: SkipMode) => {
+      const detection = 'detection' in tracking ? tracking.detection : latest.current;
+      if (!detection) return;
+      generation.current += 1;
+      await skipWork(matchKey(detection), mode);
+      setNotice(null);
+      setTracking({ kind: 'skipped', detection, mode });
+    },
+    [tracking],
+  );
+
+  /** Reprendre le suivi d'une œuvre mise de côté : elle est de nouveau identifiée comme une page ordinaire. */
+  const resume = useCallback(async () => {
+    if (tracking.kind !== 'skipped') return;
+    await resumeWork(matchKey(tracking.detection));
+    generation.current += 1;
+    await identify(tracking.detection);
+  }, [identify, tracking]);
+
   const ignoreHost = useCallback(async () => {
     await setHostIgnored(host, true);
     setTracking({ kind: 'ignored' });
@@ -316,6 +365,8 @@ export function useTracking(webview: RefObject<WebView | null>) {
     choose,
     change,
     markManually,
+    skip,
+    resume,
     ignoreHost,
     unignoreHost,
     applyPattern,

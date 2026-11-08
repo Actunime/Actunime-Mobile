@@ -428,6 +428,8 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
               onConfigure={() => setWizardOpen(true)}
               onIgnore={() => void tracking.ignoreHost()}
               onUnignore={() => void tracking.unignoreHost()}
+              onSkip={(mode) => void tracking.skip(mode)}
+              onResume={() => void tracking.resume()}
             />
           )}
         </View>

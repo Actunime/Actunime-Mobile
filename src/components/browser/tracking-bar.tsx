@@ -14,6 +14,8 @@ import type { ITitleAlternative } from '@/detection/core/auto-strategy';
 import type { LearnedPattern } from '@/detection/core/types';
 import type { PageDetection } from '@/detection/messages';
 import type { ICandidate } from '@/lib/sync';
+import type { SkipMode } from '@/lib/skipped-works';
+import { initialMode, type BarMode } from '@/lib/tracking-mode';
 import type { INotice, TrackingState } from '@/lib/use-tracking';
 
 interface ITrackingBarProps {
@@ -32,6 +34,9 @@ interface ITrackingBarProps {
   onConfigure: () => void;
   onIgnore: () => void;
   onUnignore: () => void;
+  /** « Pas pour le moment » (session) ou « Ne plus suivre cette œuvre » (mémorisé). */
+  onSkip: (mode: SkipMode) => void;
+  onResume: () => void;
 }
 
 const numberLabel = (d: PageDetection) => {
@@ -54,8 +59,6 @@ function matchedHelp(tracking: Extract<TrackingState, { kind: 'matched' }>, patt
 }
 
 const NOTICE_COLOR = { success: Colors.success, error: Colors.destructive, info: Colors.textSecondary } as const;
-
-type BarMode = 'panel' | 'pill' | 'icon';
 
 const BUBBLE_KEY = 'actunime.browser.bubble';
 const BUBBLE_SIZE = 44;
@@ -138,6 +141,8 @@ function pillText(tracking: TrackingState): string {
       return 'Recherche…';
     case 'confirm':
       return 'Quelle œuvre ?';
+    case 'skipped':
+      return tracking.mode === 'forever' ? 'Œuvre non suivie' : 'Lecture sans suivi';
     case 'ignored':
       return 'Suivi désactivé';
     case 'matched': {
@@ -164,7 +169,7 @@ export function TrackingBar(props: ITrackingBarProps) {
   // Mode par défaut selon l'état : on n'ouvre le panneau que quand l'utilisateur doit décider.
   useEffect(() => {
     if (tracking.kind === 'resolving') return;
-    setMode(tracking.kind === 'confirm' ? 'panel' : tracking.kind === 'ignored' ? 'icon' : 'pill');
+    setMode(initialMode(tracking));
   }, [stateKey]); // eslint-disable-line react-hooks/exhaustive-deps -- seul un changement d'état réinitialise le mode
 
   // Un retour (ajout réussi, erreur) rouvre la pastille pour qu'on le voie.
@@ -187,7 +192,9 @@ export function TrackingBar(props: ITrackingBarProps) {
           ? 'Quelle œuvre est-ce ?'
           : tracking.kind === 'matched'
             ? tracking.match.title
-            : 'Suivi désactivé';
+            : tracking.kind === 'skipped'
+              ? tracking.detection.title
+              : 'Suivi désactivé';
 
   const inList =
     tracking.kind === 'matched' &&
@@ -275,6 +282,17 @@ export function TrackingBar(props: ITrackingBarProps) {
             {tracking.kind === 'resolving' && <ResolvingNotice title={tracking.detection.title} />}
 
             {tracking.kind === 'confirm' && (
+              <View style={styles.skipRow}>
+                <View style={styles.skipItem}>
+                  <Button label="Pas pour le moment" variant="outline" onPress={() => props.onSkip('session')} />
+                </View>
+                <View style={styles.skipItem}>
+                  <Button label="Ne plus suivre" variant="outline" onPress={() => props.onSkip('forever')} />
+                </View>
+              </View>
+            )}
+
+            {tracking.kind === 'confirm' && (
               <WorkChoice
                 detection={tracking.detection}
                 candidates={tracking.candidates}
@@ -297,6 +315,12 @@ export function TrackingBar(props: ITrackingBarProps) {
                   <Pressable onPress={props.onChange}>
                     <ThemedText type="link">Ce n’est pas la bonne œuvre</ThemedText>
                   </Pressable>
+                  <Pressable onPress={() => props.onSkip('session')}>
+                    <ThemedText type="link">Pas pour le moment</ThemedText>
+                  </Pressable>
+                  <Pressable onPress={() => props.onSkip('forever')}>
+                    <ThemedText type="link">Ne plus suivre cette œuvre</ThemedText>
+                  </Pressable>
                   <Pressable onPress={props.onConfigure}>
                     <ThemedText type="link">Mode avancé</ThemedText>
                   </Pressable>
@@ -306,6 +330,24 @@ export function TrackingBar(props: ITrackingBarProps) {
                     </ThemedText>
                   </Pressable>
                 </View>
+              </>
+            )}
+
+            {tracking.kind === 'skipped' && (
+              <>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {tracking.mode === 'forever'
+                    ? 'Tu ne suis pas cette œuvre : rien n’est demandé ni enregistré quand tu la lis.'
+                    : 'Pas pour le moment : rien n’est demandé ni enregistré pendant cette lecture.'}
+                </ThemedText>
+                <Button label={tracking.mode === 'forever' ? 'Reprendre le suivi' : 'Suivre cette œuvre'} onPress={props.onResume} />
+                {tracking.mode === 'session' && (
+                  <Pressable onPress={() => props.onSkip('forever')}>
+                    <ThemedText type="link" themeColor="textSecondary">
+                      Ne plus me la proposer
+                    </ThemedText>
+                  </Pressable>
+                )}
               </>
             )}
 
@@ -387,5 +429,7 @@ const styles = StyleSheet.create({
   },
   poster: { width: 40, height: 56, borderRadius: Radius.small, backgroundColor: Colors.backgroundSelected },
   candidateText: { flex: 1, gap: Spacing.half },
+  skipRow: { flexDirection: 'row', gap: Spacing.two },
+  skipItem: { flex: 1 },
   links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.four, rowGap: Spacing.one },
 });
