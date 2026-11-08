@@ -87,6 +87,7 @@ const styles = StyleSheet.create({
   list: { gap: 2 },
   item: { flexDirection: 'row', gap: 8, paddingLeft: 4 },
   quote: { borderLeftWidth: 2, borderLeftColor: Tw.color.border, paddingLeft: 12 },
-  spoilerHidden: { backgroundColor: Tw.color.foreground, color: 'transparent', borderRadius: 3 },
+  // Texte et fond de la même couleur : un texte transparent resterait lisible par endroits sur Android.
+  spoilerHidden: { backgroundColor: Tw.color.gray500, color: Tw.color.gray500, borderRadius: 3 },
   spoilerShown: { backgroundColor: Tw.color.muted, color: Tw.color.foreground, borderRadius: 3 },
 });
