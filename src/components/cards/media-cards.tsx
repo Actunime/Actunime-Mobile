@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { ArrowRight, BookOpen, Calendar, Clock, Film, Layers, Pencil, Plus, Star, Tv } from 'lucide-react-native';
+import { BookOpen, Calendar, Clock, Film, Layers, Pencil, Plus, Star, Tv } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -362,7 +362,7 @@ interface IDetailedCardProps extends ICardBaseProps {
   manage?: boolean;
   onListChange?: (patch: IEntryPatch) => void;
   onListEdit?: () => void;
-  /** Bouton d'action à gauche de « Voir plus » (ajout ou gestion dans ma liste). */
+  /** Bouton d'action (ajout ou gestion dans ma liste), en bas de la carte. */
   action?: React.ReactNode;
   /** Bandeau sous la carte (œuvre en attente de référencement, proposition rejetée). */
   footer?: React.ReactNode;
@@ -371,7 +371,7 @@ interface IDetailedCardProps extends ICardBaseProps {
 /**
  * Carte détaillée (`AnimeCard.InlineDetailed` / `MangaCard.InlineDetailed`), mode « Liste détaillée » des pages de
  * recherche et de ma liste. En recherche : badges statut / format / source / VF, épisodes, durée, saison, date,
- * diffusion, genres, synopsis et « Voir plus ». Sur ma liste (`manage`) : titre, amis, format et total, notes,
+ * diffusion, genres, synopsis ; toute la carte ouvre la fiche. Sur ma liste (`manage`) : titre, amis, format et total, notes,
  * bande de gestion.
  */
 export function MediaDetailedCard({
@@ -493,39 +493,33 @@ export function MediaDetailedCard({
             interactiveChips={!manage}
           />
         ) : null}
-        {!compact ? (
+        {!compact && action ? (
           <View style={styles.actionsRow}>
-            {action ? <View style={styles.actionLeft}>{action}</View> : null}
-            {onPress ? (
-              <Pressable accessibilityRole="button" onPress={onPress} style={styles.more}>
-                <Txt size="xs" weight="medium">
-                  Voir plus
-                </Txt>
-                <ArrowRight size={12} color={Tw.color.foreground} />
-              </Pressable>
-            ) : null}
+            <View style={styles.actionLeft}>{action}</View>
           </View>
         ) : null}
       </View>
     </View>
   );
 
+  // Toute la carte ouvre la fiche (plus de bouton « Voir plus ») ; les boutons d'action et les pastilles de la liste gardent leur propre appui.
+  const pressed = ({ pressed: down }: { pressed: boolean }) => down && { backgroundColor: alpha(Tw.color.accent, 0.25) };
   return (
     <View style={[styles.detailedCard, cardOverride(palette)]}>
       <Sheen />
       {compact ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Gérer ${mediaTitle(media)} dans ma liste`}
-          onPress={onListEdit}
-          style={({ pressed }) => pressed && { backgroundColor: alpha(Tw.color.accent, 0.25) }}
-        >
+        <Pressable accessibilityRole="button" accessibilityLabel={`Gérer ${mediaTitle(media)} dans ma liste`} onPress={onListEdit} style={pressed}>
           {body}
+        </Pressable>
+      ) : onPress ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={`Ouvrir ${mediaTitle(media)}`} onPress={onPress} style={pressed}>
+          {body}
+          {footer ? <View style={styles.cardFooter}>{footer}</View> : null}
         </Pressable>
       ) : (
         body
       )}
-      {footer ? <View style={styles.cardFooter}>{footer}</View> : null}
+      {!onPress || compact ? (footer ? <View style={styles.cardFooter}>{footer}</View> : null) : null}
     </View>
   );
 }
@@ -584,17 +578,6 @@ const styles = StyleSheet.create({
   genre: { backgroundColor: alpha(Tw.color.accent, 0.4), paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999 },
   actionsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, paddingTop: 4, marginTop: 'auto' },
   actionLeft: { marginRight: 'auto' },
-  more: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    height: 28,
-    paddingHorizontal: 10,
-    borderRadius: Tw.radius.md,
-    borderWidth: 1,
-    borderColor: Tw.color.input,
-    backgroundColor: alpha(Tw.color.input, 0.3),
-  },
   cardFooter: { borderTopWidth: 1, borderColor: Tw.color.border, paddingHorizontal: 12, paddingVertical: 8 },
   // Amis
   friendsPill: { flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: -4 },
