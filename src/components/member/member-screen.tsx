@@ -8,6 +8,8 @@ import { MediaDetailedCard } from '@/components/cards/media-cards';
 import { openEntity } from '@/components/entity/open-entity';
 import { ListStatusStrip } from '@/components/list/list-controls';
 import { AvatarAura } from '@/components/member/avatar-aura';
+import { BioContent } from '@/components/member/bio-content';
+import { ProfileSocial } from '@/components/member/profile-social';
 import { PaletteProvider, ThemeBackdrop, usePalette } from '@/components/theme-context';
 import { CardCarousel, InfoRow, PRIMARY_PILL, Pill, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
 import { openMedia } from '@/components/media-row';
@@ -291,11 +293,10 @@ export function MemberScreen({ username, initialTab = 'profil' }: Readonly<{ use
             <>
               {member.description ? (
                 <SectionCard title="À propos">
-                  <Txt size="sm" color={Tw.color.mutedForeground}>
-                    {member.description}
-                  </Txt>
+                  <BioContent>{member.description}</BioContent>
                 </SectionCard>
               ) : null}
+              <ProfileSocial memberId={member.id} isOwner={isOwner} signedIn={!!auth} friendsVisible={isOwner || visibility.friendsVisible !== false} />
               {stats.data ? (
                 <SectionCard title="Listes" icon={Tv}>
                   <InfoRow first label="Animes" value={`${stats.data.animeListStats.total}${stats.data.animeListStats.averageScore ? ` · note moyenne ${stats.data.animeListStats.averageScore.toFixed(1).replace('.', ',')}` : ''}`} />

@@ -11,10 +11,11 @@ import { cardOverride } from '@/lib/palette';
 
 /** Page de réglages : retour, titre, explication, contenu qui défile. */
 export function SettingsPage({ title, description, children }: Readonly<{ title: string; description?: string; children: React.ReactNode }>) {
+  const palette = usePalette();
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Pressable accessibilityRole="button" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/settings'))} style={styles.back}>
+        <Pressable accessibilityRole="button" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/settings'))} style={[styles.back, !palette.isDefault && { backgroundColor: palette.input }]}>
           <ArrowLeft size={16} color={Tw.color.foreground} />
           <Txt size="sm">Retour</Txt>
         </Pressable>

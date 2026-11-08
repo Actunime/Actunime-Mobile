@@ -71,6 +71,17 @@ export type IMemberDetailStats = ILibMemberDetailStats;
 export type IFavorite = IFavoris;
 export type IMyProfile = IMember;
 export type IFriendRequest = IFriendship;
+
+/** Affinité entre deux membres (`IMemberAffinity` de `@actunime/types`, pas encore dans la version publiée). */
+export interface IMemberAffinity {
+  /** Faux si blocage, listes non visibles ou membre = moi. */
+  available: boolean;
+  score: number;
+  commonCount: number;
+  viewerCount: number;
+  targetCount: number;
+  topCommon: { mediaId: string; mediaType: 'Anime' | 'Manga'; title: string | null; posterUrl?: string | null }[];
+}
 export type ISession = ILibSession;
 export type INewsArticle = ILibNewsArticle;
 export type { INotification };
@@ -205,6 +216,18 @@ export const api = {
 
   async unblockMember(memberId: string) {
     return body(await client().userBlocks.unblock(memberId));
+  },
+
+  /** Compatibilité entre moi et un membre : score et œuvres en commun (`GET /community/affinity/:id`). */
+  async getAffinity(memberId: string) {
+    return (await client().getHttp().get<IMemberAffinity>(`/community/affinity/${memberId}`)).data;
+  },
+
+  /** Amis visibles d'un membre : l'autre membre de chaque amitié acceptée, comptes verrouillés écartés. */
+  async getMemberFriends(memberId: string, limit = 12) {
+    const page = body(await client().friendships.listFriends(memberId, { page: 1, limit })) as { results: IFriendship[]; total?: number };
+    const friends = page.results.map((f) => (f.userA === memberId ? f.userBMember : f.userAMember)).filter((m): m is NonNullable<typeof m> => !!m && !m.isLocked);
+    return { friends, total: page.total ?? friends.length };
   },
 
   async listFriendRequests(direction: 'incoming' | 'outgoing') {

@@ -81,6 +81,12 @@ export const useSeasonAnimes = (period: 'current' | 'next') =>
 export const useMemberProfile = (username: string) =>
   useQuery({ queryKey: ['member', username, 'profile'], queryFn: () => api.getMemberProfile(username), enabled: !!username, retry: false });
 
+export const useAffinity = (memberId: string | undefined, enabled: boolean) =>
+  useQuery({ queryKey: ['member', memberId, 'affinity'], queryFn: () => api.getAffinity(memberId!), enabled: enabled && !!memberId, retry: false, staleTime: FIVE_MINUTES });
+
+export const useMemberFriends = (memberId: string | undefined, enabled: boolean) =>
+  useQuery({ queryKey: ['member', memberId, 'friends-preview'], queryFn: () => api.getMemberFriends(memberId!), enabled: enabled && !!memberId, retry: false, staleTime: FIVE_MINUTES });
+
 export const useMemberStats = (username: string, enabled = true) =>
   useQuery({ queryKey: ['member', username, 'stats'], queryFn: () => api.getMemberStats(username), enabled: enabled && !!username });
 

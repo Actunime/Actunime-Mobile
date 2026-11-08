@@ -10,7 +10,7 @@ import { AvatarAura } from '@/components/member/avatar-aura';
 import { SettingsCard, SettingsPage, StatusNote } from '@/components/settings/settings-ui';
 import { ErrorState, Loading, errorMessage } from '@/components/states';
 import { Pressable } from '@/components/tap';
-import { PaletteProvider, ThemeBackdrop, useMyAppearance } from '@/components/theme-context';
+import { PaletteProvider, ThemeBackdrop, useMyAppearance, usePalette } from '@/components/theme-context';
 import { Txt } from '@/components/tw';
 import { Tw } from '@/constants/theme';
 import { resolveAura } from '@/lib/aura';
@@ -60,12 +60,13 @@ function Section({ title, hint, perk, unlocked = true, children }: Readonly<{ ti
 }
 
 function Choice<T extends string>({ value, options, onChange }: Readonly<{ value: T; options: { value: T; label: string }[]; onChange: (value: T) => void }>) {
+  const palette = usePalette();
   return (
     <View style={styles.choices}>
       {options.map((option) => {
         const on = option.value === value;
         return (
-          <Pressable key={option.value} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(option.value)} style={[styles.choice, on && styles.choiceOn]}>
+          <Pressable key={option.value} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(option.value)} style={[styles.choice, !palette.isDefault && { backgroundColor: palette.input }, on && styles.choiceOn, on && !palette.isDefault && { backgroundColor: palette.primary }]}>
             <Txt size="sm" weight={on ? 'semibold' : 'normal'} color={on ? Tw.color.primaryForeground : Tw.color.mutedForeground}>
               {option.label}
             </Txt>
@@ -171,6 +172,7 @@ function Preview({ draft, tier }: Readonly<{ draft: IMemberAppearanceBody; tier:
 
 /** Thème et signature (`settings/theme` du site) : couleurs, identité, photo et aura, police et effets. */
 export default function ThemeSettings() {
+  const palette = usePalette();
   const query = useMyAppearance();
   const client = useQueryClient();
   const { applyOwnTheme, showProfileThemes } = useThemeState();
@@ -235,7 +237,7 @@ export default function ThemeSettings() {
       <Section title="Thème de départ" hint="Un appui applique un thème complet, que tu peux ensuite ajuster." perk="signature" unlocked={!!perks?.signature}>
         <View style={styles.choices}>
           {THEME_PRESETS.map((preset) => (
-            <Pressable key={preset.id} accessibilityRole="button" onPress={() => setDraft(applyPreset(draft, preset))} style={styles.presetChip}>
+            <Pressable key={preset.id} accessibilityRole="button" onPress={() => setDraft(applyPreset(draft, preset))} style={[styles.presetChip, !palette.isDefault && { backgroundColor: palette.input }]}>
               <View style={[styles.dot, { backgroundColor: preset.colors?.background ?? SITE_THEME_COLORS.background, borderWidth: 3, borderColor: preset.accentColor }]} />
               <Txt size="sm">{preset.label}</Txt>
             </Pressable>
