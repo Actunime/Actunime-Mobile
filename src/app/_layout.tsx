@@ -10,10 +10,10 @@ import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { View } from 'react-native';
 import { ReduceMotion, ReducedMotionConfig } from 'react-native-reanimated';
 
 import { MobileNav } from '@/components/nav/mobile-nav';
+import { OwnThemeProvider } from '@/components/theme-context';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-store';
 import { useSyncPhoneNotifications } from '@/lib/phone-notifications';
@@ -68,8 +68,8 @@ export default function RootLayout() {
         <ReducedMotionConfig mode={ReduceMotion.System} />
         <StatusBar style="light" />
         {/* La navigation du bas est posée ici, une seule fois : elle est sur toutes les pages (rien sans connexion). */}
-        <View style={{ flex: 1, backgroundColor: Colors.background }}>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }}>
+        <OwnThemeProvider>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
           <Stack.Protected guard={!auth}>
             <Stack.Screen name="login" />
           </Stack.Protected>
@@ -108,7 +108,7 @@ export default function RootLayout() {
           <Stack.Screen name="auth/callback" />
         </Stack>
         <MobileNav />
-        </View>
+        </OwnThemeProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

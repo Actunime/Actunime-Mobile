@@ -12,7 +12,9 @@ import { Tw, alpha, Floating } from '@/constants/theme';
 import type { IFriendEntry, IListEntry, IMedia, MediaKind } from '@/lib/api';
 import { STATUS_LABELS } from '@/lib/list-form';
 import { LIST_STATUS_BAR, MEDIA_STATUS_BG } from '@/lib/list-status';
+import { cardOverride } from '@/lib/palette';
 import { signatureNameColor, signatureRing } from '@/lib/signature';
+import { usePalette } from '@/components/theme-context';
 import { MEDIA_STATUS_LABELS } from '@/lib/list-form';
 import { ANIME_FORMAT_LABELS, MANGA_FORMAT_LABELS, SOURCE_LABELS, formatReleaseDate, mediaTitle, seasonLabel, totalOf } from '@/lib/media';
 import type { IEntryPatch } from '@/lib/queries';
@@ -263,6 +265,7 @@ interface ICardBaseProps {
  * « 3/5 eps » à droite, titre dessous.
  */
 export function MediaGridCard({ kind, media, entry, onPress, dense }: Readonly<ICardBaseProps & { dense?: boolean }>) {
+  const palette = usePalette();
   const aired = airedFor(kind, media);
   const status = media.status;
   const progress = kind === 'anime' ? entry?.episodesWatched : entry?.chaptersRead;
@@ -273,7 +276,7 @@ export function MediaGridCard({ kind, media, entry, onPress, dense }: Readonly<I
         ? `${aired} eps`
         : null;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={mediaTitle(media)} onPress={onPress} style={({ pressed }) => [styles.gridCard, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={mediaTitle(media)} onPress={onPress} style={({ pressed }) => [styles.gridCard, cardOverride(palette), pressed && styles.pressed]}>
       <Sheen />
       <View>
         <CardImage uri={media.posterUrl} kind={kind} style={styles.gridImage} />
@@ -301,11 +304,12 @@ export function MediaRowCard({
   onPress,
   action,
 }: Readonly<ICardBaseProps & { action?: React.ReactNode }>) {
+  const palette = usePalette();
   const aired = airedFor(kind, media);
   const progress = kind === 'anime' ? entry?.episodesWatched : entry?.chaptersRead;
   const corner = progress != null ? `${progress}${kind === 'anime' && aired != null ? `/${aired}` : ''}` : kind === 'anime' && aired != null ? String(aired) : null;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={mediaTitle(media)} onPress={onPress} style={({ pressed }) => [styles.rowCard, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={mediaTitle(media)} onPress={onPress} style={({ pressed }) => [styles.rowCard, cardOverride(palette), pressed && styles.pressed]}>
       <Sheen />
       <View>
         <CardImage uri={media.posterUrl} kind={kind} style={styles.rowImage} iconSize={18} />
@@ -382,6 +386,7 @@ export function MediaDetailedCard({
   action,
   footer,
 }: Readonly<IDetailedCardProps>) {
+  const palette = usePalette();
   const anime = kind === 'anime';
   const total = totalOf(kind, media);
   const aired = airedFor(kind, media);
@@ -506,7 +511,7 @@ export function MediaDetailedCard({
   );
 
   return (
-    <View style={styles.detailedCard}>
+    <View style={[styles.detailedCard, cardOverride(palette)]}>
       <Sheen />
       {compact ? (
         <Pressable

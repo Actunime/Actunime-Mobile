@@ -8,6 +8,7 @@ import { MediaDetailedCard } from '@/components/cards/media-cards';
 import { openEntity } from '@/components/entity/open-entity';
 import { ListStatusStrip } from '@/components/list/list-controls';
 import { AvatarAura } from '@/components/member/avatar-aura';
+import { PaletteProvider, ThemeBackdrop, usePalette } from '@/components/theme-context';
 import { CardCarousel, InfoRow, PRIMARY_PILL, Pill, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
 import { openMedia } from '@/components/media-row';
 import { Screen } from '@/components/screen';
@@ -32,7 +33,9 @@ import {
 } from '@/lib/member';
 import { progressLabel } from '@/lib/media';
 import { resolveAura, tierOfBadges } from '@/lib/aura';
+import { paletteFromAppearance } from '@/lib/palette';
 import { signatureNameColor, signatureRing } from '@/lib/signature';
+import { useThemeState } from '@/lib/theme-store';
 import { useMemberFavorites, useMemberList, useMemberProfile, useMemberStats } from '@/lib/queries';
 
 const TAB_ICONS: Record<MemberTab, LucideIcon> = { profil: Users, animes: Tv, mangas: BookOpen, favoris: Heart, stats: BarChart3 };
@@ -42,7 +45,7 @@ const mediaOf = (entry: IListEntry): IMedia | null => (entry.media ? entry.media
 function Avatar({ member, size }: Readonly<{ member: IMemberProfile; size: number }>) {
   const initial = (member.displayName ?? member.username).slice(0, 1).toUpperCase();
   const radius = member.appearance?.avatarShape === 'circle' ? size / 2 : Tw.radius.lg;
-  const aura = resolveAura(member.signature, tierOfBadges(member.badges));
+  const aura = member.appearance?.aura?.profile === false ? null : resolveAura(member.signature, tierOfBadges(member.badges));
   return (
     <AvatarAura size={size} radius={radius} aura={aura}>
       <View style={[styles.avatar, { width: size, height: size, borderRadius: radius }, signatureRing(member.signature)]}>
@@ -110,6 +113,7 @@ function Header({ member }: Readonly<{ member: IMemberProfile }>) {
 }
 
 function Tabs({ tabs, active, onChange }: Readonly<{ tabs: MemberTab[]; active: MemberTab; onChange: (tab: MemberTab) => void }>) {
+  const palette = usePalette();
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs} accessibilityRole="tablist">
       {tabs.map((tab) => {
@@ -121,7 +125,7 @@ function Tabs({ tabs, active, onChange }: Readonly<{ tabs: MemberTab[]; active: 
             accessibilityRole="tab"
             accessibilityState={{ selected }}
             onPress={() => onChange(tab)}
-            style={[styles.tab, selected && styles.tabSelected]}
+            style={[styles.tab, selected && styles.tabSelected, !palette.isDefault && { backgroundColor: selected ? palette.primary : palette.muted, borderColor: selected ? palette.primary : palette.border }]}
           >
             <Icon size={16} color={selected ? Tw.color.primaryForeground : Tw.color.mutedForeground} />
             <Txt size="sm" weight="medium" color={selected ? Tw.color.primaryForeground : Tw.color.mutedForeground}>
@@ -187,6 +191,9 @@ export function MemberScreen({ username, initialTab = 'profil' }: Readonly<{ use
   const [favoriteType, setFavoriteType] = useState<FavoriteType | 'ALL'>('ALL');
 
   const member = profile.data?.member;
+  // Thème du membre visité (E132) : sa palette habille son profil, sauf si je les ai coupés dans mes réglages.
+  const { showProfileThemes } = useThemeState();
+  const palette = useMemo(() => paletteFromAppearance(showProfileThemes ? member?.appearance : null, 'profile'), [showProfileThemes, member?.appearance]);
   const visibility = profile.data?.visibility ?? { profileVisible: true, listsVisible: true, activityVisible: true };
   const isOwner = profile.data?.isOwnProfile ?? auth?.user.username === username;
   const tabs = visibleTabs(visibility, isOwner);
@@ -379,6 +386,9 @@ export function MemberScreen({ username, initialTab = 'profil' }: Readonly<{ use
   const loadingMore = (isList && listing.isFetchingNextPage) || (tab === 'favoris' && favorites.isFetchingNextPage);
 
   return (
+    <PaletteProvider palette={palette}>
+    <View style={[styles.themeRoot, { backgroundColor: palette.backgroundImage ? '#000000' : palette.background }]}>
+    <ThemeBackdrop palette={palette} />
     <Screen>
       <FlatList<IListEntry | IFavoriteTarget>
         data={isList ? (entries as (IListEntry | IFavoriteTarget)[]) : tab === 'favoris' ? favoriteTargets : []}
@@ -420,6 +430,8 @@ export function MemberScreen({ username, initialTab = 'profil' }: Readonly<{ use
         }
       />
     </Screen>
+    </View>
+    </PaletteProvider>
   );
 }
 
@@ -438,6 +450,7 @@ const styles = StyleSheet.create({
     backgroundColor: Tw.color.muted,
   },
   missing: { alignItems: 'center', gap: 12, padding: ScreenGutter, paddingTop: 48 },
+  themeRoot: { flex: 1 },
   identity: { paddingHorizontal: ScreenGutter, gap: 16 },
   identityRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   identityText: { flex: 1, gap: 2 },

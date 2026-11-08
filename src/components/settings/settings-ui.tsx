@@ -4,8 +4,10 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
 import { Pressable } from '@/components/tap';
+import { usePalette } from '@/components/theme-context';
 import { Txt } from '@/components/tw';
 import { ScreenGutter, Tw, alpha } from '@/constants/theme';
+import { cardOverride } from '@/lib/palette';
 
 /** Page de réglages : retour, titre, explication, contenu qui défile. */
 export function SettingsPage({ title, description, children }: Readonly<{ title: string; description?: string; children: React.ReactNode }>) {
@@ -34,7 +36,8 @@ export function SettingsPage({ title, description, children }: Readonly<{ title:
 
 /** Carte de réglages, comme les `SettingsSection` du site. */
 export function SettingsCard({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <View style={styles.card}>{children}</View>;
+  const palette = usePalette();
+  return <View style={[styles.card, cardOverride(palette)]}>{children}</View>;
 }
 
 /** Ligne qui mène à un écran de réglages. */

@@ -1,6 +1,8 @@
 import { Text, type TextProps } from 'react-native';
 
+import { usePalette } from '@/components/theme-context';
 import { Fonts, Tw } from '@/constants/theme';
+import { nativeFontFamily, themedColor } from '@/lib/palette';
 
 export type TwTextSize = keyof typeof Tw.text;
 export type TwWeight = 'normal' | 'medium' | 'semibold' | 'bold';
@@ -31,7 +33,7 @@ interface ITxtProps extends TextProps {
 export function Txt({
   size = 'sm',
   weight = 'normal',
-  color = Tw.color.foreground,
+  color,
   upper,
   tracking,
   tabular,
@@ -41,15 +43,18 @@ export function Txt({
   ...rest
 }: Readonly<ITxtProps>) {
   const scale = Tw.text[size];
+  const palette = usePalette();
+  const family = nativeFontFamily(palette.font);
   return (
     <Text
       maxFontSizeMultiplier={maxFontSizeMultiplier}
       style={[
         {
-          fontFamily: FAMILY[weight],
+          fontFamily: family ?? FAMILY[weight],
+          ...(family ? { fontWeight: weight === 'bold' ? '700' : weight === 'semibold' ? '600' : weight === 'medium' ? '500' : '400' } : null),
           fontSize: scale.fontSize,
           lineHeight: leading ? Math.round(scale.fontSize * leading) : scale.lineHeight,
-          color,
+          color: themedColor(color, palette),
         },
         upper && { textTransform: 'uppercase' },
         tracking !== undefined && { letterSpacing: tracking },

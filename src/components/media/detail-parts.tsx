@@ -5,10 +5,12 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Sheen } from '@/components/ui/sheen';
 import { Pressable } from '@/components/tap';
 import { CardImage } from '@/components/cards/media-cards';
+import { usePalette } from '@/components/theme-context';
 import { Txt } from '@/components/tw';
 import { Tw, alpha, Floating } from '@/constants/theme';
 import type { INewsArticle, MediaKind } from '@/lib/api';
 import { NEWS_TYPE_LABELS, newsCover } from '@/lib/media';
+import { cardOverride } from '@/lib/palette';
 
 /** Bloc de section de la fiche (`SectionCard` : `Card` `bg-card py-4`, en-tête `px-4` avec icône et compteur). */
 export function SectionCard({
@@ -26,8 +28,9 @@ export function SectionCard({
   children: React.ReactNode;
   onLayout?: (y: number) => void;
 }>) {
+  const palette = usePalette();
   return (
-    <View style={styles.card} onLayout={onLayout ? (e) => onLayout(e.nativeEvent.layout.y) : undefined}>
+    <View style={[styles.card, cardOverride(palette)]} onLayout={onLayout ? (e) => onLayout(e.nativeEvent.layout.y) : undefined}>
       <Sheen />
       <View style={styles.cardHeader}>
         <View style={styles.cardTitle}>

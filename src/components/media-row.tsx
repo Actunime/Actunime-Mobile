@@ -5,6 +5,8 @@ import { Sheen } from '@/components/ui/sheen';
 import { Pressable } from '@/components/tap';
 import { Poster } from '@/components/poster';
 import { ThemedText } from '@/components/themed-text';
+import { usePalette } from '@/components/theme-context';
+import { cardOverride } from '@/lib/palette';
 import { Colors, Floating, Radius, Spacing } from '@/constants/theme';
 import { mediaId, type IMedia, type MediaKind } from '@/lib/api';
 import { formatLabel, formatLongDate, mediaTitle, statusTone } from '@/lib/media';
@@ -31,11 +33,12 @@ interface IMediaRowProps {
 
 /** Ligne de résultat : affiche, titre et un résumé ; appui = fiche de l'œuvre. */
 export function MediaRow({ kind, media, subtitle, right }: Readonly<IMediaRowProps>) {
+  const palette = usePalette();
   const tone = TONES[statusTone(media.status)];
   const format = formatLabel(media.format);
   const date = formatLongDate(media.date?.start);
   return (
-    <Pressable style={({ pressed }) => [styles.row, pressed && styles.pressed]} onPress={() => openMedia(kind, mediaId(media))}>
+    <Pressable style={({ pressed }) => [styles.row, cardOverride(palette), pressed && styles.pressed]} onPress={() => openMedia(kind, mediaId(media))}>
       <Sheen />
       <Poster uri={media.posterUrl} width={72} />
       <View style={styles.body}>

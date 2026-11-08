@@ -12,6 +12,7 @@ import { ThemedText } from '@/components/themed-text';
 import { setReadingChromeHidden, useReadingChromeHidden } from '@/lib/reading-chrome';
 import { Colors, Fonts } from '@/constants/theme';
 import { signOut, useAuth } from '@/lib/auth-store';
+import { usePalette } from '@/components/theme-context';
 import { SOON_OPACITY, showSoon } from '@/lib/soon';
 import { LogoIcon } from './logo-icon';
 import { MEMBER_FAN, MEMBER_TABS, findActiveTabId, isSoonEntry, type IMobileNavItem } from './mobile-nav.config';
@@ -155,6 +156,7 @@ function FanAct({ entry, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanA
  * la géométrie vient de `radial-layout.ts`, copiée telle quelle.
  */
 export function MobileNav() {
+  const palette = usePalette();
   const { auth } = useAuth();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -389,7 +391,7 @@ export function MobileNav() {
         style={({ pressed }) => [styles.tab, active && styles.tabActive, pressed && styles.tabPressed]}
       >
         <LogoIcon name={tab.icon} size={24} />
-        <Text style={[styles.tabLabel, active && { color: Colors.primary }]} numberOfLines={1}>
+        <Text style={[styles.tabLabel, !palette.isDefault && { color: palette.mutedForeground }, active && { color: palette.primary }]} numberOfLines={1}>
           {tab.label}
         </Text>
       </Pressable>
@@ -398,7 +400,7 @@ export function MobileNav() {
 
   return (
     <>
-      <View style={[styles.bar, { height: BAR_HEIGHT + insets.bottom, paddingBottom: 6 + insets.bottom }]}>
+      <View style={[styles.bar, !palette.isDefault && { backgroundColor: palette.muted }, { height: BAR_HEIGHT + insets.bottom, paddingBottom: 6 + insets.bottom }]}>
         {renderTab(MEMBER_TABS[0]!)}
         {renderTab(MEMBER_TABS[1]!)}
         <View style={styles.hub}>
