@@ -66,6 +66,7 @@ import {
   useRelations,
   useToggleFavorite,
 } from '@/lib/queries';
+import { signatureNameColor, signatureRing } from '@/lib/signature';
 import { nextBroadcast } from '@/lib/suivi';
 
 const COUNTRY_LABELS: Record<string, string> = { JAPAN: 'Japon', KOREA: 'Corée du Sud', CHINA: 'Chine', OTHER: 'Autre' };
@@ -95,7 +96,7 @@ const isIncomplete = (m: IMedia) =>
 
 function MemberAvatar({ member, size }: Readonly<{ member: IMediaFollowerEntry['member']; size: number }>) {
   return (
-    <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
+    <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }, signatureRing(member.signature)]}>
       {member.avatarUrl ? (
         <Image source={{ uri: member.avatarUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
       ) : (
@@ -546,7 +547,7 @@ export default function MediaScreen() {
               friendEntries.slice(0, 6).map((e) => (
                 <View key={e.member.id} style={styles.friendRow}>
                   <MemberAvatar member={e.member} size={32} />
-                  <Txt size="sm" style={styles.flex} numberOfLines={1}>
+                  <Txt size="sm" style={styles.flex} numberOfLines={1} color={signatureNameColor(e.member.signature)}>
                     {e.member.displayName ?? e.member.username}
                   </Txt>
                   <View style={[styles.statusPill, { backgroundColor: LIST_STATUS_BAR[e.status] }]}>

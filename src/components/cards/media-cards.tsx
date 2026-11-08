@@ -12,6 +12,7 @@ import { Tw, alpha, Floating } from '@/constants/theme';
 import type { IFriendEntry, IListEntry, IMedia, MediaKind } from '@/lib/api';
 import { STATUS_LABELS } from '@/lib/list-form';
 import { LIST_STATUS_BAR, MEDIA_STATUS_BG } from '@/lib/list-status';
+import { signatureNameColor, signatureRing } from '@/lib/signature';
 import { MEDIA_STATUS_LABELS } from '@/lib/list-form';
 import { ANIME_FORMAT_LABELS, MANGA_FORMAT_LABELS, SOURCE_LABELS, formatReleaseDate, mediaTitle, seasonLabel, totalOf } from '@/lib/media';
 import type { IEntryPatch } from '@/lib/queries';
@@ -99,7 +100,7 @@ const nameOf = (friend: IFriendEntry) => friend.displayName || friend.username;
 
 function FriendAvatar({ friend, size }: Readonly<{ friend: IFriendEntry; size: number }>) {
   return (
-    <View style={[styles.avatarRing, { width: size + 4, height: size + 4, borderRadius: (size + 4) / 2 }]}>
+    <View style={[styles.avatarRing, { width: size + 4, height: size + 4, borderRadius: (size + 4) / 2 }, friend.signature ? { backgroundColor: signatureRing(friend.signature)?.borderColor } : null]}>
       <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
         {friend.avatarUrl ? (
           <Image source={{ uri: friend.avatarUrl }} style={StyleSheet.absoluteFill} />
@@ -194,7 +195,7 @@ export function FriendsPill({ entry, kind }: Readonly<{ entry: IListEntry; kind:
               <View key={friend.memberId} style={styles.friendRow}>
                 <FriendAvatar friend={friend} size={32} />
                 <View style={styles.flex}>
-                  <Txt size="sm" numberOfLines={1}>
+                  <Txt size="sm" numberOfLines={1} color={signatureNameColor(friend.signature)}>
                     {nameOf(friend)}
                   </Txt>
                   {progress ? (

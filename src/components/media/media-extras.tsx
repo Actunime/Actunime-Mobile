@@ -12,6 +12,7 @@ import { Txt } from '@/components/tw';
 import { Tw } from '@/constants/theme';
 import { api, type MediaKind } from '@/lib/api';
 import { plainDescribe, timeAgo } from '@/lib/notifications';
+import { signatureNameColor } from '@/lib/signature';
 
 interface ISectionProps {
   kind: MediaKind;
@@ -113,7 +114,8 @@ export function MediaActivitiesSection({ kind, id, onLayout }: Readonly<ISection
             <View key={activity.id} style={styles.item}>
               <Txt size="sm">{plainDescribe(activity.describe || activity.action)}</Txt>
               <Txt size="xs" color={Tw.color.mutedForeground}>
-                {activity.author?.displayName ? `${activity.author.displayName} · ` : ''}
+                {activity.author?.displayName ? <Txt size="xs" weight="semibold" color={signatureNameColor(activity.author.signature) ?? Tw.color.mutedForeground}>{activity.author.displayName}</Txt> : null}
+                {activity.author?.displayName ? ' · ' : ''}
                 {timeAgo(activity.createdAt)}
               </Txt>
             </View>

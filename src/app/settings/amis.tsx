@@ -11,6 +11,7 @@ import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
 import { Tw } from '@/constants/theme';
 import { api, type IFriendRequest } from '@/lib/api';
+import { signatureNameColor, signatureRing } from '@/lib/signature';
 
 type Direction = 'incoming' | 'outgoing';
 
@@ -62,9 +63,9 @@ export default function FriendsSettings() {
               return (
                 <View key={request.id} style={styles.row}>
                   <Pressable accessibilityRole="button" disabled={!member?.username} onPress={() => member?.username && openMember(member.username)} style={styles.who}>
-                    <View style={styles.avatar}>{member?.avatarUrl ? <Image source={{ uri: member.avatarUrl }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <Txt weight="bold">{name.slice(0, 1).toUpperCase()}</Txt>}</View>
+                    <View style={[styles.avatar, signatureRing(member?.signature)]}>{member?.avatarUrl ? <Image source={{ uri: member.avatarUrl }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <Txt weight="bold">{name.slice(0, 1).toUpperCase()}</Txt>}</View>
                     <View style={styles.flex}>
-                      <Txt size="sm" weight="semibold" numberOfLines={1}>
+                      <Txt size="sm" weight="semibold" numberOfLines={1} color={signatureNameColor(member?.signature)}>
                         {name}
                       </Txt>
                       {request.message ? (
