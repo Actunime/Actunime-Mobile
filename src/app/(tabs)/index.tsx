@@ -17,7 +17,7 @@ import { Colors, Floating, Radius, Spacing } from '@/constants/theme';
 import { mediaId } from '@/lib/api';
 import { useAuth } from '@/lib/auth-store';
 import { useAllMyList, useMyEntries } from '@/lib/queries';
-import { readFirst, readOf } from '@/lib/resume';
+import { readOf } from '@/lib/resume';
 import { useLastReads } from '@/lib/use-last-reads';
 import { behindAnimes, dayLabel, headline, listBreakdown, listTotals, shortDay, timeLabel, weekSchedule } from '@/lib/suivi';
 
@@ -77,15 +77,11 @@ export default function SuiviScreen() {
   const resume = useMemo(
     () =>
       [...(watching.data ?? []), ...(reading.data ?? [])]
-        .filter((entry) => ((entry.mediaType === 'Manga' ? entry.chaptersRead : entry.episodesWatched) ?? 0) > 0)
-        // un anime déjà dans « À rattraper » n'est pas répété ici
-        .filter((entry) => !behind.some((item) => item.entry === entry))
+        // les fiches en cours de ma liste, la dernière modifiée en tête, animes et mangas confondus
         .sort((a, b) => new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime())
         .slice(0, 5),
-    [watching.data, reading.data, behind],
+    [watching.data, reading.data],
   );
-  // La dernière œuvre lue dans le navigateur passe en tête de « Reprendre ».
-  const resumeOrdered = useMemo(() => readFirst(resume, reads), [resume, reads]);
   const behindTotal = behind.reduce((sum, item) => sum + item.behind, 0);
   const todayCount = week[0]?.items.length ?? 0;
   const inProgress = (watching.data?.length ?? 0) + (reading.data?.length ?? 0);
@@ -164,7 +160,7 @@ export default function SuiviScreen() {
             {resume.length > 0 && (
               <Section title="Reprendre">
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={slideWidth + Spacing.three} decelerationRate="fast" contentContainerStyle={styles.carousel} style={styles.carouselScroll}>
-                  {resumeOrdered.map((entry) => (
+                  {resume.map((entry) => (
                     <EntrySlide key={entry.id} kind={entry.mediaType === 'Manga' ? 'manga' : 'anime'} entry={entry} read={readOf(entry, reads)} width={slideWidth} />
                   ))}
                 </ScrollView>
