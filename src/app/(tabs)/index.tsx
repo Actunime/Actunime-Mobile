@@ -7,6 +7,7 @@ import { Sheen } from '@/components/ui/sheen';
 import { Pressable } from '@/components/tap';
 import { Button } from '@/components/button';
 import { EntryTile } from '@/components/suivi/entry-tile';
+import { ResumeHero } from '@/components/suivi/resume-hero';
 import { Fold } from '@/components/fold';
 import { MediaRow } from '@/components/media-row';
 import { usePalette } from '@/components/theme-context';
@@ -17,6 +18,8 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors, Floating, Radius, Spacing } from '@/constants/theme';
 import { mediaId } from '@/lib/api';
 import { useAllMyList, useMyEntries } from '@/lib/queries';
+import { latestResume } from '@/lib/resume';
+import { useLastReads } from '@/lib/use-last-reads';
 import { behindAnimes, dayLabel, headline, listBreakdown, listTotals, shortDay, timeLabel, weekSchedule } from '@/lib/suivi';
 
 const SEGMENT_COLORS = { primary: Colors.primary, success: Colors.success, info: '#0ea5e9', muted: 'rgba(190, 213, 255, 0.4)' } as const;
@@ -78,6 +81,9 @@ export default function SuiviScreen() {
 
   const animeEntries = useMemo(() => [...(watching.data ?? []), ...(planned.data ?? [])], [watching.data, planned.data]);
   const behind = useMemo(() => behindAnimes(watching.data ?? []), [watching.data]);
+  const reads = useLastReads();
+  // La dernière œuvre lue dans le navigateur passe en carte « Continuer » ; elle n'est pas répétée dans la rangée.
+  const hero = useMemo(() => latestResume([...(watching.data ?? []), ...(reading.data ?? [])], reads), [watching.data, reading.data, reads]);
   const week = useMemo(() => weekSchedule(animeEntries), [animeEntries]);
   const resume = useMemo(
     () =>
@@ -85,9 +91,10 @@ export default function SuiviScreen() {
         .filter((entry) => ((entry.mediaType === 'Manga' ? entry.chaptersRead : entry.episodesWatched) ?? 0) > 0)
         // un anime déjà dans « À rattraper » n'est pas répété ici
         .filter((entry) => !behind.some((item) => item.entry === entry))
+        .filter((entry) => entry.id !== hero?.entry.id)
         .sort((a, b) => new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime())
         .slice(0, 5),
-    [watching.data, reading.data, behind],
+    [watching.data, reading.data, behind, hero],
   );
   const behindTotal = behind.reduce((sum, item) => sum + item.behind, 0);
   const todayCount = week[0]?.items.length ?? 0;
@@ -109,8 +116,8 @@ export default function SuiviScreen() {
   const day = week[selectedDay];
   const chips: { key: ISectionKey; label: string; count?: number }[] = [
     { key: 'today', label: "Aujourd'hui" },
+    ...(hero || resume.length > 0 ? [{ key: 'resume' as const, label: 'Reprendre' }] : []),
     ...(behind.length > 0 ? [{ key: 'behind' as const, label: 'À rattraper', count: behind.length }] : []),
-    ...(resume.length > 0 ? [{ key: 'resume' as const, label: 'Reprendre' }] : []),
     { key: 'week', label: 'Semaine' },
     ...(segments.length > 0 ? [{ key: 'stats' as const, label: 'Chiffres' }] : []),
   ];
@@ -173,21 +180,24 @@ export default function SuiviScreen() {
               </View>
             </View>
 
+            {(hero || resume.length > 0) && (
+              <Section title="Reprendre" onLayout={at('resume')}>
+                {hero ? <ResumeHero target={hero} /> : null}
+                {resume.length > 0 ? (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail} style={styles.railScroll}>
+                    {resume.map((entry) => (
+                      <EntryTile key={entry.id} entry={entry} />
+                    ))}
+                  </ScrollView>
+                ) : null}
+              </Section>
+            )}
+
             {behind.length > 0 && (
               <Section title="À rattraper" hint={`${behind.length} anime${behind.length > 1 ? 's' : ''} en retard`} onLayout={at('behind')}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail} style={styles.railScroll}>
                   {behind.slice(0, 10).map((item) => (
                     <EntryTile key={item.entry.id} entry={item.entry} behind={item.behind} />
-                  ))}
-                </ScrollView>
-              </Section>
-            )}
-
-            {resume.length > 0 && (
-              <Section title="Reprendre" onLayout={at('resume')}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail} style={styles.railScroll}>
-                  {resume.map((entry) => (
-                    <EntryTile key={entry.id} entry={entry} />
                   ))}
                 </ScrollView>
               </Section>
