@@ -32,7 +32,7 @@ const pageOf = (release: IGithubRelease): string =>
   typeof release.html_url === 'string' && release.html_url.startsWith(`${RELEASES_PAGE}/`) ? release.html_url : RELEASES_PAGE;
 const SHA256 = /^[0-9a-f]{64}$/i;
 
-/** Au plus une recherche toutes les 6 heures au lancement (le bouton « Rechercher une mise à jour » passe outre). */
+/** Intervalle de repos entre deux recherches automatiques (non utilisé au lancement, qui cherche à chaque fois). */
 export const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 export const shouldCheck = (lastCheck: number | undefined, now: number, force = false): boolean =>

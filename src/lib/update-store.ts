@@ -4,7 +4,7 @@ import { Alert, Linking } from 'react-native';
 
 import { Updater } from '../../modules/actunime-updater/src';
 import { UPDATES_URL } from './config';
-import { fetchLatestRelease, isNewer, shouldCheck, type IReleaseInfo } from './updates';
+import { fetchLatestRelease, isNewer, type IReleaseInfo } from './updates';
 
 const AUTO_KEY = 'actunime.updates.auto';
 const LAST_CHECK_KEY = 'actunime.updates.lastCheck';
@@ -129,9 +129,9 @@ export async function installUpdate(info: IReleaseInfo, path: string): Promise<v
 let launchChecked = false;
 
 /**
- * Au lancement, au plus une fois toutes les 6 heures (et seulement si les mises à jour automatiques sont actives) : cherche une
+ * À chaque lancement de l'app (et seulement si les mises à jour automatiques sont actives) : cherche une
  * nouvelle version, la télécharge, puis propose de l'installer. Jamais bloquant : « Plus tard » laisse l'app utilisable,
- * et la version reste proposée dans le Profil.
+ * et la version reste proposée dans Paramètres.
  */
 export async function runLaunchCheck(): Promise<void> {
   if (launchChecked) return;
@@ -140,9 +140,6 @@ export async function runLaunchCheck(): Promise<void> {
     auto = raw !== 'false';
   });
   if (!auto) return;
-  const last = Number(await AsyncStorage.getItem(LAST_CHECK_KEY).catch(() => null)) || undefined;
-  if (!shouldCheck(last, Date.now())) return;
-
   const info = await checkForUpdate({ silent: true });
   if (!info) return;
   const path = await downloadUpdate(info);
