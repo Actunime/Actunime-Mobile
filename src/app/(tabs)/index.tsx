@@ -1,12 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Sheen } from '@/components/ui/sheen';
 import { Pressable } from '@/components/tap';
 import { Button } from '@/components/button';
-import { EntryCard } from '@/components/cards/entry-card';
+import { EntryTile } from '@/components/suivi/entry-tile';
+import { Fold } from '@/components/fold';
 import { MediaRow } from '@/components/media-row';
 import { usePalette } from '@/components/theme-context';
 import { ReceivedRecommendations } from '@/components/recommendations/received-recommendations';
@@ -15,15 +16,16 @@ import { ErrorState } from '@/components/states';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Floating, Radius, Spacing } from '@/constants/theme';
 import { mediaId } from '@/lib/api';
-import { useAuth } from '@/lib/auth-store';
 import { useAllMyList, useMyEntries } from '@/lib/queries';
 import { behindAnimes, dayLabel, headline, listBreakdown, listTotals, shortDay, timeLabel, weekSchedule } from '@/lib/suivi';
 
 const SEGMENT_COLORS = { primary: Colors.primary, success: Colors.success, info: '#0ea5e9', muted: 'rgba(190, 213, 255, 0.4)' } as const;
 
-function Section({ title, hint, children }: Readonly<{ title: string; hint?: string; children: React.ReactNode }>) {
+type ISectionKey = 'today' | 'behind' | 'resume' | 'week' | 'stats';
+
+function Section({ title, hint, onLayout, children }: Readonly<{ title: string; hint?: string; onLayout?: (y: number) => void; children: React.ReactNode }>) {
   return (
-    <View style={styles.section}>
+    <View style={styles.section} onLayout={onLayout ? (e) => onLayout(e.nativeEvent.layout.y) : undefined}>
       <View>
         <ThemedText type="subtitle">{title}</ThemedText>
         {hint ? (
@@ -53,10 +55,19 @@ function Tile({ value, label, warn }: Readonly<{ value: string | number; label: 
 /** Mon suivi : page d'ouverture du membre (retard, planning de la semaine, répartition), port de `/suivi` du site. */
 export default function SuiviScreen() {
   const palette = usePalette();
-  const { auth } = useAuth();
   const client = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDay, setSelectedDay] = useState(0);
+  const [activeChip, setActiveChip] = useState<ISectionKey>('today');
+  const scroll = useRef<ScrollView>(null);
+  const offsets = useRef<Partial<Record<ISectionKey, number>>>({});
+  const at = (key: ISectionKey) => (y: number) => {
+    offsets.current[key] = y;
+  };
+  const goTo = (key: ISectionKey) => {
+    setActiveChip(key);
+    scroll.current?.scrollTo({ y: key === 'today' ? 0 : Math.max(0, (offsets.current[key] ?? 0) - 8), animated: true });
+  };
 
   const watching = useAllMyList('Anime', 'WATCHING');
   const planned = useAllMyList('Anime', 'PLAN_TO_WATCH');
@@ -96,14 +107,40 @@ export default function SuiviScreen() {
 
 
   const day = week[selectedDay];
+  const chips: { key: ISectionKey; label: string; count?: number }[] = [
+    { key: 'today', label: "Aujourd'hui" },
+    ...(behind.length > 0 ? [{ key: 'behind' as const, label: 'À rattraper', count: behind.length }] : []),
+    ...(resume.length > 0 ? [{ key: 'resume' as const, label: 'Reprendre' }] : []),
+    { key: 'week', label: 'Semaine' },
+    ...(segments.length > 0 ? [{ key: 'stats' as const, label: 'Chiffres' }] : []),
+  ];
 
   return (
     <Screen>
       <ScrollView
+        ref={scroll}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />}
       >
         <ThemedText type="title">Mon suivi</ThemedText>
+        {!loading && !error && !empty ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipsScroll}>
+            {chips.map((chip) => (
+              <Pressable
+                key={chip.key}
+                accessibilityRole="button"
+                accessibilityState={{ selected: activeChip === chip.key }}
+                onPress={() => goTo(chip.key)}
+                style={[styles.chip, activeChip === chip.key && styles.chipActive]}
+              >
+                <ThemedText type="smallBold" style={activeChip === chip.key ? styles.chipActiveText : undefined}>
+                  {chip.label}
+                  {chip.count ? ` ${chip.count}` : ''}
+                </ThemedText>
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : null}
 
         <ReceivedRecommendations />
         {loading ? (
@@ -137,27 +174,26 @@ export default function SuiviScreen() {
             </View>
 
             {behind.length > 0 && (
-              <Section title="À rattraper" hint={`${behind.length} anime${behind.length > 1 ? 's' : ''} en retard`}>
-                {behind.slice(0, 5).map((item) => (
-                  <EntryCard
-                    key={item.entry.id}
-                    kind="anime"
-                    entry={item.entry}
-                    note={`${item.behind} épisode${item.behind > 1 ? 's' : ''} de retard`}
-                  />
-                ))}
+              <Section title="À rattraper" hint={`${behind.length} anime${behind.length > 1 ? 's' : ''} en retard`} onLayout={at('behind')}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail} style={styles.railScroll}>
+                  {behind.slice(0, 10).map((item) => (
+                    <EntryTile key={item.entry.id} entry={item.entry} behind={item.behind} />
+                  ))}
+                </ScrollView>
               </Section>
             )}
 
             {resume.length > 0 && (
-              <Section title="Reprendre">
-                {resume.map((entry) => (
-                  <EntryCard key={entry.id} kind={entry.mediaType === 'Manga' ? 'manga' : 'anime'} entry={entry} />
-                ))}
+              <Section title="Reprendre" onLayout={at('resume')}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail} style={styles.railScroll}>
+                  {resume.map((entry) => (
+                    <EntryTile key={entry.id} entry={entry} />
+                  ))}
+                </ScrollView>
               </Section>
             )}
 
-            <Section title="Ma semaine" hint="Les animes de ma liste qui sortent cette semaine">
+            <Section title="Ma semaine" hint="Les animes de ma liste qui sortent cette semaine" onLayout={at('week')}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.days}>
                 {week.map((entry, index) => (
                   <Pressable
@@ -189,9 +225,9 @@ export default function SuiviScreen() {
             </Section>
 
             {segments.length > 0 && (
-              <Section title="Mes chiffres">
-                <View style={styles.card}>
-                  <Sheen />
+              <View onLayout={(e) => at('stats')(e.nativeEvent.layout.y)}>
+              <Fold title="Mes chiffres" defaultOpen={false}>
+                <View style={styles.statsBody}>
                   <View style={styles.bar}>
                     {segments.map((segment) => (
                       <View key={segment.label} style={{ flexGrow: segment.value, backgroundColor: SEGMENT_COLORS[segment.color] }} />
@@ -211,22 +247,11 @@ export default function SuiviScreen() {
                     {segmentTotal} entrées · {totals.episodesWatched} épisodes vus · {totals.chaptersRead} chapitres lus
                   </ThemedText>
                 </View>
-              </Section>
+              </Fold>
+              </View>
             )}
-
-            <View style={styles.card}>
-
-              <Sheen />
-              <ThemedText type="small" themeColor="textSecondary">
-                Amis en ligne, activité, série et objectif de la semaine arrivent bientôt dans l’application.
-              </ThemedText>
-              <Button label="Bientôt disponible" variant="outline" disabled />
-            </View>
           </>
         )}
-        <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
-          Connecté en tant que {auth?.user.displayName ?? auth?.user.username}
-        </ThemedText>
       </ScrollView>
     </Screen>
   );
@@ -246,5 +271,12 @@ const styles = StyleSheet.create({
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.three, rowGap: Spacing.one },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
-  footer: { textAlign: 'center' },
+  statsBody: { gap: Spacing.three },
+  chipsScroll: { marginHorizontal: -Spacing.three, flexGrow: 0 },
+  chips: { gap: Spacing.two, paddingHorizontal: Spacing.three },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: 'rgba(255, 255, 255, 0.06)' },
+  chipActive: { backgroundColor: Colors.primary },
+  chipActiveText: { color: Colors.primaryForeground },
+  railScroll: { marginHorizontal: -Spacing.three },
+  rail: { gap: Spacing.three, paddingHorizontal: Spacing.three },
 });
