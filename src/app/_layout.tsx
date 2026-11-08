@@ -94,6 +94,8 @@ export default function RootLayout() {
             <Stack.Screen name="settings/amis" />
             <Stack.Screen name="settings/appareils" />
             <Stack.Screen name="settings/notifications" />
+            <Stack.Screen name="settings/theme" />
+            <Stack.Screen name="settings/soutenir" />
             <Stack.Screen name="settings/security" />
             <Stack.Screen name="settings/delete-account" />
             <Stack.Screen name="notifications" />

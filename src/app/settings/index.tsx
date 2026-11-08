@@ -1,5 +1,5 @@
 import { router, type Href } from 'expo-router';
-import { Ban, Bell, Lock, MonitorSmartphone, ShieldCheck, Trash2, User, Users } from 'lucide-react-native';
+import { Ban, Bell, Heart, Lock, MonitorSmartphone, Palette, ShieldCheck, Trash2, User, Users } from 'lucide-react-native';
 
 import { SettingsCard, SettingsLink, SettingsPage } from '@/components/settings/settings-ui';
 
@@ -11,6 +11,8 @@ export default function SettingsHub() {
     <SettingsPage title="Paramètres" description="Ton profil, tes notifications, qui peut te voir, tes amis et la sécurité du compte.">
       <SettingsCard>
         <SettingsLink icon={User} label="Profil" hint="Nom affiché et présentation" onPress={() => go('/settings/profile')} />
+        <SettingsLink icon={Palette} label="Thème & signature" hint="Pseudo coloré, couleurs, aura de ta photo" onPress={() => go('/settings/theme')} />
+        <SettingsLink icon={Heart} label="Soutenir Actunime" hint="Offre Soutien, abonnement et avantages" onPress={() => go('/settings/soutenir')} />
         <SettingsLink icon={Lock} label="Confidentialité" hint="Qui peut voir ton profil, tes listes et tes activités" onPress={() => go('/settings/confidentialite')} />
         <SettingsLink icon={Bell} label="Notifications" hint="Quoi, dans l’application et sur Discord" onPress={() => go('/settings/notifications')} />
       </SettingsCard>
