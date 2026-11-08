@@ -19,7 +19,7 @@ import { useAuth } from '@/lib/auth-store';
 import { useAllMyList, useMyEntries } from '@/lib/queries';
 import { readOf } from '@/lib/resume';
 import { useLastReads } from '@/lib/use-last-reads';
-import { behindAnimes, dayLabel, headline, listBreakdown, listTotals, shortDay, timeLabel, weekSchedule } from '@/lib/suivi';
+import { behindAnimes, isCaughtUp, dayLabel, headline, listBreakdown, listTotals, shortDay, timeLabel, weekSchedule } from '@/lib/suivi';
 
 const SEGMENT_COLORS = { primary: Colors.primary, success: Colors.success, info: '#0ea5e9', muted: 'rgba(190, 213, 255, 0.4)' } as const;
 
@@ -77,6 +77,8 @@ export default function SuiviScreen() {
   const resume = useMemo(
     () =>
       [...(watching.data ?? []), ...(reading.data ?? [])]
+        // à jour = rien de plus à voir ou lire : inutile de « reprendre »
+        .filter((entry) => !isCaughtUp(entry))
         // les fiches en cours de ma liste, la dernière modifiée en tête, animes et mangas confondus
         .sort((a, b) => new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime())
         .slice(0, 5),

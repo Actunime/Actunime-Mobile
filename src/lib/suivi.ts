@@ -79,6 +79,22 @@ export function behindAnimes(entries: IListEntry[], from = new Date()): IBehind[
   return items.sort((a, b) => b.behind - a.behind);
 }
 
+/**
+ * Entrée à jour : rien de plus à regarder ou lire pour l'instant (tous les épisodes diffusés vus, ou tous les
+ * chapitres parus lus). Une œuvre dont on ne sait pas ce qui est paru n'est jamais déclarée à jour.
+ */
+export function isCaughtUp(entry: IListEntry, from = new Date()): boolean {
+  const media = entry.media;
+  if (!media) return false;
+  if (entry.mediaType === 'Manga') {
+    const info = (media as { chaptersInfo?: { airing?: number; total?: number } }).chaptersInfo;
+    const out = info?.airing ?? info?.total;
+    return !!out && out > 0 && (entry.chaptersRead ?? 0) >= out;
+  }
+  const available = estimatedAired(media, from);
+  return available > 0 && (entry.episodesWatched ?? 0) >= available;
+}
+
 export interface IScheduleItem {
   media: IMedia;
   at: Date;

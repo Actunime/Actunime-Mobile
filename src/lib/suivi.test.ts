@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { IListEntry, IMedia } from './api';
-import { behindAnimes, estimatedAired, headline, listBreakdown, listTotals, nextBroadcast, weekSchedule } from './suivi';
+import { behindAnimes, estimatedAired, headline, isCaughtUp, listBreakdown, listTotals, nextBroadcast, weekSchedule } from './suivi';
 
 // mercredi 28 octobre 2026, 12:00 local
 const NOW = new Date(2026, 9, 28, 12, 0, 0);
@@ -118,5 +118,23 @@ describe('listTotals', () => {
 
   it('laisse la moyenne indéfinie sans aucune note', () => {
     expect(listTotals([entry(weekly(1), { mediaId: 'a' })]).averageScore).toBeUndefined();
+  });
+});
+
+describe('isCaughtUp', () => {
+  it('un anime dont tous les épisodes diffusés sont vus est à jour', () => {
+    const media = weekly(3); // 4 épisodes diffusés
+    expect(isCaughtUp(entry(media, { episodesWatched: 4 }), NOW)).toBe(true);
+    expect(isCaughtUp(entry(media, { episodesWatched: 2 }), NOW)).toBe(false);
+  });
+
+  it('une œuvre dont on ignore ce qui est paru n\'est jamais à jour', () => {
+    expect(isCaughtUp(entry({ id: 'x' } as IMedia, { episodesWatched: 5 }), NOW)).toBe(false);
+  });
+
+  it('un manga est à jour quand tous les chapitres parus sont lus', () => {
+    const media = { id: 'm', chaptersInfo: { airing: 120, total: 0 } } as unknown as IMedia;
+    expect(isCaughtUp(entry(media, { mediaType: 'Manga', chaptersRead: 120 }), NOW)).toBe(true);
+    expect(isCaughtUp(entry(media, { mediaType: 'Manga', chaptersRead: 119 }), NOW)).toBe(false);
   });
 });
