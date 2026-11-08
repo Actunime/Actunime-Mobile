@@ -129,7 +129,7 @@ export async function installUpdate(info: IReleaseInfo, path: string): Promise<v
 let launchChecked = false;
 
 /**
- * Au lancement, au plus une fois par jour (et seulement si les mises à jour automatiques sont actives) : cherche une
+ * Au lancement, au plus une fois toutes les 6 heures (et seulement si les mises à jour automatiques sont actives) : cherche une
  * nouvelle version, la télécharge, puis propose de l'installer. Jamais bloquant : « Plus tard » laisse l'app utilisable,
  * et la version reste proposée dans le Profil.
  */

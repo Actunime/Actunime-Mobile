@@ -119,6 +119,8 @@ function Header({ member, isOwner }: Readonly<{ member: IMemberProfile; isOwner:
               <Button label="Thème & signature" variant="outline" onPress={() => router.push('/settings/theme' as Href)} />
             </View>
           </View>
+          {/* Réglages de l'application : mise à jour, notifications, sécurité, déconnexion. */}
+          <Button label="Paramètres et mise à jour" variant="outline" onPress={() => router.push('/settings' as Href)} />
         </>
       ) : null}
       <View style={styles.counters}>
