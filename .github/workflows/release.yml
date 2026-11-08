@@ -23,10 +23,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: pnpm/action-setup@v6
+
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-          cache: npm
+          cache: pnpm
 
       - uses: actions/setup-java@v5
         with:
@@ -39,24 +41,26 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: gradle-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: gradle-${{ runner.os }}-
 
       - name: Installation des dépendances
         # `postinstall` applique le patch de react-native-webview (crochet de filtrage des requêtes)
-        run: npm ci
-        env:
+        run: |
           # Les bibliothèques @actunime/* sont sur GitHub Packages, qui demande un jeton de lecture même pour installer.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" >> .npmrc
+          pnpm install --frozen-lockfile
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Bundle du script de détection injecté
-        run: npm run build:injected
+        run: pnpm run build:injected
 
       - name: Tests
-        run: npm test
+        run: pnpm test
 
       - name: Vérification des types
-        run: npx tsc --noEmit
+        run: pnpm exec tsc --noEmit
 
       - name: Toolchain Rust (moteur de filtres)
         uses: dtolnay/rust-toolchain@stable
@@ -95,7 +99,7 @@ jobs:
           "
 
       - name: Génération du projet Android
-        run: npx expo prebuild --platform android --no-install
+        run: pnpm exec expo prebuild --platform android --no-install
 
       - name: Build de l'APK (non signé)
         env:

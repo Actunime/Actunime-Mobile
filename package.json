@@ -3,9 +3,9 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
-    "@actunime/client": "1.3.0-beta.55",
-    "@actunime/types": "1.13.0-beta.57",
-    "@actunime/validations": "1.7.0-beta.63",
+    "@actunime/client": "1.3.0-beta.56",
+    "@actunime/types": "1.13.0-beta.58",
+    "@actunime/validations": "1.7.0-beta.64",
     "@expo-google-fonts/outfit": "^0.4.3",
     "@expo/ui": "~57.0.9",
     "@expo/vector-icons": "^15.0.2",
@@ -57,10 +57,11 @@
     "lint": "expo lint",
     "build:injected": "node scripts/build-injected.mjs",
     "type-check": "tsc --noEmit",
-    "prestart": "npm run build:injected",
+    "prestart": "pnpm run build:injected",
     "postinstall": "patch-package",
     "build:rust": "bash scripts/build-rust.sh",
     "test": "vitest run"
   },
-  "private": true
+  "private": true,
+  "packageManager": "pnpm@10.32.1"
 }

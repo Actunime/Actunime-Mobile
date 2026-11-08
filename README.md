@@ -99,13 +99,13 @@ Voir aussi [SECURITY.md](SECURITY.md).
 
 ## Développer
 
-Prérequis : Node 22, JDK 17, le SDK Android (avec le NDK) et Rust avec `cargo-ndk` pour le moteur de filtres.
+Prérequis : Node 22, pnpm 10, JDK 17, le SDK Android (avec le NDK) et Rust avec `cargo-ndk` pour le moteur de filtres.
 
 ```bash
-npm install
-npm run build:injected          # bundle le script de détection injecté dans les pages
-npm run build:rust              # moteur de filtres du bloqueur de pubs (une fois, ou après modification)
-npx expo prebuild --platform android
+pnpm install
+pnpm run build:injected          # bundle le script de détection injecté dans les pages
+pnpm run build:rust             # moteur de filtres du bloqueur de pubs (une fois, ou après modification)
+pnpm exec expo prebuild --platform android
 ```
 
 Variables d'environnement (lues au build, `EXPO_PUBLIC_*`) :
@@ -123,8 +123,8 @@ cd android && ./gradlew assembleRelease     # APK dans android/app/build/outputs
 Vérifications (celles de la CI) :
 
 ```bash
-npm test             # Vitest : logique, détection, listes, mises à jour…
-npm run type-check   # TypeScript strict
+pnpm test            # Vitest : logique, détection, listes, mises à jour…
+pnpm run type-check  # TypeScript strict
 ```
 
 > Le dossier `android/` est généré par `expo prebuild` et n'est pas versionné. Pour changer une variable `EXPO_PUBLIC_*` d'un build local, supprime `android/app/build/generated/assets/react` avant de relancer Gradle, sinon l'ancien bundle JavaScript est réutilisé.
@@ -140,7 +140,7 @@ modules/            modules natifs Android : actunime-adblock (Rust + Kotlin), a
 patches/            correctif de react-native-webview (crochet de filtrage des requêtes)
 ```
 
-L'application utilise les bibliothèques partagées `@actunime/types`, `validations` et `client` (GitHub Packages, versions exactes figées : après une publication, `npm install @actunime/<lib>@<version>` en `--save-exact`) et parle à l'API par HTTP. L'installation demande un jeton GitHub `read:packages` dans `NODE_AUTH_TOKEN` (secret `NPM_TOKEN` en CI). La connexion suit le flux code + PKCE : l'application ouvre la page d'autorisation du site, puis échange le code contre un jeton renouvelable.
+L'application utilise les bibliothèques partagées `@actunime/types`, `validations` et `client` (GitHub Packages, versions exactes figées : après une publication, `pnpm add @actunime/<lib>@<version>`) et parle à l'API par HTTP. L'installation demande un jeton GitHub `read:packages` dans `NODE_AUTH_TOKEN` (secret `NPM_TOKEN` en CI). La connexion suit le flux code + PKCE : l'application ouvre la page d'autorisation du site, puis échange le code contre un jeton renouvelable.
 
 ### Versions
 
