@@ -98,6 +98,8 @@ export interface IAvatarAuraProps {
   /** Rayon de coin de la photo (la moitié du côté pour un rond). */
   radius: number;
   aura: IAuraSpec | null;
+  /** Sans la marge qui réserve la place des effets : pour les avatars de liste. */
+  compact?: boolean;
   children: ReactNode;
 }
 
@@ -106,14 +108,14 @@ export interface IAvatarAuraProps {
  * la vitrine des paliers (anneau qui respire, éclat d'entrée, lumières en orbite, étoiles, braises et pétales),
  * posés autour de la photo et jamais dessus. Sans mouvement quand le système les réduit : un simple anneau.
  */
-export function AvatarAura({ size, radius, aura, children }: Readonly<IAvatarAuraProps>) {
+export function AvatarAura({ size, radius, aura, compact, children }: Readonly<IAvatarAuraProps>) {
   const reduced = useReducedMotion();
   if (!aura) return <>{children}</>;
   const box = size + 10;
   const boxRadius = radius + 5;
   const orbitRadius = size * 0.62;
   // Marge qui réserve la place des effets (comètes à ~24 dp de la photo) : ils ne sortent ni de l'écran ni sur le voisin.
-  const wrap: ViewStyle = { width: size, height: size, margin: 12 };
+  const wrap: ViewStyle = { width: size, height: size, margin: compact ? 0 : 12 };
 
   return (
     <View style={wrap}>

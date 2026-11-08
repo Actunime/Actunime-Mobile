@@ -128,3 +128,13 @@ export function resolveAura(signature: IMemberSignature | null | undefined, tier
   spec.comets = tier === 8 ? 2 : 0;
   return spec;
 }
+
+/**
+ * Aura réduite des listes (membres, amis, demandes) : l'anneau qui respire, quelques lumières et étoiles, sans
+ * rayons, comètes, particules ni cadre qui déborderaient sur la ligne voisine. Comme sur le site : « ailleurs, l'effet
+ * réduit reste ».
+ */
+export function compactAura(spec: IAuraSpec | null): IAuraSpec | null {
+  if (!spec) return null;
+  return { ...spec, halo: false, disc: false, frame: false, rays: false, aurora: false, comets: 0, risers: 0, orbit: Math.min(spec.orbit, 2), twinkles: Math.min(spec.twinkles, 2) };
+}

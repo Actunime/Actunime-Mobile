@@ -66,7 +66,8 @@ import {
   useRelations,
   useToggleFavorite,
 } from '@/lib/queries';
-import { signatureNameColor, signatureRing } from '@/lib/signature';
+import { signatureNameColor } from '@/lib/signature';
+import { AuraAvatar } from '@/components/member/aura-avatar';
 import { nextBroadcast } from '@/lib/suivi';
 
 const COUNTRY_LABELS: Record<string, string> = { JAPAN: 'Japon', KOREA: 'Corée du Sud', CHINA: 'Chine', OTHER: 'Autre' };
@@ -95,17 +96,7 @@ const isIncomplete = (m: IMedia) =>
   !m.posterUrl || !m.genres?.length || !m.synopsis || !m.date?.start || !m.format || m.format === 'UNKNOWN' || !m.status || m.status === 'UNKNOWN';
 
 function MemberAvatar({ member, size }: Readonly<{ member: IMediaFollowerEntry['member']; size: number }>) {
-  return (
-    <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }, signatureRing(member.signature)]}>
-      {member.avatarUrl ? (
-        <Image source={{ uri: member.avatarUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
-      ) : (
-        <Txt size="xs" color={Tw.color.mutedForeground}>
-          {(member.displayName ?? member.username).charAt(0).toUpperCase()}
-        </Txt>
-      )}
-    </View>
-  );
+  return <AuraAvatar uri={member.avatarUrl} name={member.displayName ?? member.username} size={size} radius={size / 2} signature={member.signature} tier={member.contributionTier} />;
 }
 
 /**

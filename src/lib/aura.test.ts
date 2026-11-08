@@ -51,3 +51,12 @@ describe('tierOfBadges', () => {
     expect(tierOfBadges(null)).toBe(0);
   });
 });
+
+describe('compactAura', () => {
+  it('garde l’essentiel et retire ce qui déborde', async () => {
+    const { compactAura } = await import('./aura');
+    const full = resolveAura(null, 8)!;
+    expect(compactAura(full)).toMatchObject({ orbit: 2, comets: 0, risers: 0, frame: false, aurora: false, rays: false, twinkles: 2 });
+    expect(compactAura(null)).toBeNull();
+  });
+});

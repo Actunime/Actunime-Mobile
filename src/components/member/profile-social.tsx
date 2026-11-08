@@ -5,12 +5,12 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { openMedia } from '@/components/media-row';
 import { SectionCard } from '@/components/media/detail-parts';
+import { AuraAvatar } from '@/components/member/aura-avatar';
 import { openMember } from '@/components/member/open-member';
 import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
 import { Tw } from '@/constants/theme';
 import { useAffinity, useMemberFriends } from '@/lib/queries';
-import { signatureRing } from '@/lib/signature';
 
 /**
  * Bloc Social d'un profil (`ProfileSocial` du site) : compatibilité avec moi (score, œuvres en commun) et amis du
@@ -56,14 +56,8 @@ export function ProfileSocial({ memberId, isOwner, signedIn, friendsVisible }: R
             </Txt>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
               {friends.map((friend) => (
-                <Pressable key={friend.id} accessibilityRole="button" accessibilityLabel={friend.displayName || friend.username} onPress={() => openMember(friend.username)} style={[styles.avatar, signatureRing(friend.signature)]}>
-                  {friend.avatarUrl ? (
-                    <Image source={{ uri: friend.avatarUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                  ) : (
-                    <Txt size="sm" weight="bold" color={Tw.color.mutedForeground}>
-                      {(friend.displayName || friend.username).slice(0, 1).toUpperCase()}
-                    </Txt>
-                  )}
+                <Pressable key={friend.id} accessibilityRole="button" accessibilityLabel={friend.displayName || friend.username} onPress={() => openMember(friend.username)} style={styles.friend}>
+                  <AuraAvatar uri={friend.avatarUrl} name={friend.displayName || friend.username} size={40} radius={20} signature={friend.signature} tier={friend.contributionTier} />
                 </Pressable>
               ))}
             </ScrollView>
@@ -85,5 +79,5 @@ const styles = StyleSheet.create({
   stack: { gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   poster: { width: 40, height: 56, borderRadius: Tw.radius.md, overflow: 'hidden', backgroundColor: Tw.color.muted },
-  avatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center' },
+  friend: { padding: 6 },
 });
