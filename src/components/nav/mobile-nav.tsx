@@ -12,7 +12,13 @@ import { ThemedText } from '@/components/themed-text';
 import { setReadingChromeHidden, useReadingChromeHidden } from '@/lib/reading-chrome';
 import { Colors, Fonts } from '@/constants/theme';
 import { signOut, useAuth } from '@/lib/auth-store';
+import { useQuery } from '@tanstack/react-query';
+
+import { AvatarAura } from '@/components/member/avatar-aura';
 import { usePalette } from '@/components/theme-context';
+import { api } from '@/lib/api';
+import { compactAura, resolveAura, tierOfBadges } from '@/lib/aura';
+import { signatureRing } from '@/lib/signature';
 import { SOON_OPACITY, showSoon } from '@/lib/soon';
 import { LogoIcon } from './logo-icon';
 import { MEMBER_FAN, MEMBER_TABS, findActiveTabId, isSoonEntry, type IMobileNavItem } from './mobile-nav.config';
@@ -158,6 +164,10 @@ function FanAct({ entry, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanA
 export function MobileNav() {
   const palette = usePalette();
   const { auth } = useAuth();
+  // Ma signature (liseré, aura de palier ou de Soutien) habille aussi le bouton central, comme mon avatar partout ailleurs.
+  const me = useQuery({ queryKey: ['me', 'profile'], queryFn: () => api.getMyProfile(), enabled: !!auth, staleTime: 60_000, retry: false });
+  const myAura = useMemo(() => compactAura(resolveAura(me.data?.signature, tierOfBadges(me.data?.badges))), [me.data]);
+  const myRing = signatureRing(me.data?.signature);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const pathname = usePathname();
@@ -404,6 +414,14 @@ export function MobileNav() {
         {renderTab(MEMBER_TABS[0]!)}
         {renderTab(MEMBER_TABS[1]!)}
         <View style={styles.hub}>
+          {/* Aura derrière le bouton : décor seulement, le geste reste celui du bouton. Éteinte quand l'éventail est ouvert. */}
+          {myAura && !open ? (
+            <View pointerEvents="none" style={styles.fabAura}>
+              <AvatarAura size={FAB_SIZE} radius={FAB_SIZE / 2} aura={myAura} compact>
+                <View style={{ width: FAB_SIZE, height: FAB_SIZE }} />
+              </AvatarAura>
+            </View>
+          ) : null}
           <View
             accessibilityRole="button"
             accessibilityLabel={open ? (inSubmenu ? 'Retour' : 'Fermer les actions') : 'Ouvrir les actions rapides'}
@@ -414,7 +432,7 @@ export function MobileNav() {
             onResponderMove={onMove}
             onResponderRelease={onRelease}
             onResponderTerminate={onTerminate}
-            style={[styles.fab, open && styles.fabOpen, open && styles.fabHidden]}
+            style={[styles.fab, !open && myRing && { borderColor: myRing.borderColor }, open && styles.fabOpen, open && styles.fabHidden]}
           >
             {inSubmenu ? (
               <View style={styles.fabBack}>
@@ -535,6 +553,7 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: 'rgba(0, 153, 255, 0.16)' },
   tabLabel: { fontFamily: Fonts.medium, fontSize: 12, color: Colors.textSecondary },
   hub: { width: 96, height: 48 },
+  fabAura: { position: 'absolute', bottom: 2, left: (96 - FAB_SIZE) / 2, width: FAB_SIZE, height: FAB_SIZE },
   fab: {
     position: 'absolute',
     bottom: 2,
