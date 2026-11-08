@@ -1,6 +1,6 @@
 import type { IMemberSignature } from '@actunime/types';
 
-import { alpha } from '@/constants/theme';
+import { alpha, Tw } from '@/constants/theme';
 
 type ISignature = IMemberSignature | null | undefined;
 
@@ -20,8 +20,14 @@ export function signatureRing(signature: ISignature): { borderColor: string; bor
   return color ? { borderColor: color, borderWidth: 2 } : undefined;
 }
 
+/** Mélange `top` (part `amount`) sur `base`, deux couleurs `#rrggbb` : fond opaque, la carte garde son relief. */
+function mix(top: string, base: string, amount: number): string {
+  const channel = (i: number) => Math.round(parseInt(top.slice(i, i + 2), 16) * amount + parseInt(base.slice(i, i + 2), 16) * (1 - amount));
+  return `rgb(${channel(1)}, ${channel(3)}, ${channel(5)})`;
+}
+
 /** Teinte d'une carte de membre : bordure et fond légers à la couleur principale (ou d'accent) du membre. */
 export function signatureCardTint(signature: ISignature): { borderColor: string; backgroundColor: string } | undefined {
   const tint = safe(signature?.primaryColor) ?? safe(signature?.accentColor);
-  return tint ? { borderColor: alpha(tint, 0.45), backgroundColor: alpha(tint, 0.1) } : undefined;
+  return tint ? { borderColor: alpha(tint, 0.45), backgroundColor: mix(tint, Tw.color.card, 0.12) } : undefined;
 }
