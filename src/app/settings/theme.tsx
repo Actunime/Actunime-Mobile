@@ -1,7 +1,8 @@
 import { perkUnlockLabel, SupporterPerkObj, type IMemberAuraIntensity, type IMemberAuraStyle, type ISupporterPerk } from '@actunime/types';
 import { APPEARANCE_PRESET_COLORS, THEME_PRESETS, type IMemberAppearanceBody } from '@actunime/validations';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Lock } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import { Lock, Minus, Plus } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Switch, TextInput, View } from 'react-native';
 
@@ -14,10 +15,13 @@ import { PaletteProvider, ThemeBackdrop, useMyAppearance, usePalette } from '@/c
 import { Txt } from '@/components/tw';
 import { Tw } from '@/constants/theme';
 import { resolveAura } from '@/lib/aura';
-import { appearanceIssues, appearanceToSignature, applyPreset, blockedReason, COLOR_FIELDS, isDraftDirty, normalizeHex, SITE_THEME_COLORS, setThemeColor, type IColorKey } from '@/lib/appearance-edit';
+import { appearanceIssues, appearanceToSignature, applyPreset, backgroundFor, blockedReason, COLOR_FIELDS, isDraftDirty, normalizeHex, SITE_THEME_COLORS, setThemeColor, stepBlur, stepOverlay, type IColorKey } from '@/lib/appearance-edit';
+import { pickImage } from '@/lib/image-picker';
 import { billingApi } from '@/lib/billing';
 import { paletteFromAppearance } from '@/lib/palette';
 import { setThemeDraft, setThemePref, useThemeState } from '@/lib/theme-store';
+
+const VEIL_COLORS = ['#000000', '#0b1020', '#1a0010', '#001a0e', '#ffffff'];
 
 const AURA_STYLES: { value: IMemberAuraStyle; label: string }[] = [
   { value: 'tier', label: 'Palier' },
@@ -91,6 +95,26 @@ function Toggle({ label, hint, value, onChange }: Readonly<{ label: string; hint
         ) : null}
       </View>
       <Switch value={value} onValueChange={onChange} trackColor={{ true: Tw.color.primary, false: Tw.color.input }} thumbColor="#ffffff" />
+    </View>
+  );
+}
+
+/** Réglage numérique par pas : « − valeur + ». */
+function Stepper({ label, value, onMinus, onPlus }: Readonly<{ label: string; value: string; onMinus: () => void; onPlus: () => void }>) {
+  return (
+    <View style={styles.toggle}>
+      <Txt size="sm" weight="medium" style={styles.flex}>
+        {label}
+      </Txt>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${label} : moins`} onPress={onMinus} style={styles.step}>
+        <Minus size={18} color={Tw.color.foreground} />
+      </Pressable>
+      <Txt size="sm" weight="semibold" tabular style={styles.stepValue}>
+        {value}
+      </Txt>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${label} : plus`} onPress={onPlus} style={styles.step}>
+        <Plus size={18} color={Tw.color.foreground} />
+      </Pressable>
     </View>
   );
 }
@@ -178,6 +202,8 @@ export default function ThemeSettings() {
   const { applyOwnTheme, showProfileThemes } = useThemeState();
   const [draft, setDraft] = useState<IMemberAppearanceBody | null>(null);
   const [livePreview, setLivePreview] = useState(true);
+  const [bgBusy, setBgBusy] = useState(false);
+  const [bgError, setBgError] = useState<string | null>(null);
   const data = query.data;
 
   useEffect(() => {
@@ -192,7 +218,9 @@ export default function ThemeSettings() {
   useEffect(() => () => setThemeDraft(null), []);
 
   const perks = data?.perks;
-  const issues = useMemo(() => (draft ? appearanceIssues(draft, perks) : {}), [draft, perks]);
+  // Cellules de couleur de l'image enregistrée : la lisibilité se mesure ici sans pouvoir lire l'image.
+  const samples = draft?.background?.imageUrl && draft.background.imageUrl === data?.appearance.background?.imageUrl ? data?.backdropSamples : null;
+  const issues = useMemo(() => (draft ? appearanceIssues(draft, perks, samples) : {}), [draft, perks, samples]);
   const save = useMutation({
     mutationFn: (value: IMemberAppearanceBody) => billingApi.saveAppearance(value),
     onSuccess: (saved) => {
@@ -220,6 +248,21 @@ export default function ThemeSettings() {
   const reason = blockedReason(draft, perks, data.isSupporter);
   const valid = Object.keys(issues).length === 0;
   const update = <K extends keyof IMemberAppearanceBody>(key: K, value: IMemberAppearanceBody[K]) => setDraft({ ...draft, [key]: value });
+  // Image de fond : envoyée sur Actunime avec l'avantage thème, sinon simple essai sur le téléphone (jamais envoyé).
+  const chooseBackground = async () => {
+    setBgError(null);
+    setBgBusy(true);
+    try {
+      const file = await pickImage('BACKGROUND');
+      if (!file) return;
+      const url = perks?.themeAdvanced ? (await billingApi.uploadBackground(file)).url : file;
+      setDraft({ ...draft, background: backgroundFor(url, draft.background) });
+    } catch (error) {
+      setBgError(errorMessage(error));
+    } finally {
+      setBgBusy(false);
+    }
+  };
   const aura = draft.aura ?? { source: 'theme' as const, profile: true };
   const setAura = (patch: Partial<NonNullable<IMemberAppearanceBody['aura']>>) => update('aura', { ...aura, ...patch });
   const setEffect = (patch: Partial<IMemberAppearanceBody['effects']>) => update('effects', { ...draft.effects, ...patch });
@@ -295,11 +338,31 @@ export default function ThemeSettings() {
         <Toggle label="Apparition en fondu" value={draft.effects.entryTransition} onChange={(value) => setEffect({ entryTransition: value })} />
       </Section>
 
-      <Section title="Image de fond" hint="Choisir une image se fait depuis le site pour l’instant ; ici tu peux la retirer." perk="themeAdvanced" unlocked={!!perks?.themeAdvanced}>
-        <Txt size="sm" color={Tw.color.mutedForeground}>
-          {draft.background ? 'Une image de fond est active.' : 'Aucune image de fond.'}
-        </Txt>
-        {draft.background ? <Button label="Retirer l’image de fond" variant="outline" onPress={() => update('background', null)} /> : null}
+      <Section title="Image de fond" hint={`Derrière toute l’app, avec un voile pour garder le texte lisible. WebP, PNG ou JPEG, 10 Mo maximum.${perks?.themeAdvanced ? '' : ' Essai local : l’image reste sur ton téléphone et n’est pas envoyée.'}`} perk="themeAdvanced" unlocked={!!perks?.themeAdvanced}>
+        {draft.background ? <Image source={{ uri: draft.background.imageUrl }} style={styles.bgPreview} contentFit="cover" blurRadius={draft.background.blur} /> : null}
+        <Button label={bgBusy ? 'Envoi…' : draft.background ? 'Changer l’image' : 'Choisir une image'} variant="outline" disabled={bgBusy} onPress={() => void chooseBackground()} />
+        {bgError ? <StatusNote tone="error">{bgError}</StatusNote> : null}
+        {draft.background ? (
+          <>
+            <Stepper label="Flou" value={`${draft.background.blur} px`} onMinus={() => update('background', { ...draft.background!, blur: stepBlur(draft.background!.blur, -1) })} onPlus={() => update('background', { ...draft.background!, blur: stepBlur(draft.background!.blur, 1) })} />
+            <Stepper label="Opacité du voile" value={`${Math.round(draft.background.overlay * 100)} %`} onMinus={() => update('background', { ...draft.background!, overlay: stepOverlay(draft.background!.overlay, -1) })} onPlus={() => update('background', { ...draft.background!, overlay: stepOverlay(draft.background!.overlay, 1) })} />
+            <Txt size="xs" weight="medium" color={Tw.color.mutedForeground}>
+              Couleur du voile
+            </Txt>
+            <View style={styles.swatches}>
+              {VEIL_COLORS.map((color) => (
+                <Pressable key={color} accessibilityRole="button" accessibilityLabel={`Voile ${color}`} onPress={() => update('background', { ...draft.background!, overlayColor: color })} style={[styles.swatch, { backgroundColor: color }, (draft.background!.overlayColor ?? '#000000') === color && styles.swatchOn]} />
+              ))}
+            </View>
+            <Toggle label="Image fixe" hint="Elle ne défile pas avec la page." value={draft.background.fixed} onChange={(value) => update('background', { ...draft.background!, fixed: value })} />
+            <Txt size="xs" weight="medium" color={Tw.color.mutedForeground}>
+              Où l’afficher
+            </Txt>
+            <Choice value={draft.background.scope} options={[{ value: 'profile', label: 'Mon profil' }, { value: 'page', label: 'Toute l’app' }]} onChange={(value) => update('background', { ...draft.background!, scope: value })} />
+            <Button label="Retirer l’image de fond" variant="outline" onPress={() => update('background', null)} />
+          </>
+        ) : null}
+        {issues.background ? <StatusNote tone="error">{issues.background}</StatusNote> : null}
       </Section>
 
       {!valid ? <StatusNote tone="error">Corrige les couleurs signalées pour enregistrer.</StatusNote> : null}
@@ -328,6 +391,9 @@ const styles = StyleSheet.create({
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   swatch: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: 'transparent' },
   swatchOn: { borderColor: '#ffffff' },
+  bgPreview: { width: '100%', aspectRatio: 2.5, borderRadius: Tw.radius.lg },
+  step: { width: 40, height: 40, borderRadius: 20, backgroundColor: Tw.color.input, alignItems: 'center', justifyContent: 'center' },
+  stepValue: { minWidth: 56, textAlign: 'center' },
   preview: { borderRadius: Tw.radius.xl, padding: 16, gap: 12, overflow: 'hidden' },
   previewCard: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, paddingLeft: 24, borderRadius: Tw.radius.xl, borderWidth: 1 },
 });

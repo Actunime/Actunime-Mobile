@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_MEMBER_APPEARANCE, THEME_PRESETS, type IMemberAppearanceBody } from '@actunime/validations';
 
-import { appearanceIssues, applyPreset, blockedReason, customizesSignature, isDraftDirty, normalizeHex, setThemeColor } from './appearance-edit';
+import { appearanceIssues, applyPreset, backgroundFor, stepBlur, stepOverlay, blockedReason, customizesSignature, isDraftDirty, normalizeHex, setThemeColor } from './appearance-edit';
 
 const base = DEFAULT_MEMBER_APPEARANCE as IMemberAppearanceBody;
 const noPerks = { signature: false, theme: false, themeAdvanced: false, animatedMedia: false, hideSponsored: false };
@@ -46,5 +46,21 @@ describe('édition', () => {
     expect(normalizeHex('FFAA00')).toBe('#ffaa00');
     expect(normalizeHex('#abc')).toBe('#aabbcc');
     expect(normalizeHex('zz')).toBeNull();
+  });
+});
+
+describe('image de fond', () => {
+  it('reprend les réglages d’avant ou les défauts du site', () => {
+    expect(backgroundFor('https://x/a.jpg', null)).toEqual({ imageUrl: 'https://x/a.jpg', blur: 0, overlay: 0.5, fixed: true, scope: 'page' });
+    expect(backgroundFor('https://x/b.jpg', { imageUrl: 'https://x/a.jpg', blur: 6, overlay: 0.3, fixed: false, scope: 'profile', overlayColor: '#112233' })).toMatchObject({ blur: 6, overlay: 0.3, fixed: false, scope: 'profile', overlayColor: '#112233' });
+  });
+
+  it('borne le flou et le voile', () => {
+    expect(stepBlur(20, 1)).toBe(20);
+    expect(stepBlur(0, -1)).toBe(0);
+    expect(stepBlur(4, 1)).toBe(6);
+    expect(stepOverlay(0.9, 1)).toBe(0.9);
+    expect(stepOverlay(0.5, -1)).toBe(0.4);
+    expect(stepOverlay(0, -1)).toBe(0);
   });
 });

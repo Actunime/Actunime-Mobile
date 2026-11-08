@@ -202,6 +202,15 @@ export const api = {
     return body(await client().profile.update(data));
   },
 
+  /** Remplace ma photo de profil ou ma bannière (`PUT /members/profile/image`, data URL base64). */
+  async updateMyImage(type: 'AVATAR' | 'BANNER', file: string) {
+    return body(await client().profile.updateImage({ file, type } as never));
+  },
+
+  async deleteMyImage(type: 'AVATAR' | 'BANNER') {
+    return body(await client().profile.deleteImage({ type } as never));
+  },
+
   async getMyPrivacy() {
     return body(await client().members.getMyPrivacy());
   },

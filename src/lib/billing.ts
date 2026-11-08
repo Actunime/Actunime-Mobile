@@ -15,5 +15,7 @@ export const billingApi = {
   cancel: async () => (await http().post<IBillingStatus>('/billing/subscription/cancel')).data,
   resume: async () => (await http().post<IBillingStatus>('/billing/subscription/resume')).data,
   appearance: async () => (await http().get<IAppearanceResponse>('/billing/appearance')).data,
+  /** Envoie l'image de fond du thème (avantage thème) ; rend son adresse sur Actunime. */
+  uploadBackground: async (file: string) => (await http().post<{ id: string; url: string }>('/billing/appearance/background', { file })).data,
   saveAppearance: async (body: IMemberAppearanceBody) => (await http().put<IAppearanceResponse>('/billing/appearance', body)).data,
 };

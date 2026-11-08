@@ -9,6 +9,7 @@ import { openEntity } from '@/components/entity/open-entity';
 import { ListStatusStrip } from '@/components/list/list-controls';
 import { AvatarAura } from '@/components/member/avatar-aura';
 import { BioContent } from '@/components/member/bio-content';
+import { ProfileImageEditButton } from '@/components/member/profile-images';
 import { ProfileSocial } from '@/components/member/profile-social';
 import { PaletteProvider, ThemeBackdrop, usePalette } from '@/components/theme-context';
 import { CardCarousel, InfoRow, PRIMARY_PILL, Pill, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
@@ -76,11 +77,16 @@ function Counter({ value, label }: Readonly<{ value?: number; label: string }>) 
   );
 }
 
-function Header({ member }: Readonly<{ member: IMemberProfile }>) {
+function Header({ member, isOwner }: Readonly<{ member: IMemberProfile; isOwner: boolean }>) {
   const since = memberSince(member.createdAt);
   const badges = (member.badges ?? []).filter((entry) => entry.badge?.label);
   return (
     <View style={styles.identity}>
+      {member.bannerUrl ? (
+        <View style={styles.banner}>
+          <Image source={{ uri: member.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+        </View>
+      ) : null}
       <View style={styles.identityRow}>
         <Avatar member={member} size={72} />
         <View style={styles.identityText}>
@@ -97,6 +103,12 @@ function Header({ member }: Readonly<{ member: IMemberProfile }>) {
           ) : null}
         </View>
       </View>
+      {isOwner ? (
+        <View style={styles.counters}>
+          <ProfileImageEditButton type="AVATAR" label="Ma photo" />
+          <ProfileImageEditButton type="BANNER" label="Ma bannière" />
+        </View>
+      ) : null}
       <View style={styles.counters}>
         <Counter value={member.friendsCount} label="amis" />
         <Counter value={member.followersCount} label="abonnés" />
@@ -254,7 +266,7 @@ export function MemberScreen({ username, initialTab = 'profil' }: Readonly<{ use
   const header = (
     <View>
       <View style={styles.topBack}>{back}</View>
-      <Header member={member} />
+      <Header member={member} isOwner={isOwner} />
       {!isOwner && auth ? <MemberActions memberId={member.id} username={member.username} displayName={member.displayName} /> : null}
       <Tabs tabs={tabs} active={tab} onChange={(next) => { setTab(next); setStatus('ALL'); }} />
       {isList ? (
@@ -452,6 +464,7 @@ const styles = StyleSheet.create({
   },
   missing: { alignItems: 'center', gap: 12, padding: ScreenGutter, paddingTop: 48 },
   themeRoot: { flex: 1 },
+  banner: { width: '100%', aspectRatio: 2.5, borderRadius: Tw.radius.lg, overflow: 'hidden', backgroundColor: Tw.color.muted },
   identity: { paddingHorizontal: ScreenGutter, gap: 16 },
   identityRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   identityText: { flex: 1, gap: 2 },

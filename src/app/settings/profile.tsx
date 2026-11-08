@@ -4,13 +4,14 @@ import { StyleSheet, TextInput } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Field } from '@/components/form-fields';
+import { ProfileImageField } from '@/components/member/profile-images';
 import { SettingsCard, SettingsPage, StatusNote } from '@/components/settings/settings-ui';
 import { ErrorState, Loading } from '@/components/states';
 import { Colors, Fonts, Radius, Spacing, Tw } from '@/constants/theme';
 import { api } from '@/lib/api';
 import { errorMessage } from '@/components/states';
 
-/** Profil (`settings/profile` du site) : nom affiché et présentation. L'image de profil se change depuis le site. */
+/** Profil (`settings/profile` du site) : photo, bannière, nom affiché et présentation. */
 export default function ProfileSettings() {
   const client = useQueryClient();
   const profile = useQuery({ queryKey: ['me', 'profile'], queryFn: () => api.getMyProfile() });
@@ -40,6 +41,11 @@ export default function ProfileSettings() {
       ) : profile.isError ? (
         <ErrorState error={profile.error} onRetry={() => void profile.refetch()} />
       ) : (
+        <>
+        <SettingsCard>
+          <ProfileImageField type="AVATAR" uri={profile.data.avatarUrl} />
+          <ProfileImageField type="BANNER" uri={profile.data.bannerUrl} />
+        </SettingsCard>
         <SettingsCard>
           <Field label="Nom affiché" hint={`@${profile.data.username}`}>
             <TextInput value={displayName} onChangeText={setDisplayName} maxLength={40} style={styles.input} placeholderTextColor={Colors.textSecondary} />
@@ -51,6 +57,7 @@ export default function ProfileSettings() {
           {save.isError ? <StatusNote tone="error">{errorMessage(save.error)}</StatusNote> : null}
           <Button label={save.isPending ? 'Enregistrement…' : 'Enregistrer'} disabled={!changed || !displayName.trim() || save.isPending} onPress={() => save.mutate()} />
         </SettingsCard>
+        </>
       )}
     </SettingsPage>
   );
