@@ -1,5 +1,7 @@
 import Svg, { Defs, LinearGradient, Mask, Path, Rect, Stop } from 'react-native-svg';
 
+import { usePalette } from '@/components/theme-context';
+import { mixColors } from '@/lib/palette';
 import { LOGO_ICONS, LOGO_ICON_RIBBON, type ILogoIconShape, type LogoIconName } from './logo-icons.data';
 
 /** Couleurs du logo (`--logo-sky`, `--logo-blue`, `--logo-ribbon` du site). */
@@ -19,12 +21,18 @@ interface ILogoIconProps {
 /** Icône du jeu dessiné sur le logo (corps en dégradé + ruban plein, séparés par une réserve). Les ids sont propres à chaque `Svg`. */
 export function LogoIcon({ name, size = 24, hot = false }: Readonly<ILogoIconProps>) {
   const shape = LOGO_ICONS[name] as ILogoIconShape;
+  const palette = usePalette();
+  // Le jeu d'icônes prend la couleur principale du thème (comme `--logo-sky/-blue/-ribbon` du site) ; sans thème, celles du logo.
+  const primary = palette.primary.startsWith('#') ? palette.primary : null;
+  const sky = !palette.isDefault && primary ? mixColors('#ffffff', primary, 0.3) : SKY;
+  const blue = !palette.isDefault && primary ? primary : BLUE;
+  const ribbon = !palette.isDefault && primary ? mixColors(primary, palette.background.startsWith('#') ? palette.background : '#000616', 0.65) : RIBBON;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Defs>
         <LinearGradient id="grad" gradientUnits="userSpaceOnUse" x1="4" y1="2" x2="20" y2="22">
-          <Stop offset="0" stopColor={SKY} />
-          <Stop offset="1" stopColor={BLUE} />
+          <Stop offset="0" stopColor={sky} />
+          <Stop offset="1" stopColor={blue} />
         </LinearGradient>
         <Mask id="cut" maskUnits="userSpaceOnUse" x="-2" y="-2" width="28" height="28">
           <Rect x="-2" y="-2" width="28" height="28" fill="#fff" />
@@ -37,7 +45,7 @@ export function LogoIcon({ name, size = 24, hot = false }: Readonly<ILogoIconPro
         fill={hot ? HOT_BODY : 'url(#grad)'}
         mask="url(#cut)"
       />
-      <Path d={LOGO_ICON_RIBBON} fill={hot ? HOT_RIBBON : RIBBON} />
+      <Path d={LOGO_ICON_RIBBON} fill={hot ? HOT_RIBBON : ribbon} />
     </Svg>
   );
 }

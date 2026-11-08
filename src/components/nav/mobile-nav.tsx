@@ -10,7 +10,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { Pressable } from '@/components/tap';
 import { ThemedText } from '@/components/themed-text';
 import { setReadingChromeHidden, useReadingChromeHidden } from '@/lib/reading-chrome';
-import { Colors, Fonts } from '@/constants/theme';
+import { Colors, Fonts, alpha } from '@/constants/theme';
 import { signOut, useAuth } from '@/lib/auth-store';
 import { useQuery } from '@tanstack/react-query';
 
@@ -109,6 +109,8 @@ interface IFanActProps {
 
 /** Une action de l'éventail : sort du centre du bouton avec un léger décalage entre voisines (`mobile-nav-pop`). */
 function FanAct({ entry, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanActProps>) {
+  const palette = usePalette();
+  const themed = !palette.isDefault;
   // page du site pas encore reprise dans l'app : grisée, un appui dit « bientôt »
   const soon = isSoonEntry(entry);
   const t = useRef(new Animated.Value(0)).current;
@@ -137,8 +139,11 @@ function FanAct({ entry, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanA
         onPress={onPress}
         style={[
           styles.act,
+          themed && { backgroundColor: palette.muted },
           !soon && styles.actAccent,
+          !soon && themed && { borderColor: palette.primary },
           hot && styles.actHot,
+          hot && themed && { backgroundColor: palette.primary },
           hot && { transform: [{ scale: 1.22 }] },
           soon && { opacity: SOON_OPACITY },
         ]}
@@ -398,7 +403,7 @@ export function MobileNav() {
         onPress={() => openTarget(tab)}
         // Pas d'ondulation grise : elle ressemble à l'onglet actif. Le toucher se lit par l'opacité.
         android_ripple={{ color: 'transparent' }}
-        style={({ pressed }) => [styles.tab, active && styles.tabActive, pressed && styles.tabPressed]}
+        style={({ pressed }) => [styles.tab, active && styles.tabActive, active && !palette.isDefault && { backgroundColor: alpha(palette.primary, 0.16) }, pressed && styles.tabPressed]}
       >
         <LogoIcon name={tab.icon} size={24} />
         <Text style={[styles.tabLabel, !palette.isDefault && { color: palette.mutedForeground }, active && { color: palette.primary }]} numberOfLines={1}>
@@ -432,11 +437,11 @@ export function MobileNav() {
             onResponderMove={onMove}
             onResponderRelease={onRelease}
             onResponderTerminate={onTerminate}
-            style={[styles.fab, !open && myRing && { borderColor: myRing.borderColor }, open && styles.fabOpen, open && styles.fabHidden]}
+            style={[styles.fab, !palette.isDefault && { borderColor: palette.primary, backgroundColor: palette.muted }, !open && myRing && { borderColor: myRing.borderColor }, open && styles.fabOpen, open && !palette.isDefault && { borderColor: palette.primary }, open && styles.fabHidden]}
           >
             {inSubmenu ? (
-              <View style={styles.fabBack}>
-                <Ionicons name="chevron-back" size={30} color={Colors.primaryForeground} />
+              <View style={[styles.fabBack, !palette.isDefault && { backgroundColor: palette.primary }]}>
+                <Ionicons name="chevron-back" size={30} color={palette.primaryForeground} />
               </View>
             ) : open ? (
               <HubLogo />
@@ -473,6 +478,7 @@ export function MobileNav() {
                   pointerEvents="none"
                   style={[
                     styles.ray,
+                    !palette.isDefault && { backgroundColor: palette.primary },
                     {
                       left: hubX,
                       top: hubY - 1.5,
@@ -516,6 +522,7 @@ export function MobileNav() {
                     style={[
                       styles.label,
                       hotIndex === index && styles.labelHot,
+                      hotIndex === index && !palette.isDefault && { backgroundColor: palette.primary },
                       center && size
                         ? { left: hubX + center.x - size.w / 2, top: hubY + center.y - size.h / 2, opacity: 1 }
                         : { left: 0, top: 0, opacity: 0 },
@@ -527,7 +534,7 @@ export function MobileNav() {
               })}
               {inSubmenu ? (
                 <View pointerEvents="none" style={[styles.titleWrap, { left: 0, right: 0, top: hubY + titleY }]}>
-                  <View style={styles.title}>
+                  <View style={[styles.title, !palette.isDefault && { backgroundColor: palette.primary }]}>
                     <Text style={styles.titleText}>{trail.map((step) => step.label).join(' › ')}</Text>
                   </View>
                 </View>
