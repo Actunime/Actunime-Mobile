@@ -45,14 +45,22 @@ export function RecommendSheet({ open, onClose, kind, mediaId, title }: Readonly
   const list = friends.data?.friends ?? [];
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={`Recommander « ${title} »`}>
-      <View style={styles.stack}>
-        {send.isSuccess ? (
-          <>
-            <StatusNote tone="success">Recommandation envoyée.</StatusNote>
-            <Button label="Fermer" onPress={onClose} />
-          </>
-        ) : (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={`Recommander « ${title} »`}
+      // Le bouton et les messages restent en bas, visibles : une erreur ne doit jamais pousser « Envoyer » hors de l'écran.
+      footer={
+        <View style={styles.footer}>
+          {send.isSuccess ? <StatusNote tone="success">Recommandation envoyée.</StatusNote> : null}
+          {problem ? <StatusNote tone="error">{problem}</StatusNote> : null}
+          {send.isError ? <StatusNote tone="error">{recommendationError(send.error)}</StatusNote> : null}
+          {send.isSuccess ? <Button label="Fermer" onPress={onClose} /> : <Button label={send.isPending ? 'Envoi…' : 'Envoyer'} disabled={send.isPending || list.length === 0} onPress={submit} />}
+        </View>
+      }
+    >
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.stack}>
+        {send.isSuccess ? null : (
           <>
             <Field label="À quel ami ?">
               {me.isPending || friends.isPending ? (
@@ -87,12 +95,9 @@ export function RecommendSheet({ open, onClose, kind, mediaId, title }: Readonly
             <Field label="Un mot (facultatif)" hint={`${message.length} / ${RECOMMENDATION_MESSAGE_MAX}`}>
               <TextInput value={message} onChangeText={setMessage} maxLength={RECOMMENDATION_MESSAGE_MAX} multiline style={styles.input} placeholder="Dis-lui ce que tu en as aimé" placeholderTextColor={Colors.textSecondary} />
             </Field>
-            {problem ? <StatusNote tone="error">{problem}</StatusNote> : null}
-            {send.isError ? <StatusNote tone="error">{recommendationError(send.error)}</StatusNote> : null}
-            <Button label={send.isPending ? 'Envoi…' : 'Envoyer'} disabled={send.isPending || list.length === 0} onPress={submit} />
           </>
         )}
-      </View>
+      </ScrollView>
     </BottomSheet>
   );
 }
@@ -100,6 +105,7 @@ export function RecommendSheet({ open, onClose, kind, mediaId, title }: Readonly
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   stack: { gap: Spacing.three, padding: Spacing.three },
+  footer: { flex: 1, gap: Spacing.two },
   friends: { maxHeight: 220 },
   friend: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: 8, borderRadius: Tw.radius.lg },
   friendOn: { backgroundColor: Tw.color.input },
