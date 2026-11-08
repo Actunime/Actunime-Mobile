@@ -83,7 +83,7 @@ const CONTRIBUTE = item('contribute', 'Contribuer', 'pencil', {
 
 const SETTINGS = item('settings', 'Paramètres', 'settings', {
   children: [
-    item('settings-profile', 'Profil', 'user', { native: '/settings/profile' }),
+    item('settings-profile', 'Éditer', 'user', { native: '/settings/profile' }),
     item('settings-notifications', 'Notifications', 'bell', { native: '/settings/notifications' }),
     item('settings-lists', 'Import / export', 'transfer', { path: '/settings/list' }),
     item('settings-social', 'Social', 'community', {

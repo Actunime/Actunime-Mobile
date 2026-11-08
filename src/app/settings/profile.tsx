@@ -35,7 +35,7 @@ export default function ProfileSettings() {
   const changed = profile.data ? displayName.trim() !== (profile.data.displayName ?? '') || description.trim() !== (profile.data.description ?? '') : false;
 
   return (
-    <SettingsPage title="Profil" description="Ce que les autres membres voient en haut de ton profil.">
+    <SettingsPage title="Modifier mon profil" description="Ce que les autres membres voient en haut de ton profil.">
       {profile.isPending ? (
         <Loading />
       ) : profile.isError ? (

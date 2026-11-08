@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { ArrowLeft, BarChart3, BookOpen, Heart, Lock, Tv, UserX, Users, type LucideIcon } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
@@ -7,6 +7,7 @@ import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react
 import { MediaDetailedCard } from '@/components/cards/media-cards';
 import { openEntity } from '@/components/entity/open-entity';
 import { ListStatusStrip } from '@/components/list/list-controls';
+import { Button } from '@/components/button';
 import { AvatarAura } from '@/components/member/avatar-aura';
 import { BioContent } from '@/components/member/bio-content';
 import { ProfileImageEditButton } from '@/components/member/profile-images';
@@ -104,10 +105,20 @@ function Header({ member, isOwner }: Readonly<{ member: IMemberProfile; isOwner:
         </View>
       </View>
       {isOwner ? (
-        <View style={styles.counters}>
-          <ProfileImageEditButton type="AVATAR" label="Ma photo" />
-          <ProfileImageEditButton type="BANNER" label="Ma bannière" />
-        </View>
+        <>
+          <View style={styles.counters}>
+            <ProfileImageEditButton type="AVATAR" label="Ma photo" />
+            <ProfileImageEditButton type="BANNER" label="Ma bannière" />
+          </View>
+          <View style={styles.ownerActions}>
+            <View style={styles.flex}>
+              <Button label="Modifier mon profil" variant="outline" onPress={() => router.push('/settings/profile' as Href)} />
+            </View>
+            <View style={styles.flex}>
+              <Button label="Thème & signature" variant="outline" onPress={() => router.push('/settings/theme' as Href)} />
+            </View>
+          </View>
+        </>
       ) : null}
       <View style={styles.counters}>
         <Counter value={member.friendsCount} label="amis" />
@@ -464,6 +475,7 @@ const styles = StyleSheet.create({
   },
   missing: { alignItems: 'center', gap: 12, padding: ScreenGutter, paddingTop: 48 },
   themeRoot: { flex: 1 },
+  ownerActions: { flexDirection: 'row', gap: 8 },
   banner: { width: '100%', aspectRatio: 2.5, borderRadius: Tw.radius.lg, overflow: 'hidden', backgroundColor: Tw.color.muted },
   identity: { paddingHorizontal: ScreenGutter, gap: 16 },
   identityRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
