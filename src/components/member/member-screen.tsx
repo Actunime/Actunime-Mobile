@@ -30,6 +30,7 @@ import {
   type MemberTab,
 } from '@/lib/member';
 import { progressLabel } from '@/lib/media';
+import { signatureNameColor, signatureRing } from '@/lib/signature';
 import { useMemberFavorites, useMemberList, useMemberProfile, useMemberStats } from '@/lib/queries';
 
 const TAB_ICONS: Record<MemberTab, LucideIcon> = { profil: Users, animes: Tv, mangas: BookOpen, favoris: Heart, stats: BarChart3 };
@@ -39,7 +40,7 @@ const mediaOf = (entry: IListEntry): IMedia | null => (entry.media ? entry.media
 function Avatar({ member, size }: Readonly<{ member: IMemberProfile; size: number }>) {
   const initial = (member.displayName ?? member.username).slice(0, 1).toUpperCase();
   return (
-    <View style={[styles.avatar, { width: size, height: size, borderRadius: Tw.radius.lg }]}>
+    <View style={[styles.avatar, { width: size, height: size, borderRadius: Tw.radius.lg }, signatureRing(member.signature)]}>
       {member.avatarUrl ? (
         <Image source={{ uri: member.avatarUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
       ) : (
@@ -72,7 +73,7 @@ function Header({ member }: Readonly<{ member: IMemberProfile }>) {
       <View style={styles.identityRow}>
         <Avatar member={member} size={72} />
         <View style={styles.identityText}>
-          <Txt size="xl" weight="bold" numberOfLines={2}>
+          <Txt size="xl" weight="bold" numberOfLines={2} color={signatureNameColor(member.signature)}>
             {member.displayName ?? member.username}
           </Txt>
           <Txt size="sm" color={Tw.color.mutedForeground}>

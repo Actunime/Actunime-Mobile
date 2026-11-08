@@ -11,6 +11,7 @@ import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
 import { Colors, Fonts, Radius, Spacing, Tw } from '@/constants/theme';
 import { api } from '@/lib/api';
+import { signatureCardTint, signatureNameColor, signatureRing } from '@/lib/signature';
 
 /** Annuaire des membres (`/membres` du site) : recherche par pseudo, un appui ouvre le profil public dans l'app. */
 export default function MembersScreen() {
@@ -42,12 +43,12 @@ export default function MembersScreen() {
       ) : (
         <View style={styles.list}>
           {items.map((member) => (
-            <Pressable key={member.id} accessibilityRole="button" onPress={() => openMember(member.username)} style={styles.row}>
-              <View style={styles.avatar}>
+            <Pressable key={member.id} accessibilityRole="button" onPress={() => openMember(member.username)} style={[styles.row, signatureCardTint(member.signature)]}>
+              <View style={[styles.avatar, signatureRing(member.signature)]}>
                 {member.avatarUrl ? <Image source={{ uri: member.avatarUrl }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <Txt weight="bold">{(member.displayName ?? member.username).slice(0, 1).toUpperCase()}</Txt>}
               </View>
               <View style={styles.flex}>
-                <Txt size="sm" weight="semibold" numberOfLines={1}>
+                <Txt size="sm" weight="semibold" numberOfLines={1} color={signatureNameColor(member.signature)}>
                   {member.displayName ?? member.username}
                 </Txt>
                 <Txt size="xs" color={Tw.color.mutedForeground}>
