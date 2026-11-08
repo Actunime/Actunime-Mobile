@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { plannedStatus, recommendationBody, recommendationError, recommendationProblem, recommendationSender, recommendationTitle, type IRecommendation } from './recommendations';
+import { isAlreadyInList, plannedStatus, recommendationBody, recommendationError, recommendationProblem, recommendationSender, recommendationTitle, type IRecommendation } from './recommendations';
 
 const base = { toId: 'f1', mediaId: 'm1', mediaType: 'Anime' as const, reason: 'STORY' as const, message: '' };
 
@@ -27,6 +27,11 @@ describe('affichage', () => {
     expect(recommendationSender(rec)).toBe('ami');
     expect(plannedStatus('Anime')).toBe('PLAN_TO_WATCH');
     expect(plannedStatus('Manga')).toBe('PLAN_TO_READ');
+  });
+  it('reconnaît une œuvre déjà dans la liste', () => {
+    expect(isAlreadyInList(new Error('Ce média est déjà dans votre liste'))).toBe(true);
+    expect(isAlreadyInList(new Error('HTTP 500'))).toBe(false);
+    expect(isAlreadyInList('x')).toBe(false);
   });
   it('garde un message d’API lisible', () => {
     expect(recommendationError(new Error('Quota atteint : 10 par jour'))).toBe('Quota atteint : 10 par jour');

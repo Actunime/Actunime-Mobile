@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Bookmark, Clock, X } from 'lucide-react-native';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { openMedia } from '@/components/media-row';
@@ -10,7 +11,8 @@ import { Txt } from '@/components/tw';
 import { Tw } from '@/constants/theme';
 import { api } from '@/lib/api';
 import { useSaveEntry } from '@/lib/queries';
-import { plannedStatus, RECOMMENDATION_REASONS, recommendationPoster, recommendationSender, recommendationTitle, type IRecommendation, type IRecommendationAnswer } from '@/lib/recommendations';
+import { errorMessage } from '@/components/states';
+import { isAlreadyInList, plannedStatus, RECOMMENDATION_REASONS, recommendationPoster, recommendationSender, recommendationTitle, type IRecommendation, type IRecommendationAnswer } from '@/lib/recommendations';
 import { signatureNameColor } from '@/lib/signature';
 import { Pill } from '@/components/media/detail-parts';
 
@@ -29,9 +31,19 @@ function RecommendationCard({ rec }: Readonly<{ rec: IRecommendation }>) {
   const poster = recommendationPoster(rec);
   const busy = respond.isPending || save.isPending;
   // « Ma liste » ajoute d'abord l'œuvre (à voir / à lire), puis répond : la réponse « ajoutée » ne se dit qu'une fois l'ajout fait.
+  const [failure, setFailure] = useState<string | null>(null);
   const addToList = async () => {
-    await save.mutateAsync({ mediaId: rec.mediaId, mediaType: rec.mediaType, entry: null, fields: { status: plannedStatus(rec.mediaType) }, update: {} });
-    respond.mutate('ACCEPTED');
+    setFailure(null);
+    try {
+      try {
+        await save.mutateAsync({ mediaId: rec.mediaId, mediaType: rec.mediaType, entry: null, fields: { status: plannedStatus(rec.mediaType) }, update: {} });
+      } catch (error) {
+        if (!isAlreadyInList(error)) throw error;
+      }
+      await respond.mutateAsync('ACCEPTED');
+    } catch (error) {
+      setFailure(errorMessage(error));
+    }
   };
   return (
     <View style={styles.card}>
@@ -57,6 +69,11 @@ function RecommendationCard({ rec }: Readonly<{ rec: IRecommendation }>) {
         {rec.message ? (
           <Txt size="sm" color={Tw.color.mutedForeground} style={styles.message}>
             « {rec.message} »
+          </Txt>
+        ) : null}
+        {failure || respond.isError ? (
+          <Txt size="xs" color={Tw.color.destructive}>
+            {failure ?? errorMessage(respond.error)}
           </Txt>
         ) : null}
         <View style={styles.actions}>

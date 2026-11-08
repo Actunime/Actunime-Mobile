@@ -71,6 +71,9 @@ export function recommendationBody(input: IRecommendationCreate) {
 /** Statut d'ajout à la liste quand j'accepte une recommandation. */
 export const plannedStatus = (mediaType: 'Anime' | 'Manga') => (mediaType === 'Anime' ? 'PLAN_TO_WATCH' : 'PLAN_TO_READ') as 'PLAN_TO_WATCH' | 'PLAN_TO_READ';
 
+/** L'œuvre est déjà dans ma liste : l'ajout n'est plus à faire, la réponse « ajoutée » reste vraie. */
+export const isAlreadyInList = (error: unknown): boolean => error instanceof Error && /déjà dans (votre|ta) liste/i.test(error.message);
+
 export const recommendationTitle = (rec: IRecommendation): string => rec.media?.title?.normal ?? rec.media?.title?.original ?? 'Fiche';
 export const recommendationSender = (rec: IRecommendation): string => rec.from?.displayName || rec.from?.username || 'Un ami';
 export const recommendationPoster = (rec: IRecommendation): string | undefined => (typeof rec.media?.image === 'string' ? rec.media.image : undefined);
