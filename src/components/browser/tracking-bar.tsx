@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, PanResponder, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, BackHandler, PanResponder, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Pressable } from '@/components/tap';
 import { Button } from '@/components/button';
@@ -203,6 +203,18 @@ export function TrackingBar(props: ITrackingBarProps) {
     tracking.progress >=
       ((tracking.detection.kind === 'manga' ? tracking.detection.chapter : tracking.detection.episode) ?? 0);
 
+  // Réduit : une œuvre ou un site mis de côté se range dans le seul logo, le reste en pastille.
+  const reducedMode: BarMode = tracking.kind === 'skipped' || tracking.kind === 'ignored' ? 'icon' : 'pill';
+
+  useEffect(() => {
+    if (mode !== 'panel') return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setMode(reducedMode);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [mode, reducedMode]);
+
   if (mode === 'icon') return <DraggableBubble onPress={() => setMode('pill')} />;
 
   if (mode === 'pill') {
@@ -231,6 +243,8 @@ export function TrackingBar(props: ITrackingBarProps) {
 
   return (
     <View pointerEvents="box-none" style={styles.overlay}>
+      {/* Un appui en dehors du panneau (ou le retour du téléphone) le réduit : il ne reste pas posé sur la page. */}
+      <Pressable accessibilityRole="button" accessibilityLabel="Réduire le suivi" onPress={() => setMode(reducedMode)} style={StyleSheet.absoluteFill} />
       <ThemedView type="backgroundElement" style={styles.bar}>
         <Pressable accessibilityRole="button" onPress={() => setMode('pill')} style={styles.header}>
           <Image source={require('../../../assets/images/logo.png')} style={styles.logo} contentFit="contain" />
