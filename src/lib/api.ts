@@ -217,6 +217,19 @@ export const api = {
     return (await client().getHttp().post<IRecommendation>('/recommendations', input)).data;
   },
 
+  /**
+   * Cette API connaît-elle les recommandations ? Une instance plus ancienne (beta avant déploiement) répond 404 : le
+   * bouton « Recommander » reste alors masqué plutôt que d'échouer à l'envoi.
+   */
+  async recommendationsAvailable(): Promise<boolean> {
+    try {
+      await client().getHttp().get('/recommendations/pending-count');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
   /** Recommandations reçues, par défaut celles qui attendent une réponse. */
   async getReceivedRecommendations(status: IRecommendationStatus = 'PENDING') {
     return (await client().getHttp().post<{ results: IRecommendation[]; total?: number }>('/recommendations/received', { status, limit: 20 })).data;

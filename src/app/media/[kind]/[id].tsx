@@ -65,6 +65,7 @@ import {
   useMetadataNames,
   useMyEntries,
   useRelations,
+  useRecommendationsAvailable,
   useToggleFavorite,
 } from '@/lib/queries';
 import { signatureNameColor } from '@/lib/signature';
@@ -125,6 +126,7 @@ export default function MediaScreen() {
   const [tabsOpen, setTabsOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [recommendOpen, setRecommendOpen] = useState(false);
+  const recommendations = useRecommendationsAvailable();
   const insets = useSafeAreaInsets();
   const scroll = useRef<ScrollView>(null);
   // voile sous la barre d'état dès que le contenu défile dessous (sinon l'heure et les icônes se mêlent au texte)
@@ -405,7 +407,7 @@ export default function MediaScreen() {
           </Pressable>
           <View style={styles.icons}>
             <IconButton icon={Pencil} label="Modifier" onPress={() => router.push(`/propose/${kind}/${id}` as Href)} />
-            <IconButton icon={Send} label="Recommander" onPress={() => setRecommendOpen(true)} />
+            {recommendations.data ? <IconButton icon={Send} label="Recommander" onPress={() => setRecommendOpen(true)} /> : null}
             <IconButton icon={Share2} label="Partager" onPress={() => Share.share({ message: `${mediaTitle(data)} — ${WEB_URL}${sitePath}` }).catch(() => undefined)} />
             <Pressable
               accessibilityRole="button"

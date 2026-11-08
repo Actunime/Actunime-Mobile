@@ -87,6 +87,9 @@ export const useAffinity = (memberId: string | undefined, enabled: boolean) =>
 export const useMemberFriends = (memberId: string | undefined, enabled: boolean) =>
   useQuery({ queryKey: ['member', memberId, 'friends-preview'], queryFn: () => api.getMemberFriends(memberId!), enabled: enabled && !!memberId, retry: false, staleTime: FIVE_MINUTES });
 
+/** Les recommandations existent-elles sur l'API jointe ? (voir `api.recommendationsAvailable`) */
+export const useRecommendationsAvailable = () => useQuery({ queryKey: ['recommendations', 'available'], queryFn: api.recommendationsAvailable, staleTime: 10 * 60_000, retry: false });
+
 export const useMemberStats = (username: string, enabled = true) =>
   useQuery({ queryKey: ['member', username, 'stats'], queryFn: () => api.getMemberStats(username), enabled: enabled && !!username });
 
