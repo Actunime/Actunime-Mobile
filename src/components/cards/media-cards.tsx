@@ -5,6 +5,7 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Sheen } from '@/components/ui/sheen';
 import { Pressable } from '@/components/tap';
+import { openMember } from '@/components/member/open-member';
 import { ListEntryBand } from '@/components/cards/list-entry-band';
 import { Txt } from '@/components/tw';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -195,17 +196,27 @@ export function FriendsPill({ entry, kind }: Readonly<{ entry: IListEntry; kind:
               friend.status === 'COMPLETED' || friend.status.startsWith('PLAN') || !done ? null : `${kind === 'anime' ? 'Ép.' : 'Ch.'} ${done}`;
             return (
               <View key={friend.memberId} style={styles.friendRow}>
-                <FriendAvatar friend={friend} size={32} />
-                <View style={styles.flex}>
-                  <Txt size="sm" numberOfLines={1} color={signatureNameColor(friend.signature)}>
-                    {nameOf(friend)}
-                  </Txt>
-                  {progress ? (
-                    <Txt size="xs" tabular color={Tw.color.mutedForeground}>
-                      {progress}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Profil de ${nameOf(friend)}`}
+                  onPress={() => {
+                    setOpen(false);
+                    openMember(friend.username);
+                  }}
+                  style={styles.friendWho}
+                >
+                  <FriendAvatar friend={friend} size={32} />
+                  <View style={styles.flex}>
+                    <Txt size="sm" numberOfLines={1} color={signatureNameColor(friend.signature)}>
+                      {nameOf(friend)}
                     </Txt>
-                  ) : null}
-                </View>
+                    {progress ? (
+                      <Txt size="xs" tabular color={Tw.color.mutedForeground}>
+                        {progress}
+                      </Txt>
+                    ) : null}
+                  </View>
+                </Pressable>
                 <View style={[styles.statusPill, { backgroundColor: LIST_STATUS_BAR[friend.status] }]}>
                   <Txt size="11" color="#fff">
                     {STATUS_LABELS[friend.status]}
@@ -593,6 +604,7 @@ const styles = StyleSheet.create({
   statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   friendScore: { width: 32, textAlign: 'right' },
   friendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, paddingVertical: 6 },
+  friendWho: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
   friendScoreCol: { width: 56, alignItems: 'flex-end' },
   friendsFooter: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', columnGap: 12, borderTopWidth: 1, borderColor: Tw.color.border, paddingHorizontal: 4, paddingTop: 8, marginTop: 4 },
 });

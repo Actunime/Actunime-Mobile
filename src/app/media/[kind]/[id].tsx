@@ -542,10 +542,12 @@ export default function MediaScreen() {
             ) : (
               friendEntries.slice(0, 6).map((e) => (
                 <View key={e.member.id} style={styles.friendRow}>
-                  <MemberAvatar member={e.member} size={32} />
-                  <Txt size="sm" style={styles.flex} numberOfLines={1} color={signatureNameColor(e.member.signature)}>
-                    {e.member.displayName ?? e.member.username}
-                  </Txt>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Profil de ${e.member.displayName ?? e.member.username}`} onPress={() => openMember(e.member.username)} style={styles.friendWho}>
+                    <MemberAvatar member={e.member} size={32} />
+                    <Txt size="sm" style={styles.flex} numberOfLines={1} color={signatureNameColor(e.member.signature)}>
+                      {e.member.displayName ?? e.member.username}
+                    </Txt>
+                  </Pressable>
                   <View style={[styles.statusPill, { backgroundColor: LIST_STATUS_BAR[e.status] }]}>
                     <Txt size="11" color="#fff">
                       {STATUS_LABELS[e.status]}
@@ -810,6 +812,7 @@ const styles = StyleSheet.create({
   trailer: { width: '100%', aspectRatio: 16 / 9, borderRadius: Tw.radius.lg, overflow: 'hidden', backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center' },
   play: { width: 64, height: 44, borderRadius: 12, backgroundColor: 'rgba(255, 0, 0, 0.85)', alignItems: 'center', justifyContent: 'center' },
   friendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
+  friendWho: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
   statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   communityBody: { gap: 16 },
   bar: { flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: Tw.color.muted },
