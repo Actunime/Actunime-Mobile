@@ -12,7 +12,7 @@ import { AvatarAura } from '@/components/member/avatar-aura';
 import { BioContent } from '@/components/member/bio-content';
 import { ProfileImageEditButton } from '@/components/member/profile-images';
 import { ProfileSocial } from '@/components/member/profile-social';
-import { PaletteProvider, ThemeBackdrop, usePalette } from '@/components/theme-context';
+import { PaletteProvider, ThemeBackdrop, useOwnAppearance, usePalette } from '@/components/theme-context';
 import { CardCarousel, InfoRow, PRIMARY_PILL, Pill, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
 import { openMedia } from '@/components/media-row';
 import { Screen } from '@/components/screen';
@@ -218,7 +218,10 @@ export function MemberScreen({ username, initialTab = 'profil' }: Readonly<{ use
   const member = profile.data?.member;
   // Thème du membre visité (E132) : sa palette habille son profil, sauf si je les ai coupés dans mes réglages.
   const { showProfileThemes } = useThemeState();
-  const palette = useMemo(() => paletteFromAppearance(showProfileThemes ? member?.appearance : null, 'profile'), [showProfileThemes, member?.appearance]);
+  // Sur mon propre profil, c'est mon thème (brouillon d'aperçu compris) : le profil public peut ne pas l'avoir encore.
+  const ownAppearance = useOwnAppearance();
+  const shownAppearance = profile.data?.isOwnProfile ? (ownAppearance ?? member?.appearance) : showProfileThemes ? member?.appearance : null;
+  const palette = useMemo(() => paletteFromAppearance(shownAppearance, 'profile'), [shownAppearance]);
   const visibility = profile.data?.visibility ?? { profileVisible: true, listsVisible: true, activityVisible: true };
   const isOwner = profile.data?.isOwnProfile ?? auth?.user.username === username;
   const tabs = visibleTabs(visibility, isOwner);

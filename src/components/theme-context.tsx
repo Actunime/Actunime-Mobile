@@ -40,11 +40,15 @@ export function ThemeBackdrop({ palette }: Readonly<{ palette: IPalette }>) {
  * Applique à toute l'app, pour le membre connecté, son propre thème : celui qu'il a enregistré (s'il y a droit et
  * qu'il ne l'a pas coupé), ou son brouillon pendant qu'il l'édite. Le thème d'un profil visité prime sur ce profil.
  */
-export function OwnThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
+export function useOwnAppearance() {
   const { data } = useMyAppearance();
   const { applyOwnTheme, draft } = useThemeState();
   const saved = data?.perks.signature && applyOwnTheme ? data.appearance : null;
-  const shown = draft ?? saved;
+  return draft ?? saved;
+}
+
+export function OwnThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
+  const shown = useOwnAppearance();
   const palette = useMemo(() => paletteFromAppearance(shown, 'site'), [shown]);
   return (
     <PaletteContext.Provider value={palette}>
