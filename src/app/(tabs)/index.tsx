@@ -8,6 +8,7 @@ import { Pressable } from '@/components/tap';
 import { Button } from '@/components/button';
 import { EntryCard } from '@/components/cards/entry-card';
 import { MediaRow } from '@/components/media-row';
+import { usePalette } from '@/components/theme-context';
 import { ReceivedRecommendations } from '@/components/recommendations/received-recommendations';
 import { Screen } from '@/components/screen';
 import { ErrorState } from '@/components/states';
@@ -51,6 +52,7 @@ function Tile({ value, label, warn }: Readonly<{ value: string | number; label: 
 
 /** Mon suivi : page d'ouverture du membre (retard, planning de la semaine, répartition), port de `/suivi` du site. */
 export default function SuiviScreen() {
+  const palette = usePalette();
   const { auth } = useAuth();
   const client = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
@@ -163,7 +165,7 @@ export default function SuiviScreen() {
                     accessibilityRole="button"
                     accessibilityState={{ selected: index === selectedDay }}
                     onPress={() => setSelectedDay(index)}
-                    style={[styles.day, index === selectedDay && styles.daySelected]}
+                    style={[styles.day, !palette.isDefault && { backgroundColor: palette.card }, index === selectedDay && styles.daySelected, index === selectedDay && !palette.isDefault && { backgroundColor: palette.input }]}
                   >
                     <ThemedText type="small" themeColor={index === selectedDay ? 'primary' : 'textSecondary'}>
                       {index === 0 ? "Auj." : shortDay(entry.date)}
