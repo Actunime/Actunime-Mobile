@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { ArrowLeft, BarChart3, BookOpen, Heart, Lock, Tv, UserX, Users, type LucideIcon } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
 
 import { MediaDetailedCard } from '@/components/cards/media-cards';
@@ -12,7 +12,7 @@ import { AvatarAura } from '@/components/member/avatar-aura';
 import { BioContent } from '@/components/member/bio-content';
 import { ProfileImageEditButton } from '@/components/member/profile-images';
 import { ProfileSocial } from '@/components/member/profile-social';
-import { PaletteProvider, ThemeBackdrop, useOwnAppearance, usePalette } from '@/components/theme-context';
+import { PaletteProvider, ThemeBackdrop, useOwnAppearance, useOwnColorTable, usePalette } from '@/components/theme-context';
 import { CardCarousel, InfoRow, PRIMARY_PILL, Pill, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
 import { openMedia } from '@/components/media-row';
 import { Screen } from '@/components/screen';
@@ -37,6 +37,7 @@ import {
 } from '@/lib/member';
 import { progressLabel } from '@/lib/media';
 import { resolveAura, tierOfBadges } from '@/lib/aura';
+import { installColorRemap, remapTable } from '@/lib/color-remap';
 import { paletteFromAppearance } from '@/lib/palette';
 import { signatureNameColor, signatureRing } from '@/lib/signature';
 import { useThemeState } from '@/lib/theme-store';
@@ -222,6 +223,13 @@ export function MemberScreen({ username, initialTab = 'profil' }: Readonly<{ use
   const ownAppearance = useOwnAppearance();
   const shownAppearance = profile.data?.isOwnProfile ? (ownAppearance ?? member?.appearance) : showProfileThemes ? member?.appearance : null;
   const palette = useMemo(() => paletteFromAppearance(shownAppearance, 'profile'), [shownAppearance]);
+  // Couleurs de la charte écrites en dur : sur le profil d'un autre membre, elles prennent SON thème le temps de l'affichage
+  // (ou la charte s'il n'en a pas), puis reviennent au mien en quittant l'écran.
+  const ownTable = useOwnColorTable();
+  const isOwnProfile = !!profile.data?.isOwnProfile;
+  const hereTable = useMemo(() => (isOwnProfile ? ownTable : remapTable(palette)), [isOwnProfile, ownTable, palette]);
+  installColorRemap(hereTable);
+  useEffect(() => () => installColorRemap(ownTable), [ownTable]);
   const visibility = profile.data?.visibility ?? { profileVisible: true, listsVisible: true, activityVisible: true };
   const isOwner = profile.data?.isOwnProfile ?? auth?.user.username === username;
   const tabs = visibleTabs(visibility, isOwner);
