@@ -39,6 +39,7 @@ import type { IReportCreateBody, IAnimePaginationBody, IListEntryCreateBody, IMa
 
 import { ApiError } from './api-error';
 import { api as client } from './client';
+import type { IRecommendation, IRecommendationAnswer, IRecommendationStatus, recommendationBody } from './recommendations';
 import type { ITokenResponse } from './session';
 
 export { ApiError };
@@ -209,6 +210,20 @@ export const api = {
 
   async deleteMyImage(type: 'AVATAR' | 'BANNER') {
     return body(await client().profile.deleteImage({ type } as never));
+  },
+
+  /** Recommander une fiche à un ami (`POST /recommendations`). Routes hors de `@actunime/client` publié : axios authentifié. */
+  async recommend(input: ReturnType<typeof recommendationBody>) {
+    return (await client().getHttp().post<IRecommendation>('/recommendations', input)).data;
+  },
+
+  /** Recommandations reçues, par défaut celles qui attendent une réponse. */
+  async getReceivedRecommendations(status: IRecommendationStatus = 'PENDING') {
+    return (await client().getHttp().post<{ results: IRecommendation[]; total?: number }>('/recommendations/received', { status, limit: 20 })).data;
+  },
+
+  async respondToRecommendation(id: string, status: IRecommendationAnswer) {
+    return (await client().getHttp().post<IRecommendation>(`/recommendations/${id}/respond`, { status })).data;
   },
 
   async getMyPrivacy() {

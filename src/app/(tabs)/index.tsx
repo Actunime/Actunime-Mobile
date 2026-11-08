@@ -8,6 +8,7 @@ import { Pressable } from '@/components/tap';
 import { Button } from '@/components/button';
 import { EntryCard } from '@/components/cards/entry-card';
 import { MediaRow } from '@/components/media-row';
+import { ReceivedRecommendations } from '@/components/recommendations/received-recommendations';
 import { Screen } from '@/components/screen';
 import { ErrorState } from '@/components/states';
 import { ThemedText } from '@/components/themed-text';
@@ -102,6 +103,7 @@ export default function SuiviScreen() {
       >
         <ThemedText type="title">Mon suivi</ThemedText>
 
+        <ReceivedRecommendations />
         {loading ? (
           <ActivityIndicator color={Colors.primary} />
         ) : error ? (

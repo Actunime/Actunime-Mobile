@@ -21,7 +21,7 @@ import {
   Play,
   PlayCircle,
   Plus,
-  Share2,
+  Send, Share2,
   Star,
   TriangleAlert,
   Tv,
@@ -40,6 +40,7 @@ import { ListEntrySheetTrigger } from '@/components/media/list-button';
 import { openEntity, openMediaRelations } from '@/components/entity/open-entity';
 import { openMember } from '@/components/member/open-member';
 import { SOON_OPACITY, showSoon } from '@/lib/soon';
+import { RecommendSheet } from '@/components/recommendations/recommend-sheet';
 import { ReportSheet } from '@/components/report/report-sheet';
 import { MediaActivitiesSection, MediaEpisodesSection, MediaStatsSection } from '@/components/media/media-extras';
 import { CardCarousel, InfoRow, NewsList, PRIMARY_PILL, Pill, STATUS_PILL, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
@@ -123,6 +124,7 @@ export default function MediaScreen() {
   const [manageOpen, setManageOpen] = useState(false);
   const [tabsOpen, setTabsOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [recommendOpen, setRecommendOpen] = useState(false);
   const insets = useSafeAreaInsets();
   const scroll = useRef<ScrollView>(null);
   // voile sous la barre d'état dès que le contenu défile dessous (sinon l'heure et les icônes se mêlent au texte)
@@ -403,6 +405,7 @@ export default function MediaScreen() {
           </Pressable>
           <View style={styles.icons}>
             <IconButton icon={Pencil} label="Modifier" onPress={() => router.push(`/propose/${kind}/${id}` as Href)} />
+            <IconButton icon={Send} label="Recommander" onPress={() => setRecommendOpen(true)} />
             <IconButton icon={Share2} label="Partager" onPress={() => Share.share({ message: `${mediaTitle(data)} — ${WEB_URL}${sitePath}` }).catch(() => undefined)} />
             <Pressable
               accessibilityRole="button"
@@ -699,6 +702,7 @@ export default function MediaScreen() {
         <View pointerEvents="none" style={[styles.statusVeil, { height: insets.top }]} />
       ) : null}
 
+      <RecommendSheet open={recommendOpen} onClose={() => setRecommendOpen(false)} kind={kind} mediaId={id} title={mediaTitle(data)} />
       <ReportSheet open={reportOpen} onClose={() => setReportOpen(false)} targetId={id} targetType={anime ? 'Anime' : 'Manga'} targetName={mediaTitle(data)} />
 
       <ManageEntry kind={kind} media={data} entry={entry} open={manageOpen} onClose={() => setManageOpen(false)} genres={genres.map((g) => g.name)} hideViewEntity />
