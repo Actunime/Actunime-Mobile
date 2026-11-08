@@ -7,6 +7,7 @@ import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react
 import { MediaDetailedCard } from '@/components/cards/media-cards';
 import { openEntity } from '@/components/entity/open-entity';
 import { ListStatusStrip } from '@/components/list/list-controls';
+import { AvatarAura } from '@/components/member/avatar-aura';
 import { CardCarousel, InfoRow, PRIMARY_PILL, Pill, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
 import { openMedia } from '@/components/media-row';
 import { Screen } from '@/components/screen';
@@ -30,6 +31,7 @@ import {
   type MemberTab,
 } from '@/lib/member';
 import { progressLabel } from '@/lib/media';
+import { resolveAura, tierOfBadges } from '@/lib/aura';
 import { signatureNameColor, signatureRing } from '@/lib/signature';
 import { useMemberFavorites, useMemberList, useMemberProfile, useMemberStats } from '@/lib/queries';
 
@@ -39,16 +41,20 @@ const mediaOf = (entry: IListEntry): IMedia | null => (entry.media ? entry.media
 
 function Avatar({ member, size }: Readonly<{ member: IMemberProfile; size: number }>) {
   const initial = (member.displayName ?? member.username).slice(0, 1).toUpperCase();
+  const radius = member.appearance?.avatarShape === 'circle' ? size / 2 : Tw.radius.lg;
+  const aura = resolveAura(member.signature, tierOfBadges(member.badges));
   return (
-    <View style={[styles.avatar, { width: size, height: size, borderRadius: Tw.radius.lg }, signatureRing(member.signature)]}>
-      {member.avatarUrl ? (
-        <Image source={{ uri: member.avatarUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
-      ) : (
-        <Txt size="xl" weight="bold" color={Tw.color.mutedForeground}>
-          {initial}
-        </Txt>
-      )}
-    </View>
+    <AvatarAura size={size} radius={radius} aura={aura}>
+      <View style={[styles.avatar, { width: size, height: size, borderRadius: radius }, signatureRing(member.signature)]}>
+        {member.avatarUrl ? (
+          <Image source={{ uri: member.avatarUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+        ) : (
+          <Txt size="xl" weight="bold" color={Tw.color.mutedForeground}>
+            {initial}
+          </Txt>
+        )}
+      </View>
+    </AvatarAura>
   );
 }
 
