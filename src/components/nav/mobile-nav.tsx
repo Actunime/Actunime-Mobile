@@ -176,6 +176,8 @@ function MobileNavContent() {
   const { auth } = useAuth();
   // Ma signature (liseré, aura de palier ou de Soutien) habille aussi le bouton central, comme mon avatar partout ailleurs.
   const me = useQuery({ queryKey: ['me', 'profile'], queryFn: () => api.getMyProfile(), enabled: !!auth, staleTime: 60_000, retry: false });
+  // La photo vient du profil à jour (invalidé après un changement), pas de la copie figée dans la session de connexion.
+  const myAvatarUrl = me.data ? (me.data.avatarUrl ?? null) : (auth?.user.avatarUrl ?? null);
   const myAura = useMemo(() => compactAura(resolveAura(me.data?.signature, tierOfBadges(me.data?.badges))), [me.data]);
   const myRing = signatureRing(me.data?.signature);
   const insets = useSafeAreaInsets();
@@ -450,8 +452,8 @@ function MobileNavContent() {
               </View>
             ) : open ? (
               <HubLogo />
-            ) : auth.user.avatarUrl ? (
-              <Image source={{ uri: auth.user.avatarUrl }} style={styles.fabFill} contentFit="cover" />
+            ) : myAvatarUrl ? (
+              <Image source={{ uri: myAvatarUrl }} style={styles.fabFill} contentFit="cover" />
             ) : (
               <View style={styles.fabInitial}>
                 <ThemedText type="subtitle">{name.slice(0, 1).toUpperCase()}</ThemedText>
