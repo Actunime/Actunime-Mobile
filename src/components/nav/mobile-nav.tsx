@@ -15,7 +15,7 @@ import { signOut, useAuth } from '@/lib/auth-store';
 import { useQuery } from '@tanstack/react-query';
 
 import { AvatarAura } from '@/components/member/avatar-aura';
-import { usePalette } from '@/components/theme-context';
+import { usePalette, useThemeEpoch } from '@/components/theme-context';
 import { api } from '@/lib/api';
 import { compactAura, resolveAura, tierOfBadges } from '@/lib/aura';
 import { signatureRing } from '@/lib/signature';
@@ -166,7 +166,12 @@ function FanAct({ entry, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanA
  * pause d'une seconde sur une action à sous-menu ouvre son sous-éventail. Port de `MobileNav` du site (E114) ;
  * la géométrie vient de `radial-layout.ts`, copiée telle quelle.
  */
+/** La navigation se redessine quand le thème change : ses couleurs de la charte écrites en dur reprennent le nouveau thème. */
 export function MobileNav() {
+  return <MobileNavContent key={useThemeEpoch()} />;
+}
+
+function MobileNavContent() {
   const palette = usePalette();
   const { auth } = useAuth();
   // Ma signature (liseré, aura de palier ou de Soutien) habille aussi le bouton central, comme mon avatar partout ailleurs.
