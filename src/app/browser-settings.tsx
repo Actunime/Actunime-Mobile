@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, ScrollView, Share, StyleSheet, Switch, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Screen } from '@/components/screen';
@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors, Floating, ScreenGutter, Spacing } from '@/constants/theme';
 import { EPISODE_THRESHOLDS, setBrowserSetting, useBrowserSettings, type EpisodeEnd, type IBrowserSettings, type StartPage } from '@/lib/browser-settings';
 import { clearHistory } from '@/lib/browsing';
+import { clearDiagnosticLog, formatDiagnosticLog, getDiagnosticEntries, useDiagnosticEntries } from '@/lib/diagnostic-log';
 
 interface IRowProps {
   setting: keyof IBrowserSettings;
@@ -101,6 +102,7 @@ const confirmClear = () =>
 /** Réglages du navigateur : ce que l'app fait pendant la lecture et ce que l'accueil du navigateur affiche. */
 export default function BrowserSettingsScreen() {
   const settings = useBrowserSettings();
+  const journal = useDiagnosticEntries();
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
@@ -190,6 +192,25 @@ export default function BrowserSettingsScreen() {
               value={settings.history}
             />
             <Button label="Effacer l’historique" variant="outline" onPress={confirmClear} />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="subtitle">Diagnostic</ThemedText>
+          <View style={styles.card}>
+            <SettingRow
+              setting="diagnostic"
+              label="Mode diagnostic"
+              hint="Le navigateur note ce qu’il voit et décide : pages, détections, œuvre identifiée, écritures, erreurs. Le journal reste sur le téléphone ; rien n’est envoyé sans ton partage."
+              value={settings.diagnostic}
+            />
+            <ThemedText type="small">{journal.length} événement(s) dans le journal.</ThemedText>
+            <Button
+              label="Copier / partager le journal"
+              variant="outline"
+              onPress={() => Share.share({ message: formatDiagnosticLog(getDiagnosticEntries()) }).catch(() => undefined)}
+            />
+            <Button label="Vider le journal" variant="outline" onPress={clearDiagnosticLog} />
           </View>
         </View>
       </ScrollView>

@@ -16,6 +16,8 @@ const FAKE_PAGE = `
   <body><h1 class="series">Solo Leveling</h1><span class="chap">Chap. 45 / 200</span><p id="other">Texte</p></body>`;
 
 let messages: InPageMessage[];
+// Traces du mode diagnostic, à part : les autres tests ne regardent que les messages de suivi.
+let traces: Extract<InPageMessage, { type: 'debug' }>[];
 
 // Chaque test réinstalle le script : on déconnecte les observateurs du test précédent, sinon ils réagissent
 // aux changements de page du test suivant et postent dans le mauvais tableau de messages.
@@ -37,7 +39,14 @@ async function install() {
   vi.resetModules();
   delete (window as any).__actunime;
   messages = [];
-  (window as any).ReactNativeWebView = { postMessage: (raw: string) => messages.push(JSON.parse(raw)) };
+  traces = [];
+  (window as any).ReactNativeWebView = {
+    postMessage: (raw: string) => {
+      const message = JSON.parse(raw) as InPageMessage;
+      if (message.type === 'debug') traces.push(message);
+      else messages.push(message);
+    },
+  };
   await import('./entry');
 }
 
@@ -63,6 +72,16 @@ describe('script injecté', () => {
     vi.advanceTimersByTime(2000);
 
     expect(messages).toEqual([{ type: 'ready', host: 'manhwa.example', inferredKind: 'manga' }]);
+  });
+
+  it('trace ce qu’il évalue pour le mode diagnostic', async () => {
+    await install();
+    send({ type: 'set-pattern', pattern: null });
+    vi.advanceTimersByTime(10);
+
+    expect(traces.map((t) => t.event)).toEqual(expect.arrayContaining(['script-démarré', 'pattern-reçu', 'évaluation']));
+    const evaluation = traces.find((t) => t.event === 'évaluation');
+    expect(evaluation?.data).toMatchObject({ url: PAGE_URL, result: { title: 'Solo Leveling', ch: 45 } });
   });
 
   it('détecte le chapitre avec les heuristiques génériques', async () => {

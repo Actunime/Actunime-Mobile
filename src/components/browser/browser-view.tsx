@@ -24,6 +24,7 @@ import type { StrategyResult } from '@/detection/core/types';
 import { INJECTED_DETECTION } from '@/detection/injected.generated';
 import { commandScript, parseInPageMessage, type PickedElement } from '@/detection/messages';
 import { clickGuardScript } from './click-guard-script';
+import { logEvent } from '@/lib/diagnostic-log';
 import { resolveAddress } from '@/lib/address';
 import { allowNavigation, isSameSite, matchesClick, siteOf, type IUserClick } from '@/lib/navigation-guard';
 import { nextNumberUrl } from '@/lib/next-chapter';
@@ -163,6 +164,7 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
     (state: WebViewNavigation) => {
       setNavigation({ canGoBack: state.canGoBack, canGoForward: state.canGoForward, loading: state.loading });
       setPageUrl(state.url);
+      logEvent('nav', state.loading ? 'chargement' : 'chargé', { url: state.url, title: state.title, retour: state.canGoBack });
       if (!state.loading) {
         chainOpen.current = false;
         approved.current = null;
@@ -196,6 +198,7 @@ export function BrowserView({ url: initialUrl, onHome, active, tabCount, onOpenT
         chainOpen: chainOpen.current,
         approved: approved.current,
       });
+      if (isTopFrame || !allowed) logEvent('nav', allowed ? 'requête-autorisée' : 'requête-bloquée', { url: request.url, depuis: pageUrlRef.current });
       if (!allowed) {
         if (isTopFrame && siteOf(request.url)) setRefused(request.url);
         return false;

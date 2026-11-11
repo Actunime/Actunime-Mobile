@@ -46,6 +46,16 @@ function post(message: InPageMessage) {
   window.ReactNativeWebView?.postMessage(JSON.stringify(message));
 }
 
+/** Trace pour le mode diagnostic ; l'app l'écarte quand le mode est coupé. */
+function debug(event: string, data?: Record<string, unknown>) {
+  post({ type: 'debug', event, data });
+}
+
+/** Une détection résumée pour le journal. */
+function brief(d: PageDetection | null) {
+  return d ? { src: d.source, kind: d.kind, title: d.title, ch: d.chapter, ep: d.episode, strategy: d.strategy } : null;
+}
+
 /** Numéro de chapitre/épisode lu dans l'URL puis dans le titre, quand le JSON-LD n'en donne pas. */
 function extractNumber(kind: 'anime' | 'manga'): number | undefined {
   const words = kind === 'manga' ? 'chapter|chapitre|chap|ch|scan' : 'episode|épisode|ep|e';
@@ -129,6 +139,7 @@ function learnTitleHint(): void {
   if (isViewerUrl(location.href) || !isSeriesPageUrl(location.href)) return;
   const title = readTitleHint(document);
   if (!title) return;
+  if (titleHint?.title !== title || titleHint.url !== location.href) debug('hint-retenu', { title, url: location.href });
   titleHint = { title, host: location.hostname, url: location.href };
   try {
     sessionStorage.setItem(HINT_KEY, JSON.stringify(titleHint));
@@ -137,12 +148,21 @@ function learnTitleHint(): void {
   }
 }
 
+function debugHint(reason: string, data?: Record<string, unknown>): null {
+  debug('hint-refusé', { reason, ...data });
+  return null;
+}
+
 /** Page de lecture sans titre : le titre retenu sur la série, le numéro du sélecteur de chapitre. */
 function detectFromHint(): PageDetection | null {
-  if (!titleHint || titleHint.host !== location.hostname || location.href === titleHint.url || !isViewerUrl(location.href)) return null;
-  if (!hintApplies(titleHint.url, previousUrl)) return null;
+  if (!isViewerUrl(location.href)) return null;
+  if (!titleHint) return debugHint('pas de titre retenu');
+  if (titleHint.host !== location.hostname || location.href === titleHint.url) return debugHint('titre retenu sans rapport', { hint: titleHint.title });
+  if (!hintApplies(titleHint.url, previousUrl)) {
+    return debugHint('titre retenu écarté : on ne vient pas de la page de la série', { hint: titleHint.title, hintUrl: titleHint.url, previousUrl });
+  }
   const number = numberFromSelectorText(document.body?.innerText ?? '');
-  if (number === undefined) return null;
+  if (number === undefined) return debugHint('numéro introuvable dans le sélecteur de chapitre', { hint: titleHint.title });
   const kind = inferKind();
   return {
     kind,
@@ -208,23 +228,39 @@ if (!window.__actunime) {
   const evaluate = () => {
     timer = null;
     let detection: PageDetection | null;
+    const trace: Record<string, unknown> = { url: location.href, pageTitle: document.title, pattern: pattern?.strategy ?? null };
     if (pattern) {
       detection = detectLearned(pattern);
+      trace.learned = brief(detection);
       if (!detection) {
         if (Date.now() - navigationStartedAt < LEARNED_GRACE_MS) {
           schedule(LEARNED_RETRY_MS);
           return;
         }
-        detection = detectGeneric() ?? detectAuto();
+        detection = detectGeneric();
+        trace.generic = brief(detection);
+        if (!detection) {
+          detection = detectAuto();
+          trace.auto = brief(detection);
+        }
       }
     } else {
-      detection = detectGeneric() ?? detectAuto();
+      detection = detectGeneric();
+      trace.generic = brief(detection);
+      if (!detection) {
+        detection = detectAuto();
+        trace.auto = brief(detection);
+      }
     }
-    if (!detection) detection = detectFromHint();
+    if (!detection) {
+      detection = detectFromHint();
+      trace.hint = brief(detection);
+    }
     if (!detection) learnTitleHint();
     const key = keyOf(detection);
     if (key === lastKey) return;
     lastKey = key;
+    debug('évaluation', { ...trace, result: brief(detection) });
     post({ type: 'detection', detection });
     currentDetection = detection;
     startedKey = null;
@@ -332,6 +368,7 @@ if (!window.__actunime) {
       }
       switch (command.type) {
         case 'set-pattern':
+          debug('pattern-reçu', { pattern: command.pattern ? { strategy: command.pattern.strategy, kind: command.pattern.kind, regex: command.pattern.episodeUrlRegex } : null });
           configured = true;
           pattern = command.pattern;
           schedule(0);
@@ -361,6 +398,7 @@ if (!window.__actunime) {
     if (location.href !== lastUrl) {
       previousUrl = lastUrl;
       lastUrl = location.href;
+      debug('url-changée', { from: previousUrl, to: location.href });
       navigationStartedAt = Date.now();
       lastKey = UNKNOWN; // force à renvoyer l'état de la nouvelle page, y compris « rien détecté »
     }
@@ -412,9 +450,11 @@ if (!window.__actunime) {
   );
   // L'app répond à `ready` par le pattern du site (ou `null`) : c'est lui qui déclenche la première détection.
   post({ type: 'ready', host: location.hostname, inferredKind: inferKind() });
+  debug('script-démarré', { url: location.href, referrer: document.referrer || null, hint: titleHint?.title ?? null });
   // Filet : si l'app ne répond pas (WebView rechargée à froid), on détecte quand même au bout de 3 s.
   setTimeout(() => {
     if (configured) return;
+    debug('filet-3s', { raison: "l'app n'a pas répondu à ready" });
     configured = true;
     schedule(0);
   }, 3000);

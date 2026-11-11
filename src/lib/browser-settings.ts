@@ -29,6 +29,8 @@ export interface IBrowserSettings {
   showResume: boolean;
   showSites: boolean;
   showRecent: boolean;
+  /** Mode diagnostic : le navigateur tient un journal de ce qu'il détecte et décide, à copier pour le relire. */
+  diagnostic: boolean;
 }
 
 export const DEFAULT_BROWSER_SETTINGS: IBrowserSettings = {
@@ -43,6 +45,7 @@ export const DEFAULT_BROWSER_SETTINGS: IBrowserSettings = {
   showResume: true,
   showSites: true,
   showRecent: true,
+  diagnostic: false,
 };
 
 /** Valeurs lues du stockage : seuls les booléens connus sont repris, le reste retombe sur le défaut (versions futures, données abîmées). */

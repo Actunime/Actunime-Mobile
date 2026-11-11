@@ -42,7 +42,9 @@ export type InPageMessage =
   /** Position de lecture : bord atteint (haut, bas) et part de la page défilée. */
   | { type: 'scroll-state'; edge: 'top' | 'middle' | 'bottom'; percent: number }
   /** Réponse à `find-next-link` : lien du chapitre ou de l'épisode suivant, `null` si la page n'en donne pas. */
-  | { type: 'next-link'; href: string | null };
+  | { type: 'next-link'; href: string | null }
+  /** Trace du script pour le mode diagnostic : ce qu'il a regardé et pourquoi il a décidé ainsi. */
+  | { type: 'debug'; event: string; data?: Record<string, unknown> };
 
 /** Commandes de l'app vers le script injecté (`injectJavaScript`). */
 export type InPageCommand =
@@ -54,7 +56,7 @@ export type InPageCommand =
   /** Réglages lus par le script : part de la vidéo (0-1) à atteindre pour signaler la fin d'un épisode. */
   | { type: 'set-options'; episodeThreshold: number };
 
-const MESSAGE_TYPES = ['ready', 'detection', 'progress-reached', 'progress-started', 'strategies', 'picked', 'pick-cancelled', 'scroll-direction', 'scroll-state', 'next-link'];
+const MESSAGE_TYPES = ['ready', 'detection', 'progress-reached', 'progress-started', 'strategies', 'picked', 'pick-cancelled', 'scroll-direction', 'scroll-state', 'next-link', 'debug'];
 
 export function parseInPageMessage(raw: string): InPageMessage | null {
   try {

@@ -6,6 +6,7 @@ import { commandScript, type InPageMessage, type PageDetection } from '@/detecti
 import type { LearnedPattern, StrategyId } from '@/detection/core/types';
 
 import { getBrowserSettings } from './browser-settings';
+import { logEvent } from './diagnostic-log';
 import { progressNotice } from './notices';
 import { getPattern, isHostIgnored, removePattern, savePattern, setHostIgnored } from './patterns';
 import type { IMatch } from './storage';
@@ -48,6 +49,8 @@ function patternFor(detection: Pick<PageDetection, 'host' | 'kind' | 'url'>, str
   };
 }
 
+const briefOf = (d: PageDetection) => ({ src: d.source, kind: d.kind, title: d.title, ch: d.chapter, ep: d.episode, url: d.url });
+
 const numberOf = (d: PageDetection) => (d.kind === 'manga' ? d.chapter : d.episode);
 const unitOf = (d: PageDetection) => (d.kind === 'manga' ? 'chapitre' : 'épisode');
 
@@ -73,6 +76,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
   );
 
   const fail = useCallback((err: unknown) => {
+    logEvent('app', 'erreur', { message: err instanceof Error ? err.message : String(err) });
     setNotice({ tone: 'error', text: err instanceof Error ? err.message : 'Erreur inattendue' });
   }, []);
 
@@ -116,7 +120,12 @@ export function useTracking(webview: RefObject<WebView | null>) {
       setTracking({ kind: 'resolving', detection });
       try {
         const resolution = await resolve(detection);
-        if (!current()) return;
+        if (!current()) return logEvent('app', 'identification-périmée', { title: detection.title });
+        logEvent('app', 'identification', {
+          title: detection.title,
+          match: resolution.match ? { id: resolution.match.id, title: resolution.match.title } : null,
+          candidats: resolution.candidates.slice(0, 5).map((c) => c.title),
+        });
         if (resolution.match) {
           const progress = await progressOf(detection, resolution.match);
           if (!current()) return;
@@ -140,6 +149,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
       if (number === undefined) return setNotice({ tone: 'error', text: `Numéro de ${unitOf(detection)} non détecté` });
       const mine = generation.current;
       try {
+        logEvent('app', 'écriture-progression', { title: detection.title, number, match: match.id });
         const result = await pushProgress(detection, match);
         setNotice({ tone: 'success', text: progressNotice(detection.kind, number, result) });
         const progress = await progressOf(detection, match);
@@ -161,6 +171,12 @@ export function useTracking(webview: RefObject<WebView | null>) {
 
   const onMessage = useCallback(
     async (message: InPageMessage) => {
+      if (message.type === 'debug') return logEvent('page', message.event, message.data);
+      if (message.type === 'ready') logEvent('app', 'ready', { host: message.host, kind: message.inferredKind });
+      else if (message.type === 'detection') logEvent('app', 'détection-reçue', message.detection ? briefOf(message.detection) : { detection: null });
+      else if (message.type === 'progress-started' || message.type === 'progress-reached') {
+        logEvent('app', message.type, { ...briefOf(message.detection), affichée: latest.current ? briefOf(latest.current).title : null });
+      }
       if (message.type === 'ready') {
         // Nouvelle page : plus rien de ce qui se calculait pour la précédente ne doit s'afficher.
         const mine = ++generation.current;
@@ -171,6 +187,7 @@ export function useTracking(webview: RefObject<WebView | null>) {
         const [stored, ignored] = await Promise.all([getPattern(message.host), isHostIgnored(message.host)]);
         if (mine !== generation.current) return;
         setPattern(stored);
+        logEvent('app', 'réglage-site', { host: message.host, pattern: stored?.strategy ?? null, ignoré: ignored });
         if (ignored) return setTracking({ kind: 'ignored' });
         setTracking({ kind: 'idle' });
         send({ type: 'set-pattern', pattern: stored });
@@ -188,18 +205,23 @@ export function useTracking(webview: RefObject<WebView | null>) {
         }
         const detection = message.detection;
         latest.current = detection;
-        if (await isHostIgnored(detection.host)) return;
+        if (await isHostIgnored(detection.host)) return logEvent('app', 'site-ignoré', { host: detection.host });
         // Œuvre mise de côté : ni question, ni écriture dans la liste ; juste de quoi la reprendre.
         const skipped = await skipModeOf(matchKey(detection));
         if (mine !== generation.current) return;
-        if (skipped) return setTracking({ kind: 'skipped', detection, mode: skipped });
+        if (skipped) {
+          logEvent('app', 'œuvre-mise-de-côté', { title: detection.title, mode: skipped });
+          return setTracking({ kind: 'skipped', detection, mode: skipped });
+        }
         await identify(detection);
         return;
       }
 
       // Les messages de progression ne valent que pour la page affichée : une œuvre mise de côté, ou une page déjà
       // quittée, n'écrit rien dans la liste.
-      if ((message.type === 'progress-started' || message.type === 'progress-reached') && !(await progressAllowed(message.detection, latest.current))) return;
+      if ((message.type === 'progress-started' || message.type === 'progress-reached') && !(await progressAllowed(message.detection, latest.current))) {
+        return logEvent('app', 'progression-refusée', { title: message.detection.title, type: message.type });
+      }
 
       if (message.type === 'progress-started') {
         // Lecture réellement entamée : seulement pour une œuvre déjà identifiée, sans rien demander à l'utilisateur.
