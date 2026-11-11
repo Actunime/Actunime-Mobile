@@ -11,7 +11,7 @@ import { applyLearnedPattern } from './core/learned-engine';
 import { detectGenericFromDom, inferKind } from './core/heuristics';
 import { createNextButtonObserver } from './core/next-button';
 import { findNextLink } from './core/next-link';
-import { isViewerUrl, numberFromSelectorText, readTitleHint } from './core/title-hint';
+import { hintApplies, isSeriesPageUrl, isViewerUrl, numberFromSelectorText, readTitleHint } from './core/title-hint';
 import { scrollState } from './core/scroll-state';
 import { createPageCounterObserver } from './core/page-counter';
 import { createScrollObserver } from './core/scroll';
@@ -110,6 +110,9 @@ function detectLearned(pattern: LearnedPattern): PageDetection | null {
   };
 }
 
+/** Page vue juste avant celle-ci : le référent après un chargement complet, l'adresse précédente dans un lecteur SPA. */
+let previousUrl: string | null = document.referrer || null;
+
 const HINT_KEY = '__actunime_title_hint';
 
 /** Titre de la série vu juste avant sur ce site (page de la série), pour les lecteurs qui n'affichent pas le titre. */
@@ -123,7 +126,7 @@ try {
 
 /** Page de série : on retient son titre pour la page de lecture qui suivra. */
 function learnTitleHint(): void {
-  if (isViewerUrl(location.href)) return;
+  if (isViewerUrl(location.href) || !isSeriesPageUrl(location.href)) return;
   const title = readTitleHint(document);
   if (!title) return;
   titleHint = { title, host: location.hostname, url: location.href };
@@ -137,6 +140,7 @@ function learnTitleHint(): void {
 /** Page de lecture sans titre : le titre retenu sur la série, le numéro du sélecteur de chapitre. */
 function detectFromHint(): PageDetection | null {
   if (!titleHint || titleHint.host !== location.hostname || location.href === titleHint.url || !isViewerUrl(location.href)) return null;
+  if (!hintApplies(titleHint.url, previousUrl)) return null;
   const number = numberFromSelectorText(document.body?.innerText ?? '');
   if (number === undefined) return null;
   const kind = inferKind();
@@ -355,6 +359,7 @@ if (!window.__actunime) {
   new MutationObserver(() => {
     // Les lecteurs SPA changent d'URL sans recharger la page : on repart d'un état propre.
     if (location.href !== lastUrl) {
+      previousUrl = lastUrl;
       lastUrl = location.href;
       navigationStartedAt = Date.now();
       lastKey = UNKNOWN; // force à renvoyer l'état de la nouvelle page, y compris « rien détecté »
