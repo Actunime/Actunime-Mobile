@@ -122,7 +122,10 @@ export async function installUpdate(info: IReleaseInfo, path: string): Promise<v
     // « user-action » : Android affiche sa confirmation ; « installed » : l'app est déjà remplacée
     set({ status: 'ready', info, path });
   } catch (error) {
-    set({ status: 'error', message: messageOf(error), info });
+    // Le système refuse l'installation depuis l'app (fréquent sur Xiaomi/HyperOS) : repli sur la page de la release,
+    // où le membre télécharge l'APK et l'installe avec son navigateur.
+    set({ status: 'error', message: `${messageOf(error)} — ouverture de la page de téléchargement.`, info });
+    await openUpdatePage(info);
   }
 }
 
