@@ -20,7 +20,7 @@ export default function SettingsHub() {
         <SettingsLink icon={Bell} label="Notifications" hint="Quoi, dans l’application et sur Discord" onPress={() => go('/settings/notifications')} />
       </SettingsCard>
       <SettingsCard>
-        <SettingsLink icon={Users} label="Amis" hint="Demandes reçues et envoyées" onPress={() => go('/settings/amis')} />
+        <SettingsLink icon={Users} label="Mes amis" hint="Ta liste d’amis, les demandes reçues et envoyées" onPress={() => go('/settings/amis')} />
         <SettingsLink icon={Ban} label="Blocages" hint="Membres que tu as bloqués" onPress={() => go('/settings/blocages')} />
       </SettingsCard>
       <SettingsCard>

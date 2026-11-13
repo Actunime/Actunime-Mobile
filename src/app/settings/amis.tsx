@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Image } from 'expo-image';
+import { router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -15,6 +15,7 @@ import { signatureNameColor } from '@/lib/signature';
 import { AuraAvatar } from '@/components/member/aura-avatar';
 
 type Direction = 'incoming' | 'outgoing';
+type Tab = 'friends' | Direction;
 
 /** L'autre membre d'une demande : l'expéditeur pour une demande reçue, le destinataire pour une demande envoyée. */
 const otherMember = (request: IFriendRequest, direction: Direction) => {
@@ -25,11 +26,16 @@ const otherMember = (request: IFriendRequest, direction: Direction) => {
   return (direction === 'incoming' ? sender : recipient) ?? null;
 };
 
-/** Amis (`settings/amis` du site) : demandes reçues (accepter, refuser) et envoyées (annuler). */
+/** Mes amis : la liste, les demandes reçues (accepter, refuser) et envoyées (annuler), et la recherche d'un membre à ajouter. */
 export default function FriendsSettings() {
   const client = useQueryClient();
-  const [direction, setDirection] = useState<Direction>('incoming');
+  const [tab, setTab] = useState<Tab>('friends');
+  const direction: Direction = tab === 'outgoing' ? 'outgoing' : 'incoming';
+  const me = useQuery({ queryKey: ['me', 'profile'], queryFn: () => api.getMyProfile(), staleTime: 60_000, retry: false });
+  const friends = useQuery({ queryKey: ['friends', 'mine', me.data?.id], queryFn: () => api.getMemberFriends(me.data!.id, 50), enabled: !!me.data?.id });
+  // Les demandes reçues sont chargées même sur l'onglet « Mes amis » : leur nombre s'affiche sur l'onglet « Reçues ».
   const requests = useQuery({ queryKey: ['friendships', direction], queryFn: () => api.listFriendRequests(direction) });
+  const incomingCount = useQuery({ queryKey: ['friendships', 'incoming'], queryFn: () => api.listFriendRequests('incoming') }).data?.results.length ?? 0;
   const answer = useMutation({
     mutationFn: ({ id, action }: { id: string; action: 'accept' | 'reject' | 'cancel' }) => api.answerFriendRequest(id, action),
     onSuccess: () => void client.invalidateQueries({ queryKey: ['friendships'] }),
@@ -37,17 +43,49 @@ export default function FriendsSettings() {
   const rows = requests.data?.results ?? [];
 
   return (
-    <SettingsPage title="Amis" description="Les demandes d’amis que tu as reçues et celles que tu as envoyées.">
+    <SettingsPage title="Mes amis" description="Tes amis, les demandes reçues et envoyées, et la recherche d’un membre à ajouter.">
       <View style={styles.tabs}>
-        {(['incoming', 'outgoing'] as const).map((value) => (
-          <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: direction === value }} onPress={() => setDirection(value)} style={[styles.tab, direction === value && styles.tabSelected]}>
-            <Txt size="sm" weight="medium" color={direction === value ? Tw.color.primaryForeground : Tw.color.mutedForeground}>
-              {value === 'incoming' ? 'Reçues' : 'Envoyées'}
+        {(['friends', 'incoming', 'outgoing'] as const).map((value) => (
+          <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: tab === value }} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabSelected]}>
+            <Txt size="sm" weight="medium" color={tab === value ? Tw.color.primaryForeground : Tw.color.mutedForeground}>
+              {value === 'friends' ? 'Mes amis' : value === 'incoming' ? `Reçues${incomingCount > 0 ? ` (${incomingCount})` : ''}` : 'Envoyées'}
             </Txt>
           </Pressable>
         ))}
       </View>
-      {requests.isPending ? (
+      {tab === 'friends' ? (
+        friends.isError ? (
+          <ErrorState error={friends.error} onRetry={() => void friends.refetch()} />
+        ) : me.isPending || friends.isPending ? (
+          <Loading />
+        ) : (
+          <SettingsCard>
+            {friends.data?.friends.length ? (
+              friends.data.friends.map((friend) => {
+                const name = friend.displayName ?? friend.username;
+                return (
+                  <Pressable key={friend.id} accessibilityRole="button" onPress={() => openMember(friend.username)} style={styles.who}>
+                    <AuraAvatar uri={friend.avatarUrl} name={name} size={44} signature={friend.signature} tier={friend.contributionTier} />
+                    <View style={styles.flex}>
+                      <Txt size="sm" weight="semibold" numberOfLines={1} color={signatureNameColor(friend.signature)}>
+                        {name}
+                      </Txt>
+                      <Txt size="xs" color={Tw.color.mutedForeground}>
+                        @{friend.username}
+                      </Txt>
+                    </View>
+                  </Pressable>
+                );
+              })
+            ) : (
+              <Txt size="sm" color={Tw.color.mutedForeground}>
+                Tu n’as pas encore d’amis.
+              </Txt>
+            )}
+            <Button label="Trouver un membre" variant="outline" onPress={() => router.navigate('/search?kind=member' as Href)} />
+          </SettingsCard>
+        )
+      ) : requests.isPending ? (
         <Loading />
       ) : requests.isError ? (
         <ErrorState error={requests.error} onRetry={() => void requests.refetch()} />
