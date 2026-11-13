@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ENTITY_SECTIONS, entityBadge, entityImage, entityInfoRows, entityName } from './entity';
+import { ENTITY_SECTIONS, entityBadge, entityImage, entityInfoRows, entityName, voiceLine, voicesOfLink } from './entity';
 
 describe('entityName / entityImage', () => {
   it('prend le nom d’origine, ou « Sans nom »', () => {
@@ -56,5 +56,29 @@ describe('ENTITY_SECTIONS', () => {
     expect(ENTITY_SECTIONS.person.map((s) => s.relation)).toEqual(['animes', 'mangas', 'characters', 'tracks']);
     expect(ENTITY_SECTIONS.track.map((s) => s.title)).toEqual(['Diffusée dans', 'Artistes']);
     expect(ENTITY_SECTIONS.company.map((s) => s.relation)).toEqual(['animes', 'mangas']);
+  });
+});
+
+describe('doubleurs d’un personnage dans une œuvre (ADR-026)', () => {
+  const person = (id: string, name: string) => ({ id, data: { name: { original: name }, avatarUrl: `https://img/${id}.webp` } });
+
+  it('préfère les doubleurs du lien à ceux de la fiche', () => {
+    const link = { actors: [person('p1', 'Du lien')], data: { actors: [person('p2', 'De la fiche')] } };
+    expect(voicesOfLink(link).map((voice) => voice.name)).toEqual(['Du lien']);
+  });
+
+  it('se rabat sur la fiche quand le lien n’en porte pas', () => {
+    expect(voicesOfLink({ data: { actors: [person('p2', 'De la fiche')] } }).map((voice) => voice.id)).toEqual(['p2']);
+  });
+
+  it('un lien sans doubleur (liste vide) l’emporte sur la fiche', () => {
+    expect(voicesOfLink({ actors: [], data: { actors: [person('p2', 'De la fiche')] } })).toEqual([]);
+  });
+
+  it('écarte les personnes sans nom chargé et résume sur une ligne', () => {
+    const link = { actors: [{ id: 'x' }, person('p1', 'A'), person('p2', 'B'), person('p3', 'C')] };
+    expect(voicesOfLink(link)).toHaveLength(3);
+    expect(voiceLine(link)).toBe('Voix : A, B…');
+    expect(voiceLine({})).toBeUndefined();
   });
 });

@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Building2, Music, User, type LucideIcon } from 'lucide-react-native';
+import { ArrowLeft, Building2, Mic, Music, User, type LucideIcon } from 'lucide-react-native';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 
 import { openEntity } from '@/components/entity/open-entity';
@@ -12,7 +12,7 @@ import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
 import { Tw, ScreenGutter } from '@/constants/theme';
 import { api, mediaId, type EntityKind, type EntityRelation, type IMediaLink, type IRelated, type MediaKind } from '@/lib/api';
-import { CHARACTER_ROLE_LABELS, COMPANY_TYPE_LABELS, ENTITY_SECTIONS, MEDIA_RELATION_TITLES, TRACK_TYPE_LABELS, entityId, entityImage, entityName } from '@/lib/entity';
+import { CHARACTER_ROLE_LABELS, COMPANY_TYPE_LABELS, ENTITY_SECTIONS, MEDIA_RELATION_TITLES, TRACK_TYPE_LABELS, entityId, entityImage, entityName, voicesOfLink, type IVoice } from '@/lib/entity';
 import { formatLabel, mediaTitle } from '@/lib/media';
 import { useMetadataNames } from '@/lib/queries';
 
@@ -26,6 +26,8 @@ interface IRow {
   subtitle?: string;
   imageUrl?: string | null;
   icon: LucideIcon;
+  /** Doubleurs du personnage dans cette œuvre : chacun mène à sa fiche. */
+  voices?: IVoice[];
   onPress: () => void;
 }
 
@@ -54,6 +56,7 @@ function rowOfMediaLink(what: MediaWhat, link: IMediaLink): IRow | null {
     jobId: what === 'staffs' ? link.job : undefined,
     imageUrl: data.avatarUrl ?? data.coverUrl ?? data.logoUrl ?? null,
     icon: what === 'tracks' ? Music : what === 'companies' ? Building2 : User,
+    voices: what === 'characters' ? voicesOfLink(link) : undefined,
     onPress: () => openEntity(kind, data.id),
   };
 }
@@ -172,6 +175,24 @@ function Row({ row }: Readonly<{ row: IRow }>) {
             {row.subtitle}
           </Txt>
         ) : null}
+        {row.voices?.length ? (
+          <View style={styles.voices}>
+            {row.voices.map((voice) => (
+              <Pressable
+                key={voice.id}
+                accessibilityRole="link"
+                accessibilityLabel={`Voir ${voice.name}`}
+                onPress={() => openEntity('person', voice.id)}
+                style={styles.voice}
+              >
+                <Mic size={12} color={Tw.color.mutedForeground} />
+                <Txt size="xs" numberOfLines={1} style={styles.voiceName}>
+                  {voice.name}
+                </Txt>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -194,5 +215,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, padding: 8, borderRadius: Tw.radius.lg, backgroundColor: Tw.color.card },
   thumb: { width: 48, height: 48, borderRadius: Tw.radius.md, overflow: 'hidden', backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, gap: 2 },
+  voices: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingTop: 4 },
+  voice: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 28, paddingHorizontal: 8, borderRadius: Tw.radius.md, backgroundColor: Tw.color.muted },
+  voiceName: { flexShrink: 1 },
   footer: { paddingVertical: 16 },
 });

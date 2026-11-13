@@ -55,6 +55,7 @@ import type { IMedia, IMediaFollowerEntry, MediaKind } from '@/lib/api';
 import { WEB_URL } from '@/lib/config';
 import { MEDIA_STATUS_LABELS, STATUS_LABELS } from '@/lib/list-form';
 import { LIST_STATUS_BAR } from '@/lib/list-status';
+import { voiceLine } from '@/lib/entity';
 import { ANIME_FORMAT_LABELS, MANGA_FORMAT_LABELS, RELATION_LABELS, SOURCE_LABELS, formatLongDate, formatReleaseDate, linkLabel, mediaTitle, seasonLabel } from '@/lib/media';
 import {
   useIsFavorite,
@@ -260,7 +261,7 @@ export default function MediaScreen() {
         imageUrl: rel.data!.avatarUrl ?? rel.data!.coverUrl,
         subtitle:
           what === 'characters'
-            ? ROLE_LABELS[rel.role ?? ''] ?? rel.role
+            ? [ROLE_LABELS[rel.role ?? ''] ?? rel.role, voiceLine(rel)].filter(Boolean).join(' · ')
             : what === 'staffs'
               ? rel.job !== undefined
                 ? nameOf(rel.job)

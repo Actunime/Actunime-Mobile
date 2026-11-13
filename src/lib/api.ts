@@ -369,7 +369,7 @@ export const api = {
       switch (`${kind}:${relation}`) {
         case 'character:animes': return c.characters.paginateAnimes(id, request);
         case 'character:mangas': return c.characters.paginateMangas(id, request);
-        case 'character:actors': return c.characters.paginateActors(id, request);
+        case 'character:actors': return c.characters.paginateVoices(id, request);
         case 'person:animes': return c.persons.paginateAnimes(id, request);
         case 'person:mangas': return c.persons.paginateMangas(id, request);
         case 'person:characters': return c.persons.paginateCharacters(id, request);

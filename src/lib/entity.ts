@@ -120,3 +120,32 @@ export const MEDIA_RELATION_TITLES: Record<'characters' | 'staffs' | 'tracks' | 
   tracks: 'Musiques',
   companies: 'Sociétés',
 };
+
+export interface IVoice {
+  id: string;
+  name: string;
+  imageUrl?: string | null;
+}
+
+interface IVoiceSource {
+  actors?: { id: string; data?: { name?: { original?: string }; avatarUrl?: string | null } | null }[] | null;
+  data?: { actors?: IVoiceSource['actors'] } | null;
+}
+
+/**
+ * Doubleurs d'un personnage dans une œuvre (ADR-026) : ceux du lien s'il en porte, sinon ceux de la fiche,
+ * comme sur le site. Les personnes sans nom chargé sont écartées.
+ */
+export function voicesOfLink(link: IVoiceSource): IVoice[] {
+  const actors = link.actors ?? link.data?.actors ?? [];
+  return actors.flatMap((actor) =>
+    actor.data?.name?.original ? [{ id: actor.id, name: actor.data.name.original, imageUrl: actor.data.avatarUrl ?? null }] : [],
+  );
+}
+
+/** Une ligne « Voix : A, B » (deux noms au plus) pour les cartes qui n'ont qu'une ligne de sous-titre. */
+export function voiceLine(link: IVoiceSource): string | undefined {
+  const names = voicesOfLink(link).map((voice) => voice.name);
+  if (!names.length) return undefined;
+  return `Voix : ${names.slice(0, 2).join(', ')}${names.length > 2 ? '…' : ''}`;
+}
