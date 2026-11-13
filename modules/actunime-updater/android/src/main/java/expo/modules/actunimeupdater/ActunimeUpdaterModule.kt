@@ -172,7 +172,10 @@ class ActunimeUpdaterModule : Module() {
 
     val installer = appContext.packageManager.packageInstaller
     val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
-    if (Build.VERSION.SDK_INT >= 31) {
+    // Installation sans confirmation seulement si Android la permet vraiment : l'app doit être elle-même
+    // l'installateur d'origine (Android 12+). Sinon (APK posé depuis un navigateur, ADB…), le système avorte
+    // la session avec « INSTALL_FAILED_ABORTED: permission denied » : on laisse alors Android afficher sa confirmation.
+    if (Build.VERSION.SDK_INT >= 31 && installedBySelf(appContext)) {
       params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
     }
     val sessionId = installer.createSession(params)
@@ -192,6 +195,19 @@ class ActunimeUpdaterModule : Module() {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
       )
       session.commit(pending.intentSender)
+    }
+  }
+
+  private fun installedBySelf(ctx: Context): Boolean {
+    return try {
+      val installer = if (Build.VERSION.SDK_INT >= 30) {
+        ctx.packageManager.getInstallSourceInfo(ctx.packageName).installingPackageName
+      } else {
+        @Suppress("DEPRECATION") ctx.packageManager.getInstallerPackageName(ctx.packageName)
+      }
+      installer == ctx.packageName
+    } catch (_: Exception) {
+      false
     }
   }
 
