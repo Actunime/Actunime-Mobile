@@ -2,15 +2,15 @@ import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { ArrowLeft, BarChart3, BookOpen, Heart, Lock, Tv, UserX, Users, type LucideIcon } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
 
 import { MediaDetailedCard } from '@/components/cards/media-cards';
 import { openEntity } from '@/components/entity/open-entity';
 import { ListStatusStrip } from '@/components/list/list-controls';
-import { Button } from '@/components/button';
 import { AvatarAura } from '@/components/member/avatar-aura';
 import { BioContent } from '@/components/member/bio-content';
-import { ProfileImageEditButton } from '@/components/member/profile-images';
 import { ProfileSocial } from '@/components/member/profile-social';
 import { PaletteProvider, ThemeBackdrop, useOwnAppearance, useOwnColorTable, usePalette } from '@/components/theme-context';
 import { CardCarousel, InfoRow, PRIMARY_PILL, Pill, SectionCard, type ICarouselItem } from '@/components/media/detail-parts';
@@ -79,50 +79,55 @@ function Counter({ value, label }: Readonly<{ value?: number; label: string }>) 
   );
 }
 
-function Header({ member, isOwner }: Readonly<{ member: IMemberProfile; isOwner: boolean }>) {
+function Header({ member, back }: Readonly<{ member: IMemberProfile; back: React.ReactNode }>) {
+  const insets = useSafeAreaInsets();
+  const palette = usePalette();
   const since = memberSince(member.createdAt);
   const badges = (member.badges ?? []).filter((entry) => entry.badge?.label);
+  const hasBanner = !!member.bannerUrl;
+  // Sur une bannière, texte clair sur voile sombre ; sans bannière, le fond de la page et ses couleurs habituelles.
+  const nameColor = signatureNameColor(member.signature) ?? (hasBanner ? '#ffffff' : undefined);
+  const subColor = hasBanner ? 'rgba(255,255,255,0.78)' : Tw.color.mutedForeground;
   return (
-    <View style={styles.identity}>
-      {member.bannerUrl ? (
-        <View style={styles.banner}>
-          <Image source={{ uri: member.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
-        </View>
-      ) : null}
-      <View style={styles.identityRow}>
-        <Avatar member={member} size={72} />
-        <View style={styles.identityText}>
-          <Txt size="xl" weight="bold" numberOfLines={2} color={signatureNameColor(member.signature)}>
-            {member.displayName ?? member.username}
-          </Txt>
-          <Txt size="sm" color={Tw.color.mutedForeground}>
-            @{member.username}
-          </Txt>
-          {since ? (
-            <Txt size="xs" color={Tw.color.mutedForeground}>
-              Membre depuis {since}
+    <View>
+      <View style={[styles.hero, { height: insets.top + (hasBanner ? 280 : 210) }]}>
+        {hasBanner ? (
+          <Image source={{ uri: member.bannerUrl ?? undefined }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: alpha(palette.primary, 0.14) }]} />
+        )}
+        {hasBanner ? (
+          <Svg pointerEvents="none" style={StyleSheet.absoluteFill} preserveAspectRatio="none" viewBox="0 0 1 1">
+            <Defs>
+              <LinearGradient id="bannerFade" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor="#000" stopOpacity={0.35} />
+                <Stop offset="0.35" stopColor="#000" stopOpacity={0} />
+                <Stop offset="0.6" stopColor="#000" stopOpacity={0.45} />
+                <Stop offset="1" stopColor="#000" stopOpacity={0.92} />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="1" height="1" fill="url(#bannerFade)" />
+          </Svg>
+        ) : null}
+        <View style={[styles.heroBack, { top: insets.top + 8 }]}>{back}</View>
+        <View style={styles.heroIdentity}>
+          <Avatar member={member} size={88} />
+          <View style={styles.identityText}>
+            <Txt size="xl" weight="bold" numberOfLines={2} color={nameColor}>
+              {member.displayName ?? member.username}
             </Txt>
-          ) : null}
+            <Txt size="sm" color={subColor}>
+              @{member.username}
+            </Txt>
+            {since ? (
+              <Txt size="xs" color={subColor}>
+                Membre depuis {since}
+              </Txt>
+            ) : null}
+          </View>
         </View>
       </View>
-      {isOwner ? (
-        <>
-          <View style={styles.counters}>
-            <ProfileImageEditButton type="AVATAR" label="Ma photo" />
-            <ProfileImageEditButton type="BANNER" label="Ma bannière" />
-          </View>
-          <View style={styles.ownerActions}>
-            <View style={styles.flex}>
-              <Button label="Modifier mon profil" variant="outline" onPress={() => router.push('/settings/profile' as Href)} />
-            </View>
-            <View style={styles.flex}>
-              <Button label="Thème & signature" variant="outline" onPress={() => router.push('/settings/theme' as Href)} />
-            </View>
-          </View>
-          {/* Réglages de l'application : mise à jour, notifications, sécurité, déconnexion. */}
-          <Button label="Paramètres et mise à jour" variant="outline" onPress={() => router.push('/settings' as Href)} />
-        </>
-      ) : null}
+    <View style={styles.identity}>
       <View style={styles.counters}>
         <Counter value={member.friendsCount} label="amis" />
         <Counter value={member.followersCount} label="abonnés" />
@@ -136,6 +141,7 @@ function Header({ member, isOwner }: Readonly<{ member: IMemberProfile; isOwner:
           })}
         </View>
       ) : null}
+    </View>
     </View>
   );
 }
@@ -289,8 +295,7 @@ export function MemberScreen({ username, initialTab = 'profil' }: Readonly<{ use
 
   const header = (
     <View>
-      <View style={styles.topBack}>{back}</View>
-      <Header member={member} isOwner={isOwner} />
+      <Header member={member} back={back} />
       {!isOwner && auth ? <MemberActions memberId={member.id} username={member.username} displayName={member.displayName} /> : null}
       <Tabs tabs={tabs} active={tab} onChange={(next) => { setTab(next); setStatus('ALL'); }} />
       {isList ? (
@@ -426,7 +431,7 @@ export function MemberScreen({ username, initialTab = 'profil' }: Readonly<{ use
     <PaletteProvider palette={palette}>
     <View style={[styles.themeRoot, { backgroundColor: palette.backgroundImage ? '#000000' : palette.background }]}>
     <ThemeBackdrop palette={palette} />
-    <Screen>
+    <Screen edges={[]}>
       <FlatList<IListEntry | IFavoriteTarget>
         data={isList ? (entries as (IListEntry | IFavoriteTarget)[]) : tab === 'favoris' ? favoriteTargets : []}
         keyExtractor={(item, index) => ('kind' in item ? `${item.kind}:${item.id}` : (item.id ?? String(index)))}
@@ -488,10 +493,10 @@ const styles = StyleSheet.create({
   },
   missing: { alignItems: 'center', gap: 12, padding: ScreenGutter, paddingTop: 48 },
   themeRoot: { flex: 1 },
-  ownerActions: { flexDirection: 'row', gap: 8 },
-  banner: { width: '100%', aspectRatio: 2.5, borderRadius: Tw.radius.lg, overflow: 'hidden', backgroundColor: Tw.color.muted },
-  identity: { paddingHorizontal: ScreenGutter, gap: 16 },
-  identityRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  hero: { width: '100%', overflow: 'hidden', justifyContent: 'flex-end' },
+  heroBack: { position: 'absolute', left: ScreenGutter },
+  heroIdentity: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: ScreenGutter, paddingBottom: 16 },
+  identity: { paddingHorizontal: ScreenGutter, paddingTop: 12, gap: 16 },
   identityText: { flex: 1, gap: 2 },
   avatar: { overflow: 'hidden', backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center' },
   counters: { flexDirection: 'row', gap: 24 },
