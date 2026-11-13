@@ -87,6 +87,13 @@ export const useAffinity = (memberId: string | undefined, enabled: boolean) =>
 export const useMemberFriends = (memberId: string | undefined, enabled: boolean) =>
   useQuery({ queryKey: ['member', memberId, 'friends-preview'], queryFn: () => api.getMemberFriends(memberId!), enabled: enabled && !!memberId, retry: false, staleTime: FIVE_MINUTES });
 
+/**
+ * Notifications non lues (demandes d'ami comprises), pour la pastille de la navigation. Même clé que l'écran
+ * Notifications : marquer lu ou répondre à une demande remet la pastille à jour sans attendre.
+ */
+export const useUnreadNotifications = (enabled: boolean): number =>
+  useQuery({ queryKey: ['notifications', 'stats'], queryFn: () => api.notificationStats(), enabled, refetchInterval: 60_000, staleTime: 30_000, retry: false }).data?.unreadCount ?? 0;
+
 /** Les recommandations existent-elles sur l'API jointe ? (voir `api.recommendationsAvailable`) */
 export const useRecommendationsAvailable = () => useQuery({ queryKey: ['recommendations', 'available'], queryFn: api.recommendationsAvailable, staleTime: 10 * 60_000, retry: false });
 

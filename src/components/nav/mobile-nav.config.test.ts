@@ -55,11 +55,24 @@ describe('isSoonEntry', () => {
     expect(isSoonEntry(leaf({ children: [soon, leaf({ native: '/list' })] }))).toBe(false);
   });
 
-  it('dans l’éventail : Agenda, Paramètres et Notifications sont disponibles, À propos ne l’est pas', () => {
-    const byId = (id: string) => all.find((entry) => entry.item.id === id)!.item;
-    expect(isSoonEntry(byId('agenda'))).toBe(false);
-    expect(isSoonEntry(byId('settings'))).toBe(false);
-    expect(isSoonEntry(byId('notifications'))).toBe(false);
-    expect(isSoonEntry(byId('about'))).toBe(true);
+  it('dans l’éventail : aucune entrée « bientôt », aucun renvoi vers le site, un seul niveau de sous-menu', () => {
+    for (const { item, trail } of flattenItems(MEMBER_FAN)) {
+      expect(isSoonEntry(item), item.id).toBe(false);
+      expect(item.path, item.id).toBeUndefined();
+      expect(trail.length, item.id).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('dans l’éventail : aucune page essentielle n’est devenue inaccessible', () => {
+    const targets = new Set(flattenItems(MEMBER_FAN).flatMap(({ item }) => (item.native ? [item.native] : [])));
+    // Pages sans autre point d'entrée dans l'app (le reste des réglages est listé dans l'écran Paramètres).
+    for (const route of ['/agenda', '/notifications', '/communaute', '/propositions', '/contributeurs', '/profile', '/settings/amis', '/favoris', '/statistiques', '/settings']) {
+      expect(targets.has(route), route).toBe(true);
+    }
+  });
+
+  it('dans l’éventail : pas deux entrées vers le même écran', () => {
+    const targets = flattenItems(MEMBER_FAN).flatMap(({ item }) => (item.native ? [item.native] : []));
+    expect(new Set(targets).size).toBe(targets.length);
   });
 });

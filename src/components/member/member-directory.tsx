@@ -1,12 +1,10 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Image } from 'expo-image';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { AuraAvatar } from '@/components/member/aura-avatar';
 import { openMember } from '@/components/member/open-member';
-import { SettingsPage } from '@/components/settings/settings-ui';
 import { EmptyState, ErrorState, Loading } from '@/components/states';
 import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
@@ -14,8 +12,8 @@ import { Colors, Fonts, Radius, Spacing, Tw } from '@/constants/theme';
 import { api } from '@/lib/api';
 import { signatureCardTint, signatureNameColor } from '@/lib/signature';
 
-/** Annuaire des membres (`/membres` du site) : recherche par pseudo, un appui ouvre le profil public dans l'app. */
-export default function MembersScreen() {
+/** Recherche d'un membre par pseudo (annuaire `/membres` du site) : un appui ouvre son profil public, d'où l'on peut l'ajouter en ami. */
+export function MemberDirectory() {
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
   useEffect(() => {
@@ -33,7 +31,7 @@ export default function MembersScreen() {
   const items = useMemo(() => (list.data?.pages.flatMap((page) => page.results) ?? []).filter((m) => !!m.username), [list.data]);
 
   return (
-    <SettingsPage title="Membres" description="Les membres d’Actunime qui laissent leur profil visible.">
+    <View style={styles.root}>
       <TextInput value={text} onChangeText={setText} placeholder="Rechercher un pseudo" placeholderTextColor={Colors.textSecondary} autoCapitalize="none" autoCorrect={false} style={styles.input} />
       {list.isPending ? (
         <Loading />
@@ -59,14 +57,14 @@ export default function MembersScreen() {
           {list.hasNextPage ? <Button label={list.isFetchingNextPage ? 'Chargement…' : 'Voir plus'} variant="outline" disabled={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /> : null}
         </View>
       )}
-    </SettingsPage>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { gap: Spacing.three },
   flex: { flex: 1, gap: 2 },
   input: { minHeight: 48, paddingHorizontal: Spacing.three, borderRadius: Radius.medium, backgroundColor: Tw.color.input, color: Colors.text, fontFamily: Fonts.medium, fontSize: 14 },
   list: { gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, padding: 8, borderRadius: Tw.radius.lg, borderWidth: 1, borderColor: Tw.color.border, backgroundColor: Tw.color.card },
-  avatar: { width: 44, height: 44, borderRadius: Tw.radius.md, overflow: 'hidden', backgroundColor: Tw.color.muted, alignItems: 'center', justifyContent: 'center' },
 });

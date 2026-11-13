@@ -1,12 +1,14 @@
 import { useLocalSearchParams } from 'expo-router';
 import { Flame } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Pressable } from '@/components/tap';
 import { CardActionButton, MediaDetailedCard, MediaGridCard, MediaRowCard } from '@/components/cards/media-cards';
 import { FilterBar } from '@/components/list/filter-bar';
-import { KindSwitch, ListViewSwitcher, type ViewMode } from '@/components/list/list-controls';
+import { EntityDirectory } from '@/components/entity/entity-directory';
+import { MemberDirectory } from '@/components/member/member-directory';
+import { ListViewSwitcher, type ViewMode } from '@/components/list/list-controls';
 import { ManageEntry } from '@/components/list/manage-entry';
 import { openMedia } from '@/components/media-row';
 import { Screen } from '@/components/screen';
@@ -15,6 +17,7 @@ import { Txt } from '@/components/tw';
 import { ScreenGutter, Tw, alpha } from '@/constants/theme';
 import { useViewMode } from '@/hooks/use-view-mode';
 import { mediaId, type IListEntry, type IMedia, type MediaKind } from '@/lib/api';
+import { SEARCH_TYPES, isSearchType, type SearchType } from '@/lib/search-types';
 import { DEFAULT_SEARCH_SORT, SEARCH_SORT_FIELDS, SEARCH_SORT_LABELS, type IListQuery, type IListSort } from '@/lib/list-filter';
 import { useCatalogSearch, useMetadataNames, useMyEntries, usePatchEntry, useTrending } from '@/lib/queries';
 
@@ -32,13 +35,7 @@ type Period = (typeof PERIODS)[number]['value'];
  * nombre de résultats, disposition, tendances, barre de filtres (« Trier », « Filtres ») et cartes détaillées
  * avec ma progression quand l'œuvre est dans ma liste.
  */
-export default function SearchScreen() {
-  const params = useLocalSearchParams<{ kind?: string }>();
-  const [kind, setKind] = useState<MediaKind>('anime');
-  // L'éventail de navigation ouvre la recherche sur animes ou mangas (`/search?kind=manga`).
-  useEffect(() => {
-    if (params.kind === 'anime' || params.kind === 'manga') setKind(params.kind);
-  }, [params.kind]);
+function MediaSearch({ kind }: Readonly<{ kind: MediaKind }>) {
   const [query, setQuery] = useState<IListQuery>({});
   const [sort, setSort] = useState<IListSort>(DEFAULT_SEARCH_SORT);
   const [viewMode, setViewMode] = useViewMode();
@@ -77,12 +74,6 @@ export default function SearchScreen() {
     for (let i = 0; i < results.length; i += columns) out.push(results.slice(i, i + columns));
     return out;
   }, [results, viewMode]);
-
-  const switchKind = (next: MediaKind) => {
-    setKind(next);
-    setQuery({});
-    setSort(DEFAULT_SEARCH_SORT);
-  };
 
   const manageMedia = manageId ? results.find((m) => mediaId(m) === manageId) ?? null : null;
 
@@ -143,14 +134,6 @@ export default function SearchScreen() {
           </Pressable>
         </View>
       </View>
-      <KindSwitch
-        options={[
-          { value: 'anime', label: 'Animes' },
-          { value: 'manga', label: 'Mangas' },
-        ]}
-        value={kind}
-        onChange={switchKind}
-      />
       {trending ? (
         <View style={styles.periods}>
           {PERIODS.map((period) => {
@@ -223,6 +206,30 @@ export default function SearchScreen() {
         onClose={() => setManageId(null)}
         genres={genresOf(manageMedia).map((g) => g.name)}
       />
+    </Screen>
+  );
+}
+
+/**
+ * Recherche : animes et mangas (filtres, tendances, ajout à ma liste) ou personnages, personnes, musiques et
+ * sociétés (recherche par nom). Le type n'est pas choisi sur la page : « Recherche » dans la barre du bas ouvre un
+ * tiroir (`SearchTypeSheet`) qui arrive ici avec `?kind=…`.
+ */
+export default function SearchScreen() {
+  const params = useLocalSearchParams<{ kind?: string }>();
+  const type: SearchType = isSearchType(params.kind) ? params.kind : 'anime';
+
+  if (type === 'anime' || type === 'manga') return <MediaSearch key={type} kind={type} />;
+  return (
+    <Screen>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.header}>
+          <Txt size="2xl" weight="bold">
+            {SEARCH_TYPES.find((entry) => entry.value === type)?.label}
+          </Txt>
+        </View>
+        {type === 'member' ? <MemberDirectory /> : <EntityDirectory key={type} kind={type} />}
+      </ScrollView>
     </Screen>
   );
 }

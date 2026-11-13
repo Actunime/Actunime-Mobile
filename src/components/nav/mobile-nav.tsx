@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { router, usePathname, type Href } from 'expo-router';
+import { router, useGlobalSearchParams, usePathname, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, BackHandler, Easing, Keyboard, StyleSheet, Text, View, useWindowDimensions, type GestureResponderEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,10 +17,13 @@ import { useQuery } from '@tanstack/react-query';
 import { AvatarAura } from '@/components/member/avatar-aura';
 import { usePalette, useThemeEpoch } from '@/components/theme-context';
 import { api } from '@/lib/api';
+import { useUnreadNotifications } from '@/lib/queries';
 import { compactAura, resolveAura, tierOfBadges } from '@/lib/aura';
 import { signatureRing } from '@/lib/signature';
 import { SOON_OPACITY, showSoon } from '@/lib/soon';
+import { isSearchType, type SearchType } from '@/lib/search-types';
 import { LogoIcon } from './logo-icon';
+import { SearchTypeSheet } from './search-type-sheet';
 import { MEMBER_FAN, MEMBER_TABS, findActiveTabId, isSoonEntry, type IMobileNavItem } from './mobile-nav.config';
 import {
   ACT_SIZE,
@@ -97,7 +100,19 @@ function DwellRing() {
   );
 }
 
+/** Pastille de comptage (notifications non lues) posée sur un coin ; « 9+ » au-delà de 9. */
+function CountBadge({ count, style }: Readonly<{ count: number; style?: object }>) {
+  if (count <= 0) return null;
+  return (
+    <View pointerEvents="none" accessibilityLabel={`${count} non lue${count > 1 ? 's' : ''}`} style={[styles.count, style]}>
+      <Text style={styles.countText}>{count > 9 ? '9+' : String(count)}</Text>
+    </View>
+  );
+}
+
 interface IFanActProps {
+  /** Nombre à afficher en pastille sur l'action (notifications non lues). */
+  badge?: number;
   entry: IMobileNavItem;
   slot: IFanSlot;
   index: number;
@@ -108,7 +123,7 @@ interface IFanActProps {
 }
 
 /** Une action de l'éventail : sort du centre du bouton avec un léger décalage entre voisines (`mobile-nav-pop`). */
-function FanAct({ entry, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanActProps>) {
+function FanAct({ entry, badge = 0, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanActProps>) {
   const palette = usePalette();
   const themed = !palette.isDefault;
   // page du site pas encore reprise dans l'app : grisée, un appui dit « bientôt »
@@ -155,6 +170,7 @@ function FanAct({ entry, slot, index, hot, hubX, hubY, onPress }: Readonly<IFanA
           </View>
         ) : null}
       </Pressable>
+      <CountBadge count={badge} style={styles.countOnAct} />
       {hot && entry.children ? <DwellRing /> : null}
     </Animated.View>
   );
@@ -180,9 +196,14 @@ function MobileNavContent() {
   const myAvatarUrl = me.data ? (me.data.avatarUrl ?? null) : (auth?.user.avatarUrl ?? null);
   const myAura = useMemo(() => compactAura(resolveAura(me.data?.signature, tierOfBadges(me.data?.badges))), [me.data]);
   const myRing = signatureRing(me.data?.signature);
+  const unreadCount = useUnreadNotifications(!!auth);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const pathname = usePathname();
+  const searchParams = useGlobalSearchParams<{ kind?: string }>();
+  const [searchSheetOpen, setSearchSheetOpen] = useState(false);
+  // Type de recherche affiché, repris en surbrillance dans le tiroir.
+  const currentSearchType: SearchType | null = pathname === '/search' ? (isSearchType(searchParams.kind) ? searchParams.kind : 'anime') : null;
 
   const [open, setOpen] = useState(false);
   /** Parents des sous-éventails ouverts, du plus haut au plus bas. */
@@ -407,7 +428,8 @@ function MobileNavContent() {
         key={tab.id}
         accessibilityRole="button"
         accessibilityState={{ selected: active }}
-        onPress={() => openTarget(tab)}
+        // « Recherche » ne mène pas à un écran unique : elle demande d'abord ce qu'on cherche.
+        onPress={() => (tab.id === 'search' ? setSearchSheetOpen(true) : openTarget(tab))}
         // Pas d'ondulation grise : elle ressemble à l'onglet actif. Le toucher se lit par l'opacité.
         android_ripple={{ color: 'transparent' }}
         style={({ pressed }) => [styles.tab, active && styles.tabActive, active && !palette.isDefault && { backgroundColor: alpha(palette.primary, 0.16) }, pressed && styles.tabPressed]}
@@ -460,6 +482,8 @@ function MobileNavContent() {
               </View>
             )}
           </View>
+          {/* Pastille sur le bouton central, éventail fermé : il y a quelque chose à voir dans Notifications. */}
+          {!open ? <CountBadge count={unreadCount} style={styles.countOnHub} /> : null}
         </View>
         {renderTab(MEMBER_TABS[2]!)}
         {renderTab(MEMBER_TABS[3]!)}
@@ -499,6 +523,7 @@ function MobileNavContent() {
                 <FanAct
                   key={`${trail.length}-${entry.id}`}
                   entry={entry}
+                  badge={entry.id === 'notifications' ? unreadCount : 0}
                   slot={slots[index]!}
                   index={index}
                   hot={hotIndex === index}
@@ -550,6 +575,7 @@ function MobileNavContent() {
           ) : null}
         </View>
       ) : null}
+      <SearchTypeSheet open={searchSheetOpen} current={currentSearchType} onClose={() => setSearchSheetOpen(false)} />
     </>
   );
 }
@@ -636,6 +662,21 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.backgroundElement,
   },
+  count: {
+    position: 'absolute',
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ef4444',
+    borderWidth: 2,
+    borderColor: Colors.backgroundElement,
+  },
+  countText: { color: '#fff', fontFamily: Fonts.bold, fontSize: 10, lineHeight: 12 },
+  countOnAct: { top: -4, right: -4 },
+  countOnHub: { top: -2, right: 8 },
   ray: { position: 'absolute', height: 3, borderRadius: 2, backgroundColor: Colors.primary, transformOrigin: '0% 50%' },
   label: {
     position: 'absolute',

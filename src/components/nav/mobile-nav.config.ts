@@ -36,93 +36,34 @@ export const MEMBER_TABS: readonly IMobileNavItem[] = [
   item('reading', 'Navigateur', 'globe', { native: '/reading' }),
 ];
 
-const DISCOVER = item('discover', 'Découvrir', 'compass', {
-  children: [
-    item('discover-animes', 'Animes', 'anime', { native: '/search?kind=anime' }),
-    item('discover-mangas', 'Mangas', 'manga', { native: '/search?kind=manga' }),
-    item('discover-characters', 'Personnages', 'character', { native: '/discover/characters' }),
-    item('discover-persons', 'Personnes', 'staff', { native: '/discover/persons' }),
-    item('discover-tracks', 'Musiques', 'music', { native: '/discover/tracks' }),
-    item('discover-companies', 'Sociétés', 'company', { native: '/discover/companies' }),
-    item('discover-members', 'Membres', 'user', { native: '/membres' }),
-  ],
-});
-
 const AGENDA = item('agenda', 'Agenda', 'calendar', { native: '/agenda' });
 
 const COMMUNITY = item('community', 'Communauté', 'community', {
   children: [
-    item('community-home', 'Communauté', 'community', { native: '/communaute' }),
+    item('community-home', 'Vue d’ensemble', 'community', { native: '/communaute' }),
     item('community-proposals', 'Propositions', 'proposal', { native: '/propositions' }),
     item('community-top', 'Contributeurs', 'trophy', { native: '/contributeurs' }),
-    item('community-lab', 'Laboratoire', 'lab', { path: '/laboratoire' }),
   ],
 });
 
-const ABOUT = item('about', 'À propos', 'about', {
-  children: [
-    item('about-legal', 'Mentions', 'document', { path: '/legal/mentions' }),
-    item('about-terms', 'CGU', 'terms', { path: '/legal/cgu' }),
-    item('about-privacy', 'Confidentialité', 'shield', { path: '/legal/confidentialite' }),
-    item('about-content', 'Contenus', 'document', { path: '/legal/contenus' }),
-    item('about-contact', 'Contact', 'mail', { path: '/contact' }),
-  ],
-});
-
-const CONTRIBUTE = item('contribute', 'Contribuer', 'pencil', {
-  highlight: true,
-  children: [
-    item('contribute-anime', 'Anime', 'anime', { path: '/contribute/anime' }),
-    item('contribute-manga', 'Manga', 'manga', { path: '/contribute/manga' }),
-    item('contribute-character', 'Personnage', 'character', { path: '/contribute/character' }),
-    item('contribute-person', 'Personne', 'staff', { path: '/contribute/person' }),
-    item('contribute-company', 'Société', 'company', { path: '/contribute/company' }),
-    item('contribute-track', 'Musique', 'music', { path: '/contribute/track' }),
-  ],
-});
-
-const SETTINGS = item('settings', 'Paramètres', 'settings', {
-  children: [
-    item('settings-profile', 'Éditer', 'user', { native: '/settings/profile' }),
-    item('settings-notifications', 'Notifications', 'bell', { native: '/settings/notifications' }),
-    item('settings-lists', 'Import / export', 'transfer', { path: '/settings/list' }),
-    item('settings-social', 'Social', 'community', {
-      children: [
-        item('settings-friends', 'Amis', 'community', { native: '/settings/amis' }),
-        item('settings-blocks', 'Blocages', 'block', { native: '/settings/blocages' }),
-        item('settings-privacy', 'Confidentialité', 'lock', { native: '/settings/confidentialite' }),
-      ],
-    }),
-    item('settings-security-group', 'Sécurité', 'shield', {
-      children: [
-        item('settings-security', 'Sécurité', 'shield', { native: '/settings/security' }),
-        item('settings-sessions', 'Appareils', 'device', { native: '/settings/appareils' }),
-        item('settings-delete', 'Supprimer', 'trash', { native: '/settings/delete-account' }),
-      ],
-    }),
-  ],
-});
-
-const ACCOUNT = item('account', 'Mon compte', 'user', {
-  children: [
-    item('account-favorites', 'Favoris', 'heart', { native: '/favoris' }),
-    item('account-contributions', 'Contributions', 'document', { native: '/propositions' }),
-    item('account-stats', 'Statistiques', 'stats', { native: '/statistiques' }),
-    item('account-profile', 'Mon profil', 'user', { native: '/profile' }),
-    SETTINGS,
-    item('account-logout', 'Se déconnecter', 'logout', { action: 'logout' }),
-  ],
-});
-
-/** Éventail du bouton central (photo de profil → logo) : celui du site pour un membre connecté, notifications en moins. */
+/**
+ * Éventail du bouton central (photo de profil → logo). Volontairement court et à plat : uniquement des écrans qui
+ * existent dans l'app (rien de « bientôt », rien qui renvoie au site), un seul niveau de sous-menu, pas de doublon.
+ * Les réglages (profil, sécurité, amis…) sont rangés dans l'écran Paramètres, pas dans l'éventail.
+ */
 export const MEMBER_FAN: readonly IMobileNavItem[] = [
-  DISCOVER,
   AGENDA,
-  COMMUNITY,
-  CONTRIBUTE,
   item('notifications', 'Notifications', 'bell', { native: '/notifications' }),
-  ACCOUNT,
-  ABOUT,
+  COMMUNITY,
+  item('mine', 'Mon espace', 'user', {
+    children: [
+      item('mine-profile', 'Mon profil', 'user', { native: '/profile' }),
+      item('mine-friends', 'Mes amis', 'community', { native: '/settings/amis' }),
+      item('mine-favorites', 'Favoris', 'heart', { native: '/favoris' }),
+      item('mine-stats', 'Statistiques', 'stats', { native: '/statistiques' }),
+    ],
+  }),
+  item('settings', 'Paramètres', 'settings', { native: '/settings' }),
 ];
 
 /** Raccourci de la barre correspondant à l'écran courant (route native). */

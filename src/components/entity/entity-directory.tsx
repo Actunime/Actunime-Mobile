@@ -1,13 +1,11 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
 import { Building2, Music, User } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { openEntity } from '@/components/entity/open-entity';
-import { SettingsPage } from '@/components/settings/settings-ui';
 import { EmptyState, ErrorState, Loading } from '@/components/states';
 import { Pressable } from '@/components/tap';
 import { Txt } from '@/components/tw';
@@ -15,17 +13,16 @@ import { Colors, Fonts, Radius, Spacing, Tw } from '@/constants/theme';
 import { api, type EntityKind } from '@/lib/api';
 import { entityBadge, entityImage, entityName } from '@/lib/entity';
 
-const KINDS: Record<string, { kind: EntityKind; title: string; hint: string }> = {
-  characters: { kind: 'character', title: 'Personnages', hint: 'Rechercher un personnage' },
-  persons: { kind: 'person', title: 'Personnes', hint: 'Rechercher un doubleur, un staff, un artiste' },
-  tracks: { kind: 'track', title: 'Musiques', hint: 'Rechercher une musique' },
-  companies: { kind: 'company', title: 'Sociétés', hint: 'Rechercher un studio, un éditeur' },
+/** Texte d'aide de la barre de recherche, selon ce qu'on cherche. */
+export const ENTITY_HINTS: Record<EntityKind, string> = {
+  character: 'Rechercher un personnage',
+  person: 'Rechercher un doubleur, un staff, un artiste',
+  track: 'Rechercher une musique',
+  company: 'Rechercher un studio, un éditeur',
 };
 
-/** Annuaire d'un type d'entité (« Découvrir » du site) : recherche et liste paginée, chaque ligne ouvre sa fiche dans l'app. */
-export default function DiscoverScreen() {
-  const { kind: param } = useLocalSearchParams<{ kind: string }>();
-  const config = KINDS[param ?? ''];
+/** Recherche d'un personnage, d'une personne, d'une musique ou d'une société : liste paginée, chaque ligne ouvre sa fiche dans l'app. */
+export function EntityDirectory({ kind }: Readonly<{ kind: EntityKind }>) {
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
   // Recherche lancée après une courte pause de frappe, pas à chaque lettre.
@@ -35,20 +32,17 @@ export default function DiscoverScreen() {
   }, [text]);
 
   const list = useInfiniteQuery({
-    queryKey: ['discover', config?.kind, search],
-    queryFn: ({ pageParam }) => api.searchEntities(config!.kind, search, pageParam),
+    queryKey: ['discover', kind, search],
+    queryFn: ({ pageParam }) => api.searchEntities(kind, search, pageParam),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
-    enabled: !!config,
   });
   const items = useMemo(() => list.data?.pages.flatMap((page) => page.results) ?? [], [list.data]);
-  const Icon = config?.kind === 'track' ? Music : config?.kind === 'company' ? Building2 : User;
-
-  if (!config) return <SettingsPage title="Annuaire"><EmptyState title="Annuaire inconnu" /></SettingsPage>;
+  const Icon = kind === 'track' ? Music : kind === 'company' ? Building2 : User;
 
   return (
-    <SettingsPage title={config.title}>
-      <TextInput value={text} onChangeText={setText} placeholder={config.hint} placeholderTextColor={Colors.textSecondary} autoCapitalize="none" autoCorrect={false} style={styles.input} />
+    <View style={styles.root}>
+      <TextInput value={text} onChangeText={setText} placeholder={ENTITY_HINTS[kind]} placeholderTextColor={Colors.textSecondary} autoCapitalize="none" autoCorrect={false} style={styles.input} />
       {list.isPending ? (
         <Loading />
       ) : list.isError ? (
@@ -59,9 +53,9 @@ export default function DiscoverScreen() {
         <View style={styles.list}>
           {items.map((entity) => {
             const image = entityImage(entity);
-            const badge = entityBadge(config.kind, entity);
+            const badge = entityBadge(kind, entity);
             return (
-              <Pressable key={entity.id} accessibilityRole="button" onPress={() => openEntity(config.kind, entity.id)} style={styles.row}>
+              <Pressable key={entity.id} accessibilityRole="button" onPress={() => openEntity(kind, entity.id)} style={styles.row}>
                 <View style={styles.thumb}>
                   {image ? <Image source={{ uri: image }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <Icon size={20} color={Tw.color.mutedForeground} />}
                 </View>
@@ -81,11 +75,12 @@ export default function DiscoverScreen() {
           {list.hasNextPage ? <Button label={list.isFetchingNextPage ? 'Chargement…' : 'Voir plus'} variant="outline" disabled={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /> : null}
         </View>
       )}
-    </SettingsPage>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { gap: Spacing.three },
   flex: { flex: 1, gap: 2 },
   input: { minHeight: 48, paddingHorizontal: Spacing.three, borderRadius: Radius.medium, backgroundColor: Tw.color.input, color: Colors.text, fontFamily: Fonts.medium, fontSize: 14 },
   list: { gap: 8 },
