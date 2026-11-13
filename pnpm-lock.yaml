@@ -9,14 +9,14 @@ importers:
   .:
     dependencies:
       '@actunime/client':
-        specifier: 1.3.0-beta.66
-        version: 1.3.0-beta.66
+        specifier: 1.3.0-beta.68
+        version: 1.3.0-beta.68
       '@actunime/types':
-        specifier: 1.13.0-beta.64
-        version: 1.13.0-beta.64
+        specifier: 1.13.0-beta.66
+        version: 1.13.0-beta.66
       '@actunime/validations':
-        specifier: 1.7.0-beta.68
-        version: 1.7.0-beta.68
+        specifier: 1.7.0-beta.71
+        version: 1.7.0-beta.71
       '@expo-google-fonts/outfit':
         specifier: ^0.4.3
         version: 0.4.3
@@ -147,16 +147,16 @@ importers:
 
 packages:
 
-  '@actunime/client@1.3.0-beta.66':
-    resolution: {integrity: sha512-YhWunniwsxCeoJsMlPUxwyd3mZ6x05dqPEZ6RToa5ZJ7Li9hwxgVbZIdPkAHta81x8mS8mNBH1oekP9EWmW/vQ==, tarball: https://npm.pkg.github.com/download/@actunime/client/1.3.0-beta.66/0bb3abc3beede2a0ebf7fd3bcdb23c63c6acc69c}
+  '@actunime/client@1.3.0-beta.68':
+    resolution: {integrity: sha512-M57T1SfiOMuw5JXyDiGrooCuzWf9boLLC7JzECrZZyXLfHp2ahXk2r09uuRklSVjbxs2wgOrrWtX2/nAqjpEPg==, tarball: https://npm.pkg.github.com/download/@actunime/client/1.3.0-beta.68/c04cea4a2a26df953687b52de9cf3a5a7874f1dd}
     engines: {node: '>=22'}
 
-  '@actunime/types@1.13.0-beta.64':
-    resolution: {integrity: sha512-QqjvmR3qIh5DXEM0jHXJ/YSdINjN42DfBzZnkvZf4y2MeX/Vq4eyqN9k7mpoW0D17Uy2swlq8Q7DGMTIm7uo1g==, tarball: https://npm.pkg.github.com/download/@actunime/types/1.13.0-beta.64/63377204ee14e2f2d62845beef0c774759f60dba}
+  '@actunime/types@1.13.0-beta.66':
+    resolution: {integrity: sha512-sGhge3pGYKJr6jBrf4x6oO8wgCXp4TKRz1EErQWczNs3in7bvpDdYK6PundnnxkZwkTH7FCfnGa3YJsy9rBNmg==, tarball: https://npm.pkg.github.com/download/@actunime/types/1.13.0-beta.66/118fee327f99e517d70f5446c063337f4a758a94}
     engines: {node: '>=22'}
 
-  '@actunime/validations@1.7.0-beta.68':
-    resolution: {integrity: sha512-ktThjPcHCh8FcAkmLMato/4LjTHBShVjpy4udmtqtj3G0eV7EozqTfDNIbsk/3lbJEZvKApqR4XAeucprZux4w==, tarball: https://npm.pkg.github.com/download/@actunime/validations/1.7.0-beta.68/54870114f60ea1188f55b79518be8cabed8f9cb4}
+  '@actunime/validations@1.7.0-beta.71':
+    resolution: {integrity: sha512-tLHAkUCNMvgKHHjjwG2Z+DtUoE0N1HqvL+RuH8FyGFYSC8WbbK+5dPApU1eb2q0Ozl5xq0CVhZB0rDL2VUPTQQ==, tarball: https://npm.pkg.github.com/download/@actunime/validations/1.7.0-beta.71/e6c919d96e07a8274c12d36d06a23501e320aac1}
     engines: {node: '>=22'}
 
   '@asamuzakjp/css-color@7.1.7':
@@ -3920,10 +3920,10 @@ packages:
 
 snapshots:
 
-  '@actunime/client@1.3.0-beta.66':
+  '@actunime/client@1.3.0-beta.68':
     dependencies:
-      '@actunime/types': 1.13.0-beta.64
-      '@actunime/validations': 1.7.0-beta.68
+      '@actunime/types': 1.13.0-beta.66
+      '@actunime/validations': 1.7.0-beta.71
       axios: 1.21.0
       cross-fetch: 4.1.0
       socket.io-client: 4.8.4
@@ -3934,11 +3934,11 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@actunime/types@1.13.0-beta.64': {}
+  '@actunime/types@1.13.0-beta.66': {}
 
-  '@actunime/validations@1.7.0-beta.68':
+  '@actunime/validations@1.7.0-beta.71':
     dependencies:
-      '@actunime/types': 1.13.0-beta.64
+      '@actunime/types': 1.13.0-beta.66
       '@esbuild-plugins/node-resolve': 0.2.2(esbuild@0.25.12)
       deep-object-diff: 1.1.9
       esbuild: 0.25.12

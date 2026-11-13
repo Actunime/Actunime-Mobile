@@ -3,9 +3,9 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
-    "@actunime/client": "1.3.0-beta.66",
-    "@actunime/types": "1.13.0-beta.64",
-    "@actunime/validations": "1.7.0-beta.68",
+    "@actunime/client": "1.3.0-beta.68",
+    "@actunime/types": "1.13.0-beta.66",
+    "@actunime/validations": "1.7.0-beta.71",
     "@expo-google-fonts/outfit": "^0.4.3",
     "@expo/ui": "~57.0.9",
     "@expo/vector-icons": "^15.0.2",
