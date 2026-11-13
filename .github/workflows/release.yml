@@ -22,6 +22,9 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+        with:
+          # historique et tags complets : les notes de version listent les commits depuis la release précédente
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
 
@@ -131,6 +134,10 @@ jobs:
             "$RUNNER_TEMP/aligned.apk"
           rm -f "$RUNNER_TEMP/release.p12"
 
+      - name: Notes de version (commits feat et fix depuis la release précédente)
+        # release-notes.md : page GitHub ; release-notes.txt : montré par l'app quand elle propose la mise à jour.
+        run: node scripts/release-notes.mjs "$RUNNER_TEMP"
+
       - name: Fiche de version (lue par l'app pour se mettre à jour)
         run: |
           APK="actunime-mobile-beta-${{ github.run_number }}.apk"
@@ -144,16 +151,17 @@ jobs:
               apk: process.argv[2],
               notes: process.argv[3],
             }, null, 2) + '\n');
-          " "$SHA" "$APK" "$(git log -1 --pretty=%s)"
+          " "$SHA" "$APK" "$(cat "$RUNNER_TEMP/release-notes.txt")"
           cat latest.json
 
       - name: Publication de la release GitHub
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          printf '\n---\nAPK Android signé. Depuis l’app, la mise à jour se propose toute seule ; sinon, télécharge l’APK ci-dessous et installe-le (autoriser les sources inconnues).\n' >> "$RUNNER_TEMP/release-notes.md"
           gh release create "v0.1.0-beta.${{ github.run_number }}" \
             "actunime-mobile-beta-${{ github.run_number }}.apk" \
             latest.json \
             --prerelease \
             --title "Actunime Mobile beta ${{ github.run_number }}" \
-            --notes "APK Android signé, à installer à la main (autoriser les sources inconnues)."
+            --notes-file "$RUNNER_TEMP/release-notes.md"

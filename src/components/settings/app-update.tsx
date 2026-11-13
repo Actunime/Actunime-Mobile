@@ -78,6 +78,14 @@ export function AppUpdate() {
         {version ? `Version installée : ${version}. ` : ''}
         {line}
       </ThemedText>
+      {(update.status === 'available' || update.status === 'downloading' || update.status === 'ready') && update.info.notes ? (
+        <View style={styles.notes}>
+          <ThemedText type="smallBold">Nouveautés de la version {update.info.version}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {update.info.notes}
+          </ThemedText>
+        </View>
+      ) : null}
       {update.status === 'available' ? (
         <>
           <Button label="Télécharger la mise à jour" onPress={() => void downloadUpdate(update.info)} />
@@ -103,5 +111,6 @@ export function AppUpdate() {
 const styles = StyleSheet.create({
   card: { ...Floating, overflow: 'hidden', padding: Spacing.three, gap: Spacing.three },
   names: { flex: 1 },
+  notes: { gap: Spacing.one },
   updateHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
 });
