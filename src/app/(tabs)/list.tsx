@@ -23,6 +23,7 @@ import {
   type IListSort,
   type ListStatusFilter,
 } from '@/lib/list-filter';
+import { mediaOf } from '@/lib/entry-media';
 import { ANIME_STATUSES, MANGA_STATUSES, STATUS_LABELS } from '@/lib/list-form';
 import { useMetadataNames, useMyEntries, usePatchEntry } from '@/lib/queries';
 
@@ -50,13 +51,6 @@ function buildItems(sections: { key: string; label: string; entries: IListEntry[
   } else pushRows(flat, 'flat');
   return items;
 }
-
-/** Œuvre affichable d'une entrée : la fiche, ou l'aperçu d'une proposition en attente. */
-const mediaOf = (entry: IListEntry): IMedia =>
-  (entry.media ?? {
-    title: { original: entry.preview?.title || 'Titre inconnu' },
-    posterUrl: entry.preview?.coverImage ?? null,
-  }) as IMedia;
 
 /**
  * Ma liste, transposée de `Actunime-Web/src/routes/_authenticated/suivi/animes.tsx` et `mangas.tsx` (téléphone) :

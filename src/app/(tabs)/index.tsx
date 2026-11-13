@@ -16,6 +16,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors, Floating, Radius, Spacing } from '@/constants/theme';
 import { mediaId } from '@/lib/api';
 import { useAuth } from '@/lib/auth-store';
+import { isDisplayableEntry } from '@/lib/entry-media';
 import { useAllMyList, useMyEntries } from '@/lib/queries';
 import { readOf } from '@/lib/resume';
 import { useLastReads } from '@/lib/use-last-reads';
@@ -77,6 +78,8 @@ export default function SuiviScreen() {
   const resume = useMemo(
     () =>
       [...(watching.data ?? []), ...(reading.data ?? [])]
+        // jamais de page vide dans le carrousel : une fiche existante, ou un ajout rapide en attente (affiché comme tel)
+        .filter(isDisplayableEntry)
         // à jour = rien de plus à voir ou lire : inutile de « reprendre »
         .filter((entry) => !isCaughtUp(entry))
         // les fiches en cours de ma liste, la dernière modifiée en tête, animes et mangas confondus

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { TriangleAlert } from 'lucide-react-native';
+import { Clock, TriangleAlert } from 'lucide-react-native';
 
 import { MediaDetailedCard } from '@/components/cards/media-cards';
 import { ManageEntry } from '@/components/list/manage-entry';
 import { Txt } from '@/components/tw';
 import { Tw, alpha } from '@/constants/theme';
 import type { IListEntry, MediaKind } from '@/lib/api';
+import { isPendingEntry, mediaOf } from '@/lib/entry-media';
 import { usePatchEntry } from '@/lib/queries';
 
 /**
@@ -17,6 +18,25 @@ export function EntryCard({ kind, entry, note }: Readonly<{ kind: MediaKind; ent
   const patch = usePatchEntry();
   const [open, setOpen] = useState(false);
   const media = entry.media;
+  // Ajout rapide pas encore validé : pas de fiche à gérer, on montre l'aperçu et son état (comme dans Ma liste).
+  if (isPendingEntry(entry)) {
+    return (
+      <MediaDetailedCard
+        kind={kind}
+        media={mediaOf(entry)}
+        entry={entry}
+        onPress={undefined}
+        footer={
+          <View style={styles.pending}>
+            <Clock size={14} color={Tw.color.primary} />
+            <Txt size="xs" weight="medium" color={Tw.color.primary}>
+              En attente de référencement
+            </Txt>
+          </View>
+        }
+      />
+    );
+  }
   if (!media || !entry.mediaId) return null;
   return (
     <>
@@ -45,5 +65,6 @@ export function EntryCard({ kind, entry, note }: Readonly<{ kind: MediaKind; ent
 }
 
 const styles = StyleSheet.create({
+  pending: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: Tw.radius.sm, borderWidth: 1, borderColor: alpha(Tw.color.primary, 0.4), backgroundColor: alpha(Tw.color.primary, 0.1), paddingHorizontal: 8, paddingVertical: 4 },
   note: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: Tw.radius.sm, backgroundColor: alpha(Tw.color.warning, 0.12), paddingHorizontal: 8, paddingVertical: 4 },
 });
