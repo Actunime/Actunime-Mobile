@@ -52,6 +52,7 @@ import { Txt } from '@/components/tw';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { ScreenGutter, Tw, alpha } from '@/constants/theme';
 import type { IMedia, IMediaFollowerEntry, MediaKind } from '@/lib/api';
+import { displaySynopsis, isSequel } from '@/lib/sequel-synopsis';
 import { WEB_URL } from '@/lib/config';
 import { MEDIA_STATUS_LABELS, STATUS_LABELS } from '@/lib/list-form';
 import { LIST_STATUS_BAR } from '@/lib/list-status';
@@ -94,9 +95,12 @@ function fromNow(date: Date): string {
   return `dans ${days} jour${days > 1 ? 's' : ''}`;
 }
 
-/** Fiche incomplète : affiche, genres, synopsis, date, format ou statut manquant (`isMediaIncomplete`). */
+/**
+ * Fiche incomplète : affiche, genres, synopsis, date, format ou statut manquant (`isMediaIncomplete`). Une suite sans
+ * synopsis affiche le texte de suite (E182) : elle n'est pas incomplète pour autant.
+ */
 const isIncomplete = (m: IMedia) =>
-  !m.posterUrl || !m.genres?.length || !m.synopsis || !m.date?.start || !m.format || m.format === 'UNKNOWN' || !m.status || m.status === 'UNKNOWN';
+  !m.posterUrl || !m.genres?.length || (!m.synopsis && !isSequel(m)) || !m.date?.start || !m.format || m.format === 'UNKNOWN' || !m.status || m.status === 'UNKNOWN';
 
 function MemberAvatar({ member, size }: Readonly<{ member: IMediaFollowerEntry['member']; size: number }>) {
   return <AuraAvatar uri={member.avatarUrl} name={member.displayName ?? member.username} size={size} radius={size / 2} signature={member.signature} tier={member.contributionTier} />;
@@ -208,6 +212,8 @@ export default function MediaScreen() {
     .filter((e, i, all) => all.findIndex((x) => x.member.id === e.member.id) === i)
     .slice(0, 5);
   const links = (data.links ?? []).filter((link) => /^https?:\/\//.test(link.url));
+  // Une suite sans synopsis affiche « La suite des évènements de la saison précédente » (E182), comme sur le site.
+  const synopsis = displaySynopsis(data);
   const trailer = data.trailers?.[0]?.url;
   const youtubeId = trailer?.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/)?.[1];
 
@@ -428,10 +434,15 @@ export default function MediaScreen() {
         </View>
 
         <View style={styles.sections}>
-          {data.synopsis ? (
+          {synopsis ? (
             <SectionCard title="Synopsis" icon={BookOpen}>
-              <Txt size="base" color={Tw.color.mutedForeground} leading={1.625}>
-                {data.synopsis}
+              <Txt
+                size="base"
+                color={Tw.color.mutedForeground}
+                leading={1.625}
+                style={synopsis.automatic ? { fontStyle: 'italic' } : undefined}
+              >
+                {synopsis.text}
               </Txt>
             </SectionCard>
           ) : null}
